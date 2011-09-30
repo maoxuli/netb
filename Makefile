@@ -19,11 +19,19 @@ ARFLAGS := rcs
 INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/SocketError.hpp \
 	   $(INCDIR)/Socket.hpp \
-	   $(INCDIR)/SocketSelector.hpp 
+	   $(INCDIR)/SocketSelector.hpp \
+	   $(INCDIR)/SocketAddress.hpp \
+	   $(INCDIR)/StreamBuffer.hpp \
+	   $(INCDIR)/StreamReader.hpp \
+	   $(INCDIR)/StreamWriter.hpp
 	  
 OBJ	:= $(OBJDIR)/SocketError.o \
 	   $(OBJDIR)/Socket.o \
-	   $(OBJDIR)/SocketSelector.o
+	   $(OBJDIR)/SocketSelector.o \
+	   $(OBJDIR)/SocketAddress.o \
+	   $(OBJDIR)/StreamBuffer.o \
+	   $(OBJDIR)/StreamReader.o \
+	   $(OBJDIR)/StreamWriter.o
 
 all: $(LIBDIR)/$(OUT)
 
