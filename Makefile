@@ -23,7 +23,10 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/SocketAddress.hpp \
 	   $(INCDIR)/StreamBuffer.hpp \
 	   $(INCDIR)/StreamReader.hpp \
-	   $(INCDIR)/StreamWriter.hpp
+	   $(INCDIR)/StreamWriter.hpp \
+	   $(INCDIR)/TcpSocket.hpp \
+	   $(INCDIR)/UdpSocket.hpp \
+	   $(INCDIR)/RawSocket.hpp
 	  
 OBJ	:= $(OBJDIR)/SocketError.o \
 	   $(OBJDIR)/Socket.o \
@@ -31,7 +34,10 @@ OBJ	:= $(OBJDIR)/SocketError.o \
 	   $(OBJDIR)/SocketAddress.o \
 	   $(OBJDIR)/StreamBuffer.o \
 	   $(OBJDIR)/StreamReader.o \
-	   $(OBJDIR)/StreamWriter.o
+	   $(OBJDIR)/StreamWriter.o \
+	   $(OBJDIR)/TcpSocket.o \
+	   $(OBJDIR)/UdpSocket.o \
+	   $(OBJDIR)/RawSocket.o
 
 all: $(LIBDIR)/$(OUT)
 

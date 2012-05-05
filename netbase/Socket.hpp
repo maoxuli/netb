@@ -117,7 +117,7 @@ public:
     bool Block() const;
 
     bool ReuseAddress(bool);
-    bool ResueAddress() const;
+    bool ReuseAddress() const;
 
     // For TCP socket
     bool NoDelay(bool);
