@@ -28,9 +28,11 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/UdpSocket.hpp \
 	   $(INCDIR)/RawSocket.hpp \
 	   $(INCDIR)/SocketPipe.hpp \
+	   $(INCDIR)/EventHandler.hpp \
 	   $(INCDIR)/EventSource.hpp \
 	   $(INCDIR)/EventSelector.hpp \
-	   
+	   $(INCDIR)/EventLoop.hpp \
+	   $(INCDIR)/EventLoopThread.hpp
 	  
 OBJ	:= $(OBJDIR)/SocketError.o \
 	   $(OBJDIR)/Socket.o \
@@ -43,7 +45,10 @@ OBJ	:= $(OBJDIR)/SocketError.o \
 	   $(OBJDIR)/UdpSocket.o \
 	   $(OBJDIR)/RawSocket.o \
 	   $(OBJDIR)/SocketPipe.o \
+	   $(OBJDIR)/EventHandler.o \
 	   $(OBJDIR)/EventSelector.o \
+	   $(OBJDIR)/EventLoop.o \
+	   $(OBJDIR)/EventLoopThread.o
 	   
 	   
 

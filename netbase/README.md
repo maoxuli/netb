@@ -19,4 +19,9 @@
 
 ## Asynchronous socket API
 - SocketPipe
+- EventHandler
+- EventSource
+- EventSelector
+- EventLoop
+- EventLoopThread
 
