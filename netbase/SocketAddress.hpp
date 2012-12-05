@@ -70,16 +70,10 @@ public:
 public: 
 	// Copy constructor, and assigment operator, from other data structure
 	SocketAddress(const SocketAddress& sa) throw() { memcpy(&mAddress, &sa.mAddress,sizeof(sockaddr_storage)); }
-	SocketAddress(const SocketAddress* sa) throw() { memcpy(&mAddress, &sa->mAddress,sizeof(sockaddr_storage)); }
-
 	SocketAddress(const struct sockaddr_storage& ss) throw() { *this = ss; }
-	SocketAddress(const struct sockaddr_storage* ss) throw() { *this = ss; }
 	SocketAddress(const struct sockaddr& sa) throw() { *this = sa; }
-	SocketAddress(const struct sockaddr* sa) throw() { *this = sa; }
 	SocketAddress(const struct sockaddr_in& sa) throw() { *this = sa; }
-	SocketAddress(const struct sockaddr_in* sa) throw() { *this = sa; }
 	SocketAddress(const struct sockaddr_in6& sa) throw() { *this = sa; }
-	SocketAddress(const struct sockaddr_in6* sa) throw() { *this = sa; }
 
 	inline SocketAddress& operator=(const SocketAddress& sa) throw()
 	{
@@ -88,24 +82,10 @@ public:
 		return *this;
 	}
 
-	inline SocketAddress& operator=(const SocketAddress* sa) throw()
-	{
-		if(sa != this) 
-			memcpy(&mAddress, &sa->mAddress, sizeof(struct sockaddr_storage));
-		return *this;
-	}
-
 	inline SocketAddress& operator=(const struct sockaddr_storage& ss) throw()
 	{
 		if(&ss != &mAddress)
 			memcpy(&mAddress, &ss,sizeof(struct sockaddr_storage));
-		return *this;
-	}
-
-	inline SocketAddress& operator=(const struct sockaddr_storage* ss) throw()
-	{
-		if(ss != &mAddress)
-			memcpy(&mAddress, ss, sizeof(struct sockaddr_storage));
 		return *this;
 	}
 
@@ -127,24 +107,6 @@ public:
 		return *this;
 	}
 
-	inline SocketAddress& operator=(const struct sockaddr* sa) throw()
-	{
-		if(reinterpret_cast<const struct sockaddr_storage*>(sa) != &mAddress) 
-		{
-			memset(&mAddress, 0, sizeof(struct sockaddr_storage));
-			switch(sa->sa_family) 
-			{
-				case AF_INET:
-					memcpy(&mAddress, sa, sizeof(struct sockaddr_in));
-					break;
-				case AF_INET6:
-					memcpy(&mAddress, sa, sizeof(struct sockaddr_in6));
-					break;
-			}
-		}
-		return *this;
-	}
-
 	inline SocketAddress& operator=(const struct sockaddr_in& sa) throw()
 	{
 		if(reinterpret_cast<const struct sockaddr_storage*>(&sa) != &mAddress) 
@@ -155,32 +117,12 @@ public:
 		return *this;
 	}
 
-	inline SocketAddress& operator=(const struct sockaddr_in* sa) throw()
-	{
-		if(reinterpret_cast<const struct sockaddr_storage*>(sa) != &mAddress) 
-		{
-			memset(&mAddress, 0, sizeof(struct sockaddr_storage));
-			memcpy(&mAddress, sa, sizeof(struct sockaddr_in));
-		}
-		return *this;
-	}
-
 	inline SocketAddress& operator=(const struct sockaddr_in6& sa) throw()
 	{
 		if(reinterpret_cast<const struct sockaddr_storage*>(&sa) != &mAddress) 
 		{
 			memset(&mAddress, 0, sizeof(struct sockaddr_storage));
 			memcpy(&mAddress, &sa, sizeof(struct sockaddr_in6));
-		}
-		return *this;
-	}
-
-	inline SocketAddress& operator=(const struct sockaddr_in6* sa) throw()
-	{
-		if(reinterpret_cast<const struct sockaddr_storage*>(sa) != &mAddress) 
-		{
-			memset(&mAddress, 0, sizeof(struct sockaddr_storage));
-			memcpy(&mAddress, sa, sizeof(struct sockaddr_in6));
 		}
 		return *this;
 	}

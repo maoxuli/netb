@@ -17,4 +17,6 @@
 - UdpSocket
 - RawSocket
 
+## Asynchronous socket API
+- SocketPipe
 
