@@ -17,7 +17,7 @@
 - UdpSocket
 - RawSocket
 
-## Asynchronous socket API
+## Asynchronous mechanism
 - SocketPipe
 - EventHandler
 - EventSource
@@ -25,3 +25,8 @@
 - EventLoop
 - EventLoopThread
 
+## Asynchronous socket API
+- TcpListener
+- TcpConnector
+- TcpConnection
+- UdpTransceiver

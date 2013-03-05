@@ -39,6 +39,7 @@ private:
 public:
 	// Reset the address to empty, thus ss_family is AF_UNSPEC
 	void Reset() { memset(&mAddress, 0, sizeof(sockaddr_storage)); }
+    void Port(unsigned short port);
 
 	// Address information
 	bool Empty() const { return Family() == AF_UNSPEC; }

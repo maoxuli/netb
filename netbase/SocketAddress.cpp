@@ -90,6 +90,11 @@ std::string SocketAddress::Host() const
     return "";
 }
 
+void SocketAddress::Port(unsigned short port) 
+{
+    assert(false);
+}
+
 unsigned short SocketAddress::Port() const
 {
     if(mAddress.ss_family == AF_INET)
