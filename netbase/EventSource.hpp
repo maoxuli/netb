@@ -27,7 +27,7 @@ class EventHandler;
 class EventSource
 {
 public:    
-    virtual ~EventSource();
+    virtual ~EventSource() { }
     
     // Wait for active events, 
     // Return as a list of EventHandlers that hadle those active events

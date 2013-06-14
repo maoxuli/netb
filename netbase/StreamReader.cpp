@@ -55,6 +55,14 @@ StreamReader& StreamReader::Attach(StreamBuffer& buf)
     return *this;
 }
 
+bool StreamReader::SerializeBytes(void* p, size_t n)
+{
+    if(mStream == NULL) return false;
+    if(mStream->Readable() < n) return false;
+
+    return mStream->Read(p, n);
+}
+
 bool StreamReader::SerializeString(std::string& s, size_t n)
 {
     if(mStream == NULL) return false;

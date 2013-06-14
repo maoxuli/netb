@@ -2,3 +2,5 @@
 
 build/*.o
 lib/*.a
+bin/*.dSYM
+bin/httpclient

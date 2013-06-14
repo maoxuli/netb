@@ -55,6 +55,12 @@ StreamWriter& StreamWriter::Attach(StreamBuffer& buf)
     return *this;
 }
 
+bool StreamWriter::SerializeBytes(const void* p, size_t n)
+{
+    if(mStream == NULL) return false;
+    return mStream->Write(p, n);
+}
+
 bool StreamWriter::SerializeString(const std::string& s, size_t n)
 {
     if(mStream == NULL) return false;
