@@ -33,12 +33,6 @@ TcpSocket::~TcpSocket()
 
 }
 
-bool TcpSocket::Bind(unsigned short port)
-{
-    SocketAddress addr(port, mSocket.Family());
-    return mSocket.Bind(addr.SockAddr(), addr.SockAddrLen());
-}
-
 bool TcpSocket::Bind(const char* host, unsigned short port)
 {
     SocketAddress addr(host, port, mSocket.Family());

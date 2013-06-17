@@ -1,3 +1,4 @@
 # NetBase Library
 
-examples
+- http
+Examples of simple HTTP client and HTTP server.

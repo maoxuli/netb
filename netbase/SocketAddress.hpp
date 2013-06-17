@@ -60,12 +60,8 @@ public:
 	// Empty address, all set to 0, AF_UNSPEC
 	SocketAddress() throw() { memset(&mAddress, 0, sizeof(sockaddr_storage)); }
 
-	// port is 0 for loopback address, otherwise wildcard address
-	// Suitable for server address
-	SocketAddress(unsigned short port, sa_family_t family = AF_INET) throw();
-
-	// if host is null, loopback address
-	// Suitable for client address
+	// if host is null and port is 0, loopback address, used for local host only
+	// if host is null and port is non 0, wildcard address, used for server 
 	SocketAddress(const char* host, unsigned short port, sa_family_t family = AF_INET) throw();
 
 public: 

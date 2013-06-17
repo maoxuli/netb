@@ -69,7 +69,8 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(INC)
 .PHONY: examples clean cleanall
 
 examples:
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/httpclient examples/http/HttpClient.cpp examples/http/HttpMessage.cpp
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/httpclient examples/http/HttpMessage.cpp examples/http/HttpClient.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/httpserver examples/http/HttpMessage.cpp examples/http/HttpServer.cpp 
 
 clean:
 	rm -f $(OBJDIR)/*.o
@@ -78,3 +79,4 @@ cleanall: clean
 	rm -f $(LIBDIR)/$(OUT)
 	rm -r $(BINDIR)/*.dSYM
 	rm -f $(BINDIR)/httpclient
+	rm -f $(BINDIR)/httpserver

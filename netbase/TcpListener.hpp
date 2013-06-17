@@ -48,10 +48,7 @@ public:
     // No address binded
     TcpListener(EventLoop* loop, sa_family_t family = AF_INET);
 
-    // Loopback address for 0 port, and wildcard for others
-    TcpListener(EventLoop* loop, unsigned short port, sa_family_t family = AF_INET);
-
-    // Loopback address for NULL host
+    // Loopback address for NULL host or 0 port
     TcpListener(EventLoop* loop, const char* host, unsigned short port, sa_family_t family = AF_INET);
 
     // Given address
@@ -65,10 +62,6 @@ public:
 
     // Listen on address passed in on instantiation
     bool Listen(int backlog = SOMAXCONN);
-
-    // Listen on given address
-    // Loopback address for 0 port, and wildcard for others
-    bool Listen(unsigned short port, int backlog = SOMAXCONN);
 
     // Listen on given address
     // Loopback address for NULL host

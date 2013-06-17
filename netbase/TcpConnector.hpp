@@ -46,13 +46,11 @@ class TcpConnector
 {
 public:
     TcpConnector(EventLoop* loop, sa_family_t family = AF_INET); // Not bind to local address
-    TcpConnector(EventLoop* loop, unsigned short port, sa_family_t family = AF_INET); // Bind to local port
     TcpConnector(EventLoop* loop, const char* host, unsigned short port, sa_family_t family = AF_INET); // Bind to local host and port
     TcpConnector(EventLoop* loop, const SocketAddress& addr); // Bind to local address
     ~TcpConnector();
 
     // connect to remote address
-    bool Connect(unsigned short port);
     bool Connect(const char* host, unsigned short port);
     bool Connect(const SocketAddress& addr);
 

@@ -35,7 +35,7 @@ SocketPipe::~SocketPipe()
 
 bool SocketPipe::MakePair(Socket& reader, Socket& writer)
 {
-    SocketAddress addr(0); // Local loopback address
+    SocketAddress addr(NULL, 0); // Local loopback address
     reader.Block(true); 
     reader.Bind(addr.SockAddr(), addr.SockAddrLen());
     reader.Listen(1); // reader works as server socket

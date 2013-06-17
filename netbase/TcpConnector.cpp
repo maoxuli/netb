@@ -29,14 +29,6 @@ TcpConnector::TcpConnector(EventLoop* loop, sa_family_t family)
 
 }
 
-// Bind to local port
-TcpConnector::TcpConnector(EventLoop* loop, unsigned short port, sa_family_t family)
-: mLoop(loop)
-, mAddress(port, family) 
-{
-
-}
-
 // Bind to local host and port
 TcpConnector::TcpConnector(EventLoop* loop, const char* host, unsigned short port, sa_family_t family)
 : mLoop(loop)
@@ -55,12 +47,6 @@ TcpConnector::TcpConnector(EventLoop* loop, const SocketAddress& addr)
 TcpConnector::~TcpConnector()
 {
  
-}
-
-bool TcpConnector::Connect(unsigned short port)
-{
-    SocketAddress addr(NULL, port, mAddress.Family());
-    return Connect(addr);
 }
 
 bool TcpConnector::Connect(const char* host, unsigned short port)

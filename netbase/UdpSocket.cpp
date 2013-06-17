@@ -32,12 +32,6 @@ UdpSocket::~UdpSocket()
 
 }
 
-bool UdpSocket::Bind(unsigned short port)
-{
-    SocketAddress addr(port);
-    return mSocket.Bind(addr.SockAddr(), addr.SockAddrLen());
-}
-
 bool UdpSocket::Bind(const char* host, unsigned short port)
 {
     SocketAddress addr(host, port);

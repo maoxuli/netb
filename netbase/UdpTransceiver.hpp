@@ -39,13 +39,8 @@ public:
     // Not bind to local address
     UdpTransceiver(EventLoop* loop, sa_family_t family = AF_INET);
 
-    // Bind to a local address
-    // If port is 0, assign a loop back address
-    // otherwise, assign wildcard address
-    UdpTransceiver(EventLoop* loop, unsigned short port, sa_family_t family = AF_INET);
-
     // Bind to local address
-    // If host is NULL, assign loop back address
+    // If host is NULL and port is 0, assign loop back address
     UdpTransceiver(EventLoop* loop, const char* host, unsigned short port, sa_family_t family = AF_INET);
 
     // Given address
@@ -56,9 +51,6 @@ public:
 
     // Open on address passed in on instantiation
     bool Open();
-
-    // Open on a given port
-    bool Open(unsigned short port);
 
     // Open on a given host and port
     bool Open(const char* host, unsigned short port);

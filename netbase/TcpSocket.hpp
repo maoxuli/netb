@@ -39,7 +39,6 @@ public:
     SOCKET GetSocket() const { return mSocket; }
 
     // Bind to local address
-    bool Bind(unsigned short port);
     bool Bind(const char* host, unsigned short port);
     bool Bind(const SocketAddress& addr);
 

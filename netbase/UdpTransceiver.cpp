@@ -30,16 +30,6 @@ UdpTransceiver::UdpTransceiver(EventLoop* loop, sa_family_t family)
     mHandler.SetWriteCallback(std::bind(&UdpTransceiver::OnWrite, this));   
 }
 
-UdpTransceiver::UdpTransceiver(EventLoop* loop, unsigned short port, sa_family_t family)
-: mLoop(loop)
-, mAddress(port, family)
-, mSocket(family, SOCK_DGRAM, IPPROTO_UDP)
-, mHandler(loop, mSocket)
-{
-    mHandler.SetReadCallback(std::bind(&UdpTransceiver::OnRead, this));
-    mHandler.SetWriteCallback(std::bind(&UdpTransceiver::OnWrite, this));   
-}
-
 UdpTransceiver::UdpTransceiver(EventLoop* loop, const char* host, unsigned short port, sa_family_t family)
 : mLoop(loop)
 , mAddress(host, port, family)

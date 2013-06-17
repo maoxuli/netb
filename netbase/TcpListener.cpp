@@ -32,16 +32,6 @@ TcpListener::TcpListener(EventLoop* loop, sa_family_t family)
     mHandler.SetReadCallback(std::bind(&TcpListener::OnRead, this, _1));
 }
 
-TcpListener::TcpListener(EventLoop* loop, unsigned short port, sa_family_t family)
-: mLoop(loop)
-, mAddress(port, family)
-, mSocket(family, SOCK_STREAM, IPPROTO_TCP)
-, mHandler(loop, mSocket)
-, mListening(false)
-{
-    mHandler.SetReadCallback(std::bind(&TcpListener::OnRead, this, _1));
-}
-
 TcpListener::TcpListener(EventLoop* loop, const char* host, unsigned short port, sa_family_t family)
 : mLoop(loop)
 , mAddress(host, port, family)
@@ -104,28 +94,8 @@ bool TcpListener::Listen(int backlog)
     return true;
 }
 
-// Listen on given port, 
-// If address has been assigned, update port, 
-// otherwise assign new address for given port,
-// Loopback address for 0 port, and wildcard for others
-bool TcpListener::Listen(unsigned short port, int backlog)
-{
-    // Update address
-    if(!mAddress.Empty())
-    {
-        mAddress.Port(port);
-    } 
-    else
-    {
-        mAddress = SocketAddress(port, mSocket.Family());
-    }
-    assert(!mAddress.Empty());
-    
-    return Listen(backlog);
-}
-
 // Listen on given address
-// Loopback address for NULL host
+// Loopback address for NULL host and 0 port
 bool TcpListener::Listen(const char* host, unsigned short port, int backlog)
 {
     // Update address

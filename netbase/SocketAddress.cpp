@@ -22,61 +22,63 @@
 
 NET_BASE_BEGIN
 
-// if port number is not 0, assign wildcard address
-// if port number is 0, assign loop back address
-SocketAddress::SocketAddress(unsigned short port, sa_family_t family) throw()
-{
-    memset(&mAddress, 0, sizeof(sockaddr_storage));
-    if(family == AF_INET)
-    {
-        sockaddr_in* addrin = reinterpret_cast<sockaddr_in*>(&mAddress);
-        addrin->sin_len = sizeof(sockaddr_in);
-        addrin->sin_family = AF_INET;
-        addrin->sin_port = htons(port);
-        addrin->sin_addr.s_addr = port == 0 ? htonl(INADDR_LOOPBACK) : htonl(INADDR_ANY);
-    }
-    else if(family == AF_INET6) 
-    {
-        sockaddr_in6* addrin6 = reinterpret_cast<sockaddr_in6*>(&mAddress);
-        addrin6->sin6_len = sizeof(sockaddr_in6);
-        addrin6->sin6_family = AF_INET6;
-        addrin6->sin6_port = htons(port);
-        addrin6->sin6_addr = port == 0 ? in6addr_loopback : in6addr_any;
-    }
-    else // unsupported family
-    {
-        assert(false);
-    }
-}
-
-// By default assign loop back address if host is NULL
+// if host is null and port is 0, loopback address, used for local host only
+// if host is null and port is non 0, wildcard address, used for server 
 SocketAddress::SocketAddress(const char* host, unsigned short port, sa_family_t family) throw()
 {
     memset(&mAddress, 0, sizeof(sockaddr_storage));
 
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = family; 
-    
-    char service[8];
-    sprintf(service,"%d", port);
-    struct addrinfo* res = NULL;
-    short retry = 5;
-    int rs = 0;
-    do
-    {
-        rs = getaddrinfo(host, service, &hints, &res);
-    }
-    while(rs == EAI_AGAIN && --retry >= 0);    
-    if(rs != 0)
-    {
-        assert(false);
-    }
+    memset(&mAddress, 0, sizeof(sockaddr_storage));
 
-    if(res != NULL)
+    if(host == NULL)
     {
-        memcpy(&mAddress, res->ai_addr, res->ai_addrlen);
-        freeaddrinfo(res);
+        if(family == AF_INET)
+        {
+            sockaddr_in* addrin = reinterpret_cast<sockaddr_in*>(&mAddress);
+            addrin->sin_len = sizeof(sockaddr_in);
+            addrin->sin_family = AF_INET;
+            addrin->sin_port = htons(port);
+            addrin->sin_addr.s_addr = port == 0 ? htonl(INADDR_LOOPBACK) : htonl(INADDR_ANY);
+        }
+        else if(family == AF_INET6) 
+        {
+            sockaddr_in6* addrin6 = reinterpret_cast<sockaddr_in6*>(&mAddress);
+            addrin6->sin6_len = sizeof(sockaddr_in6);
+            addrin6->sin6_family = AF_INET6;
+            addrin6->sin6_port = htons(port);
+            addrin6->sin6_addr = port == 0 ? in6addr_loopback : in6addr_any;
+        }
+        else // unsupported family
+        {
+            assert(false);
+        }
+    }
+    else
+    {
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = family; 
+        
+        char service[8];
+        sprintf(service,"%d", port);
+        struct addrinfo* res = NULL;
+        short retry = 5;
+        int rs = 0;
+        do
+        {
+            rs = getaddrinfo(host, service, &hints, &res);
+        }
+        while(rs == EAI_AGAIN && --retry >= 0);    
+        if(rs != 0)
+        {
+            assert(false);
+        }
+
+        if(res != NULL)
+        {
+            memcpy(&mAddress, res->ai_addr, res->ai_addrlen);
+            freeaddrinfo(res);
+        }
     }
 }
 

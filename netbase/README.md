@@ -7,10 +7,11 @@
 - SocketSelector
 
 ## Utility classes
-- SocketAddress
 - StreamBuffer
 - StreamReader
 - StreamWriter
+- SocketAddress
+- SocketPipe
 
 ## Wrapper of TCP, UDP, and RAW socket
 - TcpSocket
@@ -18,7 +19,6 @@
 - RawSocket
 
 ## Asynchronous mechanism
-- SocketPipe
 - EventHandler
 - EventSource
 - EventSelector
