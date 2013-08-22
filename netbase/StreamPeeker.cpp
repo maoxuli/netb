@@ -15,66 +15,75 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "StreamReader.hpp"
+#include "StreamPeeker.hpp"
 #include <cassert>
 
 NET_BASE_BEGIN
 
-StreamReader::StreamReader()
+StreamPeeker::StreamPeeker()
 : mStream(NULL)
+, mOffset(0)
 {
 
 }
 
-StreamReader::StreamReader(StreamBuffer* buf)
+StreamPeeker::StreamPeeker(StreamBuffer* buf)
 : mStream(buf)
+, mOffset(0)
 {
 
 }
 
-StreamReader::StreamReader(StreamBuffer& buf)
+StreamPeeker::StreamPeeker(StreamBuffer& buf)
 : mStream(&buf)
+, mOffset(0)
 {
 
 }
 
-StreamReader::~StreamReader()
+StreamPeeker::~StreamPeeker()
 {
 
 }
 
-StreamReader& StreamReader::Attach(StreamBuffer* buf)
+StreamPeeker& StreamPeeker::Attach(StreamBuffer* buf)
 {
     mStream = buf;
+    mOffset = 0;
     return *this;
 }
 
-StreamReader& StreamReader::Attach(StreamBuffer& buf)
+StreamPeeker& StreamPeeker::Attach(StreamBuffer& buf)
 {
     mStream = &buf;
+    mOffset = 0;
     return *this;
 }
 
-bool StreamReader::SerializeBytes(void* p, size_t n)
+bool StreamPeeker::SerializeBytes(void* p, size_t n)
 {
     if(mStream == NULL) return false;
-    if(mStream->Readable() < n) return false;
 
-    return mStream->Read(p, n);
+    if(mStream->Peek(p, n, mOffset))
+    {
+        mOffset += n;
+        return true;
+    }
+    return false;
 }
 
-bool StreamReader::SerializeString(std::string& s, size_t n)
+bool StreamPeeker::SerializeString(std::string& s, size_t n)
 {
     if(mStream == NULL) return false;
     if(mStream->Readable() < n) return false;
 
-    const unsigned char* p = (const unsigned char*)mStream->Read();
+    const unsigned char* p = (const unsigned char*)mStream->Peek(mOffset);
     std::string(p, p + n).swap(s);
-    mStream->Read(n);
+    mOffset += n;
     return true;
 }
 
-bool StreamReader::SerializeString(std::string& s, const char delim)
+bool StreamPeeker::SerializeString(std::string& s, const char delim)
 {
     if(mStream == NULL) return false;
     if(mStream->Readable() < sizeof(delim)) return false;
@@ -83,13 +92,13 @@ bool StreamReader::SerializeString(std::string& s, const char delim)
     if(n < 0) return false;
     if(n == 0) return true;
 
-    const unsigned char* p = (const unsigned char*)mStream->Read();
+    const unsigned char* p = (const unsigned char*)mStream->Peek(mOffset);
     std::string(p, p + n).swap(s);
-    mStream->Read(n + sizeof(delim));
+    mOffset += n + sizeof(delim);
     return true;
 }
 
-bool StreamReader::SerializeString(std::string& s, const char* delim)
+bool StreamPeeker::SerializeString(std::string& s, const char* delim)
 {
     if(mStream == NULL) return false;
     if(mStream->Readable() < strlen(delim)) return false;
@@ -98,9 +107,9 @@ bool StreamReader::SerializeString(std::string& s, const char* delim)
     if(n < 0) return false;
     if(n == 0) return true;
     
-    const unsigned char* p = (const unsigned char*)mStream->Read();
+    const unsigned char* p = (const unsigned char*)mStream->Peek(mOffset);
     std::string(p, p + n).swap(s);
-    mStream->Read(n + strlen(delim));
+    mOffset += n + strlen(delim);
     return true;
 }
 

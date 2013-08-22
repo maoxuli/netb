@@ -8,8 +8,9 @@
 
 ## Utility classes
 - StreamBuffer
-- StreamReader
 - StreamWriter
+- StreamReader
+- StreamPeeker
 - SocketAddress
 - SocketPipe
 

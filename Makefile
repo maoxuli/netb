@@ -22,8 +22,9 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/SocketSelector.hpp \
 	   $(INCDIR)/SocketAddress.hpp \
 	   $(INCDIR)/StreamBuffer.hpp \
-	   $(INCDIR)/StreamReader.hpp \
 	   $(INCDIR)/StreamWriter.hpp \
+	   $(INCDIR)/StreamReader.hpp \
+	   $(INCDIR)/StreamPeeker.hpp \
 	   $(INCDIR)/TcpSocket.hpp \
 	   $(INCDIR)/UdpSocket.hpp \
 	   $(INCDIR)/RawSocket.hpp \
@@ -43,8 +44,9 @@ OBJ	:= $(OBJDIR)/SocketError.o \
 	   $(OBJDIR)/SocketSelector.o \
 	   $(OBJDIR)/SocketAddress.o \
 	   $(OBJDIR)/StreamBuffer.o \
-	   $(OBJDIR)/StreamReader.o \
 	   $(OBJDIR)/StreamWriter.o \
+	   $(OBJDIR)/StreamReader.o \
+	   $(OBJDIR)/StreamPeeker.o \
 	   $(OBJDIR)/TcpSocket.o \
 	   $(OBJDIR)/UdpSocket.o \
 	   $(OBJDIR)/RawSocket.o \
@@ -71,6 +73,8 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(INC)
 examples:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/httpclient examples/http/HttpMessage.cpp examples/http/HttpClient.cpp 
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/httpserver examples/http/HttpMessage.cpp examples/http/HttpServer.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoclient examples/echo/EchoClient.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoserver examples/echo/EchoServer.cpp 
 
 clean:
 	rm -f $(OBJDIR)/*.o
@@ -80,3 +84,5 @@ cleanall: clean
 	rm -r $(BINDIR)/*.dSYM
 	rm -f $(BINDIR)/httpclient
 	rm -f $(BINDIR)/httpserver
+	rm -f $(BINDIR)/echoclient
+	rm -f $(BINDIR)/echoserver

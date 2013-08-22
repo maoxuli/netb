@@ -18,8 +18,8 @@
 #ifndef NET_BASE_TCP_CONNECTOR_HPP
 #define NET_BASE_TCP_CONNECTOR_HPP
 
+#include "Socket.hpp"
 #include "SocketAddress.hpp"
-#include "TcpSocket.hpp"
 #include "EventHandler.hpp"
 #include "TcpConnection.hpp"
 #include <map>

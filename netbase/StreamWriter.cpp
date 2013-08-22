@@ -74,11 +74,11 @@ bool StreamWriter::SerializeString(const std::string& s, const char delim)
            mStream->Write(&delim, sizeof(char));
 }
 
-bool StreamWriter::SerializeString(const std::string& s, const std::string& delim)
+bool StreamWriter::SerializeString(const std::string& s, const char* delim)
 {
     if(mStream == NULL) return false;
     return mStream->Write(s.data(), s.length()) && 
-           mStream->Write(delim.data(), delim.length());
+           mStream->Write(delim, strlen(delim));
 }
 
 NET_BASE_END

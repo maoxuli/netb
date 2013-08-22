@@ -19,8 +19,8 @@
 #define NET_BASE_SOCKET_HPP
 
 #include "Config.hpp"
+#include "SocketError.hpp"
 #include "Uncopyable.hpp"
-
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>

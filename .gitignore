@@ -5,3 +5,5 @@ lib/*.a
 bin/*.dSYM
 bin/httpclient
 bin/httpserver
+bin/echoclient
+bin/echoserver

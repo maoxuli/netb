@@ -1,6 +1,6 @@
 # NetBase Library
 
-A C++ library for asynchronous socket programming with multi-threads support.
+A lightweight C++ API for socket programming.
 
 make
 make all

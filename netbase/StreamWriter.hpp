@@ -88,7 +88,7 @@ public:
     bool SerializeString(const std::string& s, const char delim);
 
     // Write bytes in a string (not include terminate \0), plus a delimit string
-    bool SerializeString(const std::string& s, const std::string& delim);
+    bool SerializeString(const std::string& s, const char* delim);
 
 private:
     StreamBuffer* mStream;

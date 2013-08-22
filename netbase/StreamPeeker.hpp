@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_STREAM_READER_HPP
-#define NET_BASE_STREAM_READER_HPP
+#ifndef NET_BASE_STREAM_PEEKER_HPP
+#define NET_BASE_STREAM_PEEKER_HPP
 
 #include "StreamBuffer.hpp"
 #include <cstddef>
@@ -26,40 +26,28 @@
 NET_BASE_BEGIN
 
 //
-// StreamReader and StreamWriter are designed as tool classes to read from and 
-// write to a StreamBuffer. The reader and writer work on a buffer object but 
-// not own the buffer. 
-// Reader read data from the buffer sequentially, and writer write data to the 
-// buffer sequentially. In terms of protocol message packaging, these operations 
-// are kind of serialization.
-// Serialization read data from buffer and assign the value to variables in 
-// protocol message packet, while write the value of variables into buffer. 
-// Reader and Writer support serialization of same types of variables, and 
-// particularly, the operations of reading and writing have compatable names, 
-// i.e., SerializeXXX(). These may let protocol message packet using a some function 
-// to read from buffer or write to buffer, which determined by using StreamReader 
-// or StreamWriter.  
+// StreamPeeker
 //
-class StreamReader
+class StreamPeeker
 {
 private:
-    StreamReader(const StreamReader*);
-    StreamReader(const StreamReader&);
-    StreamReader& operator=(const StreamReader&);
+    StreamPeeker(const StreamPeeker*);
+    StreamPeeker(const StreamPeeker&);
+    StreamPeeker& operator=(const StreamPeeker&);
 
 public:
     // If not assign a StreamBuffer at init, 
     // should attach later before serializing operations
-    StreamReader();
-    StreamReader(StreamBuffer* buf);
-    StreamReader(StreamBuffer& buf);
-    ~StreamReader();
+    StreamPeeker();
+    StreamPeeker(StreamBuffer* buf);
+    StreamPeeker(StreamBuffer& buf);
+    ~StreamPeeker();
 
-    StreamReader& Attach(StreamBuffer* buf);
-    StreamReader& Attach(StreamBuffer& buf);
+    StreamPeeker& Attach(StreamBuffer* buf);
+    StreamPeeker& Attach(StreamBuffer& buf);
 
-    // Read n bits from the low end
-    bool SerializeBits(void* p, size_t n);
+    // Peek n bits from the low end
+    bool SerializeBits(void* p, size_t n) { return false; }
 
     // n bytes
     bool SerializeBytes(void* p, size_t n);
@@ -92,6 +80,7 @@ public:
 
 private:
     StreamBuffer* mStream;
+    size_t mOffset;
 };
 
 NET_BASE_END
