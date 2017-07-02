@@ -1,5 +1,5 @@
 #
-# Todo: 
+# Todo: depedency rules on hpp files
 #
 
 INCDIR := netbase

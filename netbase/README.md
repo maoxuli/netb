@@ -1,12 +1,11 @@
-# NetBase Library
+# NetBase
 
-## A thin wrapper of socket API
-
+A thin wrapper of socket API:  
 - Socket
 - SocketError
 - SocketSelector
 
-## Utility classes
+Utility classes:  
 - StreamBuffer
 - StreamWriter
 - StreamReader
@@ -14,19 +13,19 @@
 - SocketAddress
 - SocketPipe
 
-## Wrapper of TCP, UDP, and RAW socket
+Wrapper of TCP, UDP, and RAW socket:  
 - TcpSocket
 - UdpSocket
 - RawSocket
 
-## Asynchronous mechanism
+Asynchronous facility:  
 - EventHandler
 - EventSource
 - EventSelector
 - EventLoop
 - EventLoopThread
 
-## Asynchronous socket API
+Asynchronous socket API:  
 - TcpListener
 - TcpConnector
 - TcpConnection

@@ -1,7 +1,7 @@
-# NetBase Library
+# NetBase
 
-- http
+- http  
 Examples of simple HTTP client and HTTP server.
 
-- echo
+- echo  
 Examples of echo server and echo client based on TCP protocol.
