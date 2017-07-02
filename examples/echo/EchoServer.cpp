@@ -33,7 +33,7 @@ class EchoServer
 public: 
     EchoServer(EventLoop* loop, unsigned short port) 
     : mLoop(loop)
-    , mListener(loop, NULL, port)
+    , mListener(mLoop, NULL, port)
     {
         mListener.SetConnectedCallback(std::bind(&EchoServer::OnConnected, this, _1));
     }

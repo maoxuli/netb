@@ -33,7 +33,7 @@ class EchoClient
 public: 
     EchoClient(EventLoop* loop) 
     : mLoop(loop)
-    , mConnector(loop)
+    , mConnector(mLoop)
     , mConnection(NULL)
     {
         mConnector.SetConnectedCallback(std::bind(&EchoClient::OnConnected, this, _1));
