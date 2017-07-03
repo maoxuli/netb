@@ -18,6 +18,7 @@
 #ifndef NET_BASE_STREAM_PEEKER_HPP
 #define NET_BASE_STREAM_PEEKER_HPP
 
+#include "Uncopyable.hpp"
 #include "StreamBuffer.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -28,13 +29,8 @@ NET_BASE_BEGIN
 //
 // StreamPeeker
 //
-class StreamPeeker
+class StreamPeeker : Uncopyable
 {
-private:
-    StreamPeeker(const StreamPeeker*);
-    StreamPeeker(const StreamPeeker&);
-    StreamPeeker& operator=(const StreamPeeker&);
-
 public:
     // If not assign a StreamBuffer at init, 
     // should attach later before serializing operations
@@ -46,8 +42,8 @@ public:
     StreamPeeker& Attach(StreamBuffer* buf);
     StreamPeeker& Attach(StreamBuffer& buf);
 
-    // Peek n bits from the low end
-    bool SerializeBits(void* p, size_t n) { return false; }
+    // Peek n bits from the low end or current byte
+    bool SerializeBits(void* p, size_t n);
 
     // n bytes
     bool SerializeBytes(void* p, size_t n);

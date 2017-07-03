@@ -18,6 +18,7 @@
 #ifndef NET_BASE_STREAM_WRITER_HPP
 #define NET_BASE_STREAM_WRITER_HPP
 
+#include "Uncopyable.hpp"
 #include "StreamBuffer.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -40,13 +41,8 @@ NET_BASE_BEGIN
 // to read from buffer or write to buffer, which determined by using StreamReader 
 // or StreamWriter.  
 //
-class StreamWriter
+class StreamWriter : Uncopyable
 {
-private:
-    StreamWriter(const StreamWriter*);
-    StreamWriter(const StreamWriter&);
-    void operator=(const StreamWriter&);
-
 public:
     // If not assign a StreamBuffer at init, 
     // should attach later before serializing operations
@@ -58,7 +54,7 @@ public:
     StreamWriter& Attach(StreamBuffer* buf);
     StreamWriter& Attach(StreamBuffer& buf);
 
-    // Write the n bits from low end of the buffer
+    // Write n bits to low end of current byte
     bool SerializeBits(const void* p, size_t n);
 
     // n bytes

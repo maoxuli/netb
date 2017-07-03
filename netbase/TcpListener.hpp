@@ -24,7 +24,7 @@
 #include "TcpConnection.hpp"
 #include <functional>
 #include <string>
-#include <map>
+#include <vector>
 
 NET_BASE_BEGIN
 

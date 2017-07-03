@@ -19,21 +19,80 @@
 #define NET_BASE_STREAM_BUFFER_HPP
 
 #include "Config.hpp"
-
 #include <cstddef>
 #include <cstdint>
-#include <string>
-#include <vector>
-#include <memory>
-#include <iostream>
+#include <cassert>
 
 NET_BASE_BEGIN
 
 //
-// Stream buffer is basically a bytes buffer, with random access. 
-// The buffer is designed particularly for network IO and message packaging. 
-// It is not thread safe, so can be used within a single thread. That means the 
-// network IO and prottocol message packaging must be done in a same thread. 
+// A memory block denoted with a pointer and size is usually used in network 
+// programming to carry data, or transfer data. Naturally, at some points, we 
+// need to write or read data from the memory. As a carrier of protocol data, 
+// some features as below are usually expected:
+//
+// 1. The size of the memory is enought to hold the protocol data, or it can be 
+//    resized automatically according to requirments. 
+// 2. Write or read data in a manner of "streaming", that means the positions of 
+//    last read and last write are tracted and kept. 
+// 3. An easy interface to the plain pointer and size that denotes the memory block.
+// 
+// StreamBuffer is designed from above perspectives. Basically, it works in two 
+// manners: 
+// 
+// 1. StreamBuffer object is initiated firstly, it initalizes and owns the internal 
+//    memory block. Writing or reading data are always done via the interface of the 
+//    object. A pointer and size can be exposed to external to read or write data, 
+//    but the extenal can not own and manage the memory block directly. 
+//    Such objects are instantiated with below constructor: 
+//    
+//    // A buffer with a initial size
+//    StreamBuffer(size_t size);
+//
+//    // A buffer with inital data, which will be copied into the internal memory
+//    StreamBuffer(const void* p, size_t data_len);
+// 
+// 2. A memory block is initialized firstly, and some data maybe has been written into 
+//    the memory block already. Then a StreamBuffer object is instantiated to manage 
+//    the existing memory block, i.e. reading and writing data. The object does not 
+//    own the memory block, all functions of the object effect on the external memory 
+//    block, thus the memory block (the pointer and size) must be kept valid during 
+//    the lifetime of StreamBuffer object. 
+//    Such objects are instantiated with below constructor: 
+// 
+//    // The external memory block is denoted by p and size,
+//    // data_len denotes the size of initial data in the memory block
+//    StreamBuffer(const void* p, size_t size, size_t data_len); 
+// 
+// The buffer object is designed particularly for network IO and message packaging. 
+// According to typical protocol message packaging strategies, it supports writing 
+// and reading data with a fixed size, or with a ending delimit, as below:
+// 
+//    bool StreamBuffer::Write(void* p, size_t n);
+//    bool StreamBuffer::Write(void* p, size_t n, const char/char* delimit);
+//
+//    size_t StreamBuffer::Readable(const char/char* delimit); // size to the delimit
+//    bool StreamBuffer::Read(void* p, size_t); 
+//
+// As a IO buffer, it must expose the memory pointer for reading and writing to 
+// avoid more memory copies. 
+// 
+//    void* Write(); // expose the writing position (pointer) for external writing
+//    bool Write(size_t n);  // adjust buffer size according external writing
+//
+//    void* Read(); // expose the reading position (pointer) for external reading 
+//    bool Read(size_t n); // Adjust buffer size according to external reading
+// 
+// The buffer also support to peek and update data on random position, which is 
+// useful in message packaging. 
+// 
+// The buffer works in bytes basis, all parameters of size or offset are of bytes 
+// count. The exposed pointers are all void* type to support any pointer types.
+// There is no specific data type information other than bytes sequence, so there 
+// is no endinaness concerns.  
+
+// StreamBuffer is not thread safe, so can be used within a single thread. That 
+// means the network IO and prottocol message packaging must be done in a same thread. 
 // To be specific, the buffer should be used immediately in ReceivedCallback, 
 // and Send should be done in the same thread of network IO. 
 //
@@ -41,90 +100,83 @@ NET_BASE_BEGIN
 // write may be successfully always until reach the max limit of the buffer size. 
 // Meanwhile, any memory position (pointer) is timely valid. It may be invalid 
 // with next time resizing (usually with memory re-allocation).
-// 
-// According to typical protocol message packaging strategies, the buffer support 
-// writing and reading data with a fixed size, or writing data with a ending 
-// delimit and reading data to the delimit. 
 //
-// bool StreamBuffer::Write(void* p, size_t n);
-// bool StreamBuffer::Write(void* p, size_t n, delimit);
-// size_t StreamBuffer::Readable(delimit); // get data size before the delimit
-// bool StreamBuffer::Read(void* p, size_t); 
-//
-// As a IO buffer, it must expose the memory pointer for reading and writing to 
-// IO operations, to avoid more memory copy. 
-// void* Write(); // expose the writing position (pointer) for external writing
-// bool Write(size_t n);  // adjust buffer size according external writing
-// void* Read(); // expose the reading position (pointer) for external reading 
-// bool Read(size_t n); // Adjust buffer size according to external reading
-// 
-// The buffer also support to peek and update data on random position, which is 
-// useful in message packaging. 
-// 
-// The buffer works in bytes basis, all parameters of size or offset are of bytes 
-// count. The exposed pointers are all void* type to support any pointer types.
-// There is no specific data type information other than bytes sequence, so 
-// there is no endinaness concerns.  
-//  
-// The buffer is based on a internal std::vector that can resize by request. 
-// In a typical continuous writing and reading, the buffer may  
-//
+
+#define BUFFER_SIZE_STEP    8096        // 8K bytes, enough for 4 MTUs
+#define BUFFER_SIZE_LIMIT   1024*1024   // 1G bytes
+
 class StreamBuffer
 {
 public:
     ~StreamBuffer();
 
-    // May set a init size of the buffer, unit is byte
-    // May set a max limit of the footprint of the buffer, unit is k bytes
-    // limit is 0 means no limit
-    StreamBuffer(size_t init = 4096, size_t limit = 1024);
+    // Initialize internal buffer with initial size
+    StreamBuffer(size_t size = BUFFER_SIZE_STEP);
 
-    // The buffer is created with inital data
-    // May set a init size scale of the buffer, i.e., n x init
-    // May set a max limit of the footprint, unit is k bytes
-    // limit is 0 means no limit
-    StreamBuffer(const void* p, size_t n, size_t init = 10, size_t limit = 1024);
-    
-    // Copy constructor with pointer
-    // Deep copy, buy data is set at the begining
-    StreamBuffer(const StreamBuffer*);
+    // Initialize internal buffer with initial data (p, data_len)
+    StreamBuffer(const void* p, size_t data_len);
 
-    // Copy constructor with reference
-    // Deep copy, buy data is set at the begining
-    StreamBuffer(const StreamBuffer&);
+    // Buffer is externally initialized
+    StreamBuffer(const void* p, size_t size, size_t data_len);
 
-    // Assignment
-    // Deep copy, buy data is set at the begining
-    StreamBuffer& operator=(const StreamBuffer&);
+    // Copy constructor, deep copy
+    StreamBuffer(const StreamBuffer& b);
 
-    // Swap two buffers without copy data
+    // Copy from a pointer, deep copy
+    StreamBuffer(const StreamBuffer* b);
+
+    // Assignment, deep copy
+    StreamBuffer& operator = (const StreamBuffer& b);
+
+    // Swap two buffers
     StreamBuffer& Swap(StreamBuffer& b)
     {
-        mBytes.swap(b.mBytes);
-        std::swap(mReadIndex, b.mReadIndex);
-        std::swap(mWriteIndex, b.mWriteIndex);
-        std::swap(mLimit, b.mLimit);
+        if(mOwn && b.mOwn)
+        {
+            std::swap(mSize, b.mSize);
+            std::swap(mBytes, b.mBytes);
+            std::swap(mReadIndex, b.mReadIndex);
+            std::swap(mWriteIndex, b.mWriteIndex);
+        }
+        else if(mOwn) // !b.mOwn
+        {
+            *this = b;
+        }
+        else if(b.mOwn)  // !mOwn
+        {
+            b = *this;
+        }
         return *this;
     }
     
-    // Swap two buffers without copy data
-    StreamBuffer& Swap(StreamBuffer* p)
+    // Swap two buffers
+    StreamBuffer& Swap(StreamBuffer* b)
     {
-        mBytes.swap(p->mBytes);
-        std::swap(mReadIndex, p->mReadIndex);
-        std::swap(mWriteIndex, p->mWriteIndex);
-        std::swap(mLimit, p->mLimit);
+        if(mOwn && b->mOwn)
+        {
+            std::swap(mSize, b->mSize);
+            std::swap(mBytes, b->mBytes);
+            std::swap(mReadIndex, b->mReadIndex);
+            std::swap(mWriteIndex, b->mWriteIndex);
+        }
+        else if(mOwn) // !b.mOwn
+        {
+            *this = *b;
+        }
+        else if(b->mOwn)  // !mOwn
+        {
+            *b = *this;
+        }
         return *this;
     }
 
-    // Size() = Readable() + Writable()
+    // Allocated memory size
     size_t Size() const
     {
-        return mBytes.size() - mReadIndex;
+        return mSize;
     }
 
     // Clear the buffer
-    // Todo: Thrink footprint is necessary
     void Clear()
     {
         mReadIndex = 0;
@@ -142,32 +194,44 @@ public:
     // Once reach the limit footprint, shrink 
     bool Reserve(size_t n)
     {
-        if(n == 0 || Writable() >= n)
+        // No need to move data or resize buffer
+        if(n == 0 || (mSize - mWriteIndex) >= n)
         {
             return true;
         }
-        
-        if(mLimit > 0) 
+
+        // External memory can not be moved or resized
+        if(!mOwn)
         {
-            if(mWriteIndex - mReadIndex + n > mLimit) // the buffer is flowout
-            {
-                return false;
-            } 
+            return false;
+        }
 
-            if(mWriteIndex + n > mLimit) // Footprint is beyond limit, shrink
-            {
-                Shrink();
-            }
-        } 
-
-        mBytes.resize(mWriteIndex + n);
+        // The spare space before data is larger than a step, and 
+        // total spare space is enough to keep at leat step/2 spare space
+        // Move data to the beginning
+        if(mReadIndex >= BUFFER_SIZE_STEP && (mSize - mWriteIndex + mReadIndex - BUFFER_SIZE_STEP / 2) >= n)
+        {
+            memcpy(mBytes, mBytes + mReadIndex, mWriteIndex - mReadIndex);
+            mWriteIndex = mWriteIndex - mReadIndex;
+            mReadIndex = 0;
+        }
+        
+        // resize the buffer to keep at leat step/2 spare space
+        size_t steps = (mSize - mWriteIndex + BUFFER_SIZE_STEP / 2) >= n ? 1 : (n / BUFFER_SIZE_STEP + 1);
+        size_t rsize = steps * BUFFER_SIZE_STEP + mSize;
+        if(rsize > BUFFER_SIZE_LIMIT)
+        {
+            return false;
+        }
+        mBytes = (unsigned char*)realloc(mBytes, rsize);
+        assert(mBytes != NULL);
         return true;
     }
 
     // Available free space to write
     size_t Writable() const
     {
-        return mBytes.size() - mWriteIndex;
+        return mSize - mWriteIndex;
     }
 
     // Write n bytes
@@ -179,7 +243,7 @@ public:
     // move forward write position only
     bool Write(size_t n)
     {
-        if(Writable() < n)
+        if(mSize < mWriteIndex + n)
         {
             return false;
         }
@@ -195,13 +259,13 @@ public:
     // buf.Write(100);
     void* Write()
     {
-        return Begin() + mWriteIndex;
+        return mBytes + mWriteIndex;
     }
     
     // const pointer used as a position
     const void* Write() const
     {
-        return Begin() + mWriteIndex;
+        return mBytes + mWriteIndex;
     }
 
     // The available bytes to read
@@ -222,7 +286,7 @@ public:
     // move forward read position only
     bool Read(size_t n)
     {
-        if(Readable() < n)
+        if(mWriteIndex < mReadIndex + n)
         {
             return false;
         }
@@ -251,12 +315,12 @@ public:
     //
     const void* Read() const
     {
-        return Begin() + mReadIndex;
+        return mBytes + mReadIndex;
     }
 
     void* Read() 
     {
-        return Begin() + mReadIndex;
+        return mBytes + mReadIndex;
     }
 
     bool Peek(void* p, size_t n, size_t offset = 0);
@@ -265,55 +329,24 @@ public:
     // return first byte position of peek for external use
     const void* Peek(size_t offset = 0) const
     {
-        return mWriteIndex - mReadIndex > offset ? Begin() + mReadIndex + offset : NULL;
+        return mReadIndex + offset < mWriteIndex ? mBytes + mReadIndex + offset : NULL;
     }
 
     // for update
     void* Peek(size_t offset)
     {
-        return mWriteIndex - mReadIndex > offset ? Begin() + mReadIndex + offset : NULL;
+        return mReadIndex + offset < mWriteIndex ? mBytes + mReadIndex + offset : NULL;
     }
 
     // update bytes
     bool Update(void* p, size_t n, size_t offset = 0);
 
 private:
-    
-    //
-    //        |                        -size()-                          |
-    // vector |##########################################################|.............|
-    //      begin()                                                     end()      capacity()
-    //
-    //
-    //
-    //                 |                   -Size()-                      |
-    // Buffer |--------|xxxxxxxxxxxxxxxxxxxxxxxxx|***********************|.............|
-    //                        -Readable()-              -Writable()-
-    //      Begin() mReadIndex              mWriteIndex                  
-    //
-    //
-    
-    unsigned char* Begin()
-    {
-        return &mBytes[0];
-    }
-    
-    const unsigned char* Begin() const
-    {
-        return &mBytes[0];
-    }
-
-    void Shrink()
-    {
-        std::rotate(mBytes.begin(), mBytes.begin() + mReadIndex, mBytes.begin() + mWriteIndex - mReadIndex);
-        mWriteIndex -= mReadIndex;
-        mReadIndex = 0;
-    }
-
-    std::vector<unsigned char> mBytes;
-    size_t mLimit; // Limit of the max footprint of the buffer
-    size_t mReadIndex; // Index of first readable byte
-    size_t mWriteIndex; // Index of first writable byte
+    bool mOwn;
+    size_t mSize;           // Allocated size of memory block
+    unsigned char* mBytes;  // Pointer of the memory block
+    size_t mReadIndex;      // Index of first byte of data
+    size_t mWriteIndex;     // Index of next byte of last data byte
 };
 
 NET_BASE_END

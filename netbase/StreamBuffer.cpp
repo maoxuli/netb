@@ -20,72 +20,119 @@
 
 NET_BASE_BEGIN
 
-// limit the footprint of the buffer
-// 0 is no limit
-StreamBuffer::StreamBuffer(size_t init, size_t limit)
-: mBytes(init) // Initial buffer size
-, mLimit(limit * 1024) // Limit of footprint
+// Initialize internal buffer with initial size 
+StreamBuffer::StreamBuffer(size_t size)
+: mOwn(true)
+, mSize(size)
+, mBytes((unsigned char*)malloc(mSize))
 , mReadIndex(0)
 , mWriteIndex(0)
 {
-    
+    assert(mBytes != NULL);
 }
 
-// A buffer loading given data on init
-StreamBuffer::StreamBuffer(const void* p, size_t n, size_t init, size_t limit)
-: mBytes(n * init) // Initial buffer size
-, mLimit(limit * 1024) // limit of footprint
+// Initialize internal bufffer with initial data
+StreamBuffer::StreamBuffer(const void* p, size_t data_len)
+: mOwn(true)
+, mSize(data_len * 2)
+, mBytes((unsigned char*)malloc(mSize))
 , mReadIndex(0)
+, mWriteIndex(0)
 {
-    memcpy(Begin(), p, n);
-    mWriteIndex = n;
+    assert(mBytes != NULL);
+    memcpy(mBytes, p, data_len);
+    mWriteIndex = data_len;
 }
 
-
-StreamBuffer::StreamBuffer(const StreamBuffer* buf)
-: mBytes(buf->Size())
-, mLimit(buf->mLimit)
+// Initialize with external buffer
+StreamBuffer::StreamBuffer(const void* p, size_t size, size_t data_len)
+: mOwn(false)
+, mSize(size)
+, mBytes((unsigned char*)p)
+, mReadIndex(0)
+, mWriteIndex(data_len)
 {
-    memcpy(Begin(), buf->Read(), buf->Readable());
-    mReadIndex = 0;
-    mWriteIndex = buf->Readable();
+    assert(mBytes != NULL);
+    assert(mWriteIndex <= mSize);
 }
 
-StreamBuffer::StreamBuffer(const StreamBuffer& buf)
-: mBytes(buf.Size())
-, mLimit(buf.mLimit)
+// Deep copy
+StreamBuffer::StreamBuffer(const StreamBuffer& b)
+: mOwn(true)
+, mSize(b.mSize)
+, mBytes((unsigned char*)malloc(mSize))
+, mReadIndex(0)
+, mWriteIndex(0)
 {
-    memcpy(Begin(), buf.Read(), buf.Readable());
-    mReadIndex = 0;
-    mWriteIndex = buf.Readable();
+    assert(mBytes != NULL);
+    if(b.Readable() > 0) 
+    {
+        memcpy(mBytes, b.Read(), b.Readable());
+        mWriteIndex = b.Readable();
+    }
+}
+
+// Deep copy
+StreamBuffer::StreamBuffer(const StreamBuffer* b)
+: mOwn(true)
+, mSize(b->mSize)
+, mBytes((unsigned char*)malloc(mSize))
+, mReadIndex(0)
+, mWriteIndex(0)
+{
+    assert(mBytes != NULL);
+    if(b->Readable() > 0) 
+    {
+        memcpy(mBytes, b->Read(), b->Readable());
+        mWriteIndex = b->Readable();
+    }
 }
 
 StreamBuffer::~StreamBuffer()
 {
-    
+    if(mOwn && mBytes != NULL)
+    {
+        free(mBytes);
+    }
 }
 
-StreamBuffer& StreamBuffer::operator=(const StreamBuffer& buf)
+// Deep copy
+StreamBuffer& StreamBuffer::operator=(const StreamBuffer& b)
 {
-    mBytes.resize(buf.Size());
-    mLimit = buf.mLimit;
-    memcpy(Begin(), buf.Read(), buf.Readable());
+    if(!mOwn) 
+    {
+        mOwn = true;
+        mSize = b.mSize;
+        mBytes = (unsigned char*)malloc(mSize);
+        assert(mBytes != NULL);
+    }
+    else if(mSize < b.Readable())
+    {
+        mSize = b.mSize;
+        mBytes = (unsigned char*)realloc(mBytes, mSize);
+        assert(mBytes != NULL);
+    }
+
     mReadIndex = 0;
-    mWriteIndex = buf.Readable();
+    if(b.Readable() > 0)
+    {
+        memcpy(mBytes, b.Read(), b.Readable());
+        mWriteIndex = b.Readable();
+    }
+
     return *this;
 }
 
 // Write n bytes
 bool StreamBuffer::Write(const void* p, size_t n)
 {
-    if(!Reserve(n))
+    if(Reserve(n))
     {
-        return false;
+        memcpy(Write(), p, n);
+        Write(n);
+        return true;
     }
-
-    memcpy(Write(), p, n);
-    Write(n);
-    return true;
+    return false;
 }
 
 bool StreamBuffer::Write(const void* p, size_t n, const char delim)
@@ -155,7 +202,7 @@ bool StreamBuffer::Read(void* p, size_t n)
 
 bool StreamBuffer::Peek(void* p, size_t n, size_t offset)
 {
-    if(Readable() < n + offset) 
+    if(Readable() - offset < n) 
     {
         return false;
     }
@@ -167,13 +214,13 @@ bool StreamBuffer::Peek(void* p, size_t n, size_t offset)
 
 bool StreamBuffer::Update(void* p, size_t n, size_t offset)
 {
-    if(Readable() < n + offset) 
+    if(Readable() - offset < n) 
     {
         return false;
     }
 
     memcpy(Peek(offset), p, n);
-    return false;
+    return true;
 }
 
 NET_BASE_END

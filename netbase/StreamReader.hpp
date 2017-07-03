@@ -18,6 +18,7 @@
 #ifndef NET_BASE_STREAM_READER_HPP
 #define NET_BASE_STREAM_READER_HPP
 
+#include "Uncopyable.hpp"
 #include "StreamBuffer.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -40,25 +41,20 @@ NET_BASE_BEGIN
 // to read from buffer or write to buffer, which determined by using StreamReader 
 // or StreamWriter.  
 //
-class StreamReader
+class StreamReader : Uncopyable
 {
-private:
-    StreamReader(const StreamReader*);
-    StreamReader(const StreamReader&);
-    StreamReader& operator=(const StreamReader&);
-
 public:
     // If not assign a StreamBuffer at init, 
     // should attach later before serializing operations
     StreamReader();
     StreamReader(StreamBuffer* buf);
-    StreamReader(StreamBuffer& buf);
+    StreamReader(StreamBuffer& buf);  // buf can not be const, i.e. temporary variable
     ~StreamReader();
 
     StreamReader& Attach(StreamBuffer* buf);
-    StreamReader& Attach(StreamBuffer& buf);
+    StreamReader& Attach(StreamBuffer& buf); // buf can not be const, i.e. temporary variable
 
-    // Read n bits from the low end
+    // Read n bits from the low end of current byte
     bool SerializeBits(void* p, size_t n);
 
     // n bytes
