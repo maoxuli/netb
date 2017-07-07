@@ -15,10 +15,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_STREAM_BUFFER_HPP
-#define NET_BASE_STREAM_BUFFER_HPP
+#ifndef NET_BASE_BYTE_WRAPPER_HPP
+#define NET_BASE_BYTE_WRAPPER_HPP
 
 #include "Config.hpp"
+#include "Uncopyable.hpp"
+#include "ByteStream.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <cassert>
@@ -105,75 +107,18 @@ NET_BASE_BEGIN
 #define BUFFER_SIZE_STEP    8096        // 8K bytes, enough for 4 MTUs
 #define BUFFER_SIZE_LIMIT   1024*1024   // 1G bytes
 
-class StreamBuffer
+class ByteWrapper : public ByteStream, Uncopyable
 {
 public:
-    ~StreamBuffer();
+    virtual ~ByteWrapper();
 
-    // Initialize internal buffer with initial size
-    StreamBuffer(size_t size = BUFFER_SIZE_STEP);
+    // Initialize with external buffer
+    ByteWrapper(const void* p, size_t size, size_t& data_len);
 
-    // Initialize internal buffer with initial data (p, data_len)
-    StreamBuffer(const void* p, size_t data_len);
-
-    // Buffer is externally initialized
-    StreamBuffer(const void* p, size_t size, size_t data_len);
-
-    // Copy constructor, deep copy
-    StreamBuffer(const StreamBuffer& b);
-
-    // Copy from a pointer, deep copy
-    StreamBuffer(const StreamBuffer* b);
-
-    // Assignment, deep copy
-    StreamBuffer& operator = (const StreamBuffer& b);
-
-    // Swap two buffers
-    StreamBuffer& Swap(StreamBuffer& b)
+    // Is empty?
+    bool Empty() const 
     {
-        if(mOwn && b.mOwn)
-        {
-            std::swap(mSize, b.mSize);
-            std::swap(mBytes, b.mBytes);
-            std::swap(mReadIndex, b.mReadIndex);
-            std::swap(mWriteIndex, b.mWriteIndex);
-        }
-        else if(mOwn) // !b.mOwn
-        {
-            *this = b;
-        }
-        else if(b.mOwn)  // !mOwn
-        {
-            b = *this;
-        }
-        return *this;
-    }
-    
-    // Swap two buffers
-    StreamBuffer& Swap(StreamBuffer* b)
-    {
-        if(mOwn && b->mOwn)
-        {
-            std::swap(mSize, b->mSize);
-            std::swap(mBytes, b->mBytes);
-            std::swap(mReadIndex, b->mReadIndex);
-            std::swap(mWriteIndex, b->mWriteIndex);
-        }
-        else if(mOwn) // !b.mOwn
-        {
-            *this = *b;
-        }
-        else if(b->mOwn)  // !mOwn
-        {
-            *b = *this;
-        }
-        return *this;
-    }
-
-    // Allocated memory size
-    size_t Size() const
-    {
-        return mSize;
+        return mWriteIndex == mReadIndex;
     }
 
     // Clear the buffer
@@ -183,49 +128,22 @@ public:
         mWriteIndex = 0; 
     }
 
-    // Is empty?
-    bool Empty() const 
+    // Size of the stream
+    // Readable size  and writable size
+    size_t Size() const
     {
-        return mWriteIndex == mReadIndex;
+        return mSize;
     }
 
-    // Reserve free space to write
-    // Ensure the buffer has enough writing space
-    // Once reach the limit footprint, shrink 
-    bool Reserve(size_t n)
+    // Check and try to get available space to write
+    bool Writable(size_t n)
     {
         // No need to move data or resize buffer
-        if(n == 0 || (mSize - mWriteIndex) >= n)
+        if(n == 0 || n <= mSize - mWriteIndex)
         {
             return true;
         }
-
-        // External memory can not be moved or resized
-        if(!mOwn)
-        {
-            return false;
-        }
-
-        // The spare space before data is larger than a step, and 
-        // total spare space is enough to keep at leat step/2 spare space
-        // Move data to the beginning
-        if(mReadIndex >= BUFFER_SIZE_STEP && (mSize - mWriteIndex + mReadIndex - BUFFER_SIZE_STEP / 2) >= n)
-        {
-            memcpy(mBytes, mBytes + mReadIndex, mWriteIndex - mReadIndex);
-            mWriteIndex = mWriteIndex - mReadIndex;
-            mReadIndex = 0;
-        }
-        
-        // resize the buffer to keep at leat step/2 spare space
-        size_t steps = (mSize - mWriteIndex + BUFFER_SIZE_STEP / 2) >= n ? 1 : (n / BUFFER_SIZE_STEP + 1);
-        size_t rsize = steps * BUFFER_SIZE_STEP + mSize;
-        if(rsize > BUFFER_SIZE_LIMIT)
-        {
-            return false;
-        }
-        mBytes = (unsigned char*)realloc(mBytes, rsize);
-        assert(mBytes != NULL);
-        return true;
+        return false;
     }
 
     // Available free space to write
@@ -243,7 +161,7 @@ public:
     // move forward write position only
     bool Write(size_t n)
     {
-        if(mSize < mWriteIndex + n)
+        if(n == 0 || mSize < mWriteIndex + n)
         {
             return false;
         }
@@ -251,32 +169,36 @@ public:
         return true;
     }
 
-    // Write without argument
-    // return a pointer of write position for external use
-    // unsigned char src[100];
+    // A buffer should expose a pointer and size so that the external 
+    // can write data into the buffer directly without unneccessary copy 
+    // char src[100];
     // buf.Reserve(100);
     // memcpy(buf.Write(), src, 100);
     // buf.Write(100);
-    void* Write()
-    {
-        return mBytes + mWriteIndex;
-    }
-    
-    // const pointer used as a position
+
+    // A const pointer of write position 
+    // only used for comparing or locating of the position
     const void* Write() const
     {
         return mBytes + mWriteIndex;
     }
 
-    // The available bytes to read
-    size_t Readable() const
+    // A non-const pointer of write position
+    // used for externally copy of data into the buffer
+    void* Write()
     {
-        return mWriteIndex - mReadIndex;
+        return mBytes + mWriteIndex;
+    }
+    
+    // The available bytes to read
+    size_t Readable(size_t offset = 0) const
+    {
+        return mWriteIndex - mReadIndex - offset;
     }
 
     // Readable before the delimit
-    ssize_t Readable(const char delim, size_t offset = 0);
-    ssize_t Readable(const char* delim, size_t offset = 0);
+    ssize_t Readable(const char delim, size_t offset = 0) const;
+    ssize_t Readable(const char* delim, size_t offset = 0) const;
 
     // Read with buffer and size
     // actual read and move forward read index
@@ -292,11 +214,6 @@ public:
         }
 
         mReadIndex += n;
-        if(mReadIndex == mWriteIndex)
-        {
-            mReadIndex = 0;
-            mWriteIndex = 0;
-        }
         return true;
     }
     
@@ -341,12 +258,11 @@ public:
     // update bytes
     bool Update(void* p, size_t n, size_t offset = 0);
 
-private:
-    bool mOwn;
-    size_t mSize;           // Allocated size of memory block
+protected:
     unsigned char* mBytes;  // Pointer of the memory block
-    size_t mReadIndex;      // Index of first byte of data
-    size_t mWriteIndex;     // Index of next byte of last data byte
+    size_t mSize;           // Allocated size of the memory block
+    size_t& mWriteIndex;    // Current write position, length of current data
+    size_t mReadIndex;      // Current read position
 };
 
 NET_BASE_END

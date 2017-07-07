@@ -20,11 +20,11 @@
 
 #include "HttpMessage.hpp"
 #include "TcpConnector.hpp"
+#include "TcpConnection.hpp"
 
 NET_BASE_BEGIN
 
 class EventLoop;
-class TcpConnection;
 class HttpClient
 {
 public:
@@ -41,7 +41,7 @@ protected:
     void OnConnected(TcpConnection* conn);
 
     // TcpConnection::ReceivedCallback
-    void OnReceived(TcpConnection* conn, StreamBuffer* buf);
+    void OnReceived(TcpConnection* conn, ByteStream* stream);
 
     // TcpConnection::ClosedCallback
     void OnClosed(TcpConnection* conn);

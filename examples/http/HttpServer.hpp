@@ -20,12 +20,12 @@
 
 #include "HttpMessage.hpp"
 #include "TcpListener.hpp"
+#include "TcpConnection.hpp"
 #include <vector>
 
 NET_BASE_BEGIN
 
 class EventLoop;
-class TcpConnection;
 class HttpServer
 {
 public:
@@ -39,7 +39,7 @@ protected:
     void OnConnected(TcpConnection* conn);
 
     // TcpConnection::ReceivedCallback
-    void OnReceived(TcpConnection* conn, StreamBuffer* buf);
+    void OnReceived(TcpConnection* conn, ByteStream* stream);
 
     // TcpConnection::ClosedCallback
     void OnClosed(TcpConnection* conn);

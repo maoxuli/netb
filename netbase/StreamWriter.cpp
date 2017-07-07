@@ -26,14 +26,14 @@ StreamWriter::StreamWriter()
 
 }
 
-StreamWriter::StreamWriter(StreamBuffer* buf)
-: mStream(buf)
+StreamWriter::StreamWriter(ByteStream& buf)
+: mStream(&buf)
 {
 
 }
 
-StreamWriter::StreamWriter(StreamBuffer& buf)
-: mStream(&buf)
+StreamWriter::StreamWriter(ByteStream* buf)
+: mStream(buf)
 {
 
 }
@@ -43,15 +43,15 @@ StreamWriter::~StreamWriter()
 
 }
 
-StreamWriter& StreamWriter::Attach(StreamBuffer* buf)
+StreamWriter& StreamWriter::Attach(ByteStream& buf)
 {
-    mStream = buf;
+    mStream = &buf;
     return *this;
 }
 
-StreamWriter& StreamWriter::Attach(StreamBuffer& buf)
+StreamWriter& StreamWriter::Attach(ByteStream* buf)
 {
-    mStream = &buf;
+    mStream = buf;
     return *this;
 }
 

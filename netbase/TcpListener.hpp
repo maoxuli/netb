@@ -57,8 +57,9 @@ public:
     // Deconstructor
     ~TcpListener();
     
-    // Current status
-    bool IsListening() const { return mListening; }
+    // Notify of connection established
+    // must set before listening is started
+    void SetConnectedCallback(const TcpConnection::ConnectedCallback& cb) { mConnectedCallback = cb; }
 
     // Listen on address passed in on instantiation
     bool Listen(int backlog = SOMAXCONN);
@@ -70,13 +71,8 @@ public:
     // Listen on given address
     bool Listen(const SocketAddress& addr, int backlog = SOMAXCONN);
 
-    // Actual listening address
-    // Note: Not thread safe
-    SocketAddress Address() const;
-
-    // Notify of connection established
-    // must set before listening is started
-    void SetConnectedCallback(const TcpConnection::ConnectedCallback& cb) { mConnectedCallback = cb; }
+    // Service address, update to actual listening address after listening
+    const SocketAddress& Address() const { return mAddress; }
 
 private:
     // EventHandler::EventCallback
@@ -90,7 +86,6 @@ private:
     SocketAddress mAddress;
     Socket mSocket;
     EventHandler mHandler;
-    bool mListening;
 
     // Established TCP connections
     std::vector<TcpConnection*> mConnections;

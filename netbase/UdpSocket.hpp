@@ -21,7 +21,7 @@
 #include "Config.hpp"
 #include "Socket.hpp"
 #include "SocketAddress.hpp"
-#include "StreamBuffer.hpp"
+#include "ByteStream.hpp"
 
 NET_BASE_BEGIN
 
@@ -44,11 +44,11 @@ public:
 
     // Send (non-connection)
     ssize_t Send(void* p, size_t n, const SocketAddress& addr);
-    ssize_t Send(StreamBuffer* buf, const SocketAddress& addr);
+    ssize_t Send(ByteStream* buf, const SocketAddress& addr);
 
     // Receive (non-connection)
     ssize_t Receive(void* p, size_t n, SocketAddress* addr);
-    ssize_t Receive(StreamBuffer* buf, SocketAddress* addr);
+    ssize_t Receive(ByteStream* buf, SocketAddress* addr);
 
     // Connect to remote address
     bool Connect(const char* host, unsigned short port);
@@ -60,11 +60,11 @@ public:
 
     // Send (connection)
     ssize_t Send(void* p, size_t n);
-    ssize_t Send(StreamBuffer* buf);
+    ssize_t Send(ByteStream* buf);
 
     // Receive (connection)
     ssize_t Receive(void* p, size_t n);
-    ssize_t Receive(StreamBuffer* buf);
+    ssize_t Receive(ByteStream* buf);
 
 public:
     // Options

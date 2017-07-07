@@ -71,7 +71,7 @@ bool UdpTransceiver::Connect(const SocketAddress& addr)
     return false;
 }
 
-bool UdpTransceiver::Send(StreamBuffer* buf)
+bool UdpTransceiver::Send(ByteStream* buf)
 {
     return false;
 }
@@ -89,12 +89,12 @@ bool UdpTransceiver::Send(void* p, size_t n, const SocketAddress& addr)
     }
     else
     {
-        mLoop->Invoke(std::bind(&UdpTransceiver::SendInLoop, this, std::make_shared<StreamBuffer>(p, n) , addr));
+        mLoop->Invoke(std::bind(&UdpTransceiver::SendInLoop, this, std::make_shared<ByteBuffer>(p, n) , addr));
     }
     return true;
 }
 
-bool UdpTransceiver::Send(StreamBuffer* buf, const SocketAddress& addr)
+bool UdpTransceiver::Send(ByteStream* buf, const SocketAddress& addr)
 {
     if(mLoop->IsInLoopThread())
     {
@@ -103,13 +103,13 @@ bool UdpTransceiver::Send(StreamBuffer* buf, const SocketAddress& addr)
     }
     else
     {
-        mLoop->Invoke(std::bind(&UdpTransceiver::SendInLoop, this, std::make_shared<StreamBuffer>(buf), addr));
+        mLoop->Invoke(std::bind(&UdpTransceiver::SendInLoop, this, std::make_shared<ByteBuffer>(buf), addr));
         buf->Clear(); /// ???
     }
     return true;
 }
 
-void UdpTransceiver::SendInLoop(StreamBufferPtr buf, SocketAddress addr)
+void UdpTransceiver::SendInLoop(ByteBufferPtr buf, SocketAddress addr)
 {
     DoSend(buf->Read(), buf->Readable(), addr);
 }
@@ -132,7 +132,7 @@ void UdpTransceiver::DoSend(void* p, size_t n, const SocketAddress& addr)
     if(sent < n) // Only send part of the data
     {
         std::cout << "UdpSocket::DoSend send partially: " << sent << "\n";
-        mOutBuffers.push(BufferAddress(new StreamBuffer(p, n), addr));
+        mOutBuffers.push(BufferAddress(new ByteBuffer(p, n), addr));
     }
 }
 
@@ -144,7 +144,7 @@ void UdpTransceiver::OnRead()
     ssize_t n = 0;
     SocketAddress addr;
     socklen_t addrlen = addr.SockAddrLen();
-    if(mInBuffer.Reserve(2048))
+    if(mInBuffer.Writable(2048))
     {
         n = mSocket.ReceiveFrom(mInBuffer.Write(), mInBuffer.Writable(), addr.SockAddr(), &addrlen);
     }

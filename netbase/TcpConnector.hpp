@@ -50,12 +50,15 @@ public:
     TcpConnector(EventLoop* loop, const SocketAddress& addr); // Bind to local address
     ~TcpConnector();
 
+    // Notify when connection established
+    void SetConnectedCallback(const TcpConnection::ConnectedCallback& cb) { mConnectedCallback = cb; }
+
     // connect to remote address
     bool Connect(const char* host, unsigned short port);
     bool Connect(const SocketAddress& addr);
 
-    // Notify when connection established
-    void SetConnectedCallback(const TcpConnection::ConnectedCallback& cb) { mConnectedCallback = cb; }
+    // Local address, not update to actual binded local address after connected
+    const SocketAddress& Address() const { return mAddress; }
 
 private: 
     // Event loop on thread

@@ -18,14 +18,29 @@
 #include "TcpConnection.hpp"
 #include "EventLoop.hpp"
 #include "SocketError.hpp"
-#include <iostream>
 #include <memory>
 
 NET_BASE_BEGIN
 
+// Always initialize with external initialized socket
 TcpConnection::TcpConnection(EventLoop* loop, SOCKET s)
 : mLoop(loop)
 , mSocket(s)
+, mLocalAddress()
+, mRemoteAddress()
+, mHandler(loop, mSocket)
+{
+    mSocket.Block(false); // working in non-block mode
+    mHandler.SetWriteCallback(std::bind(&TcpConnection::OnWrite, this));
+    mHandler.SetReadCallback(std::bind(&TcpConnection::OnRead, this));
+}
+
+// Always initialize with external initialized socket
+TcpConnection::TcpConnection(EventLoop* loop, SOCKET s, const SocketAddress& local, const SocketAddress& remote)
+: mLoop(loop)
+, mSocket(s)
+, mLocalAddress(local)
+, mRemoteAddress(remote)
 , mHandler(loop, mSocket)
 {
     mSocket.Block(false); // working in non-block mode
@@ -42,6 +57,20 @@ TcpConnection::~TcpConnection()
 // by TcpListener or TcpConnector
 void TcpConnection::Connected()
 {
+    if(mLocalAddress.Empty())
+    {
+        socklen_t addrlen = mLocalAddress.SockAddrLen();
+        mSocket.LocalAddress(mLocalAddress.SockAddr(), &addrlen);
+        assert(addrlen == mLocalAddress.SockAddrLen());
+    }
+
+    if(mRemoteAddress.Empty())
+    {
+        socklen_t addrlen = mRemoteAddress.SockAddrLen();
+        mSocket.LocalAddress(mRemoteAddress.SockAddr(), &addrlen);
+        assert(addrlen == mRemoteAddress.SockAddrLen());
+    }
+
     mLoop->Invoke(std::bind(&TcpConnection::ConnectedInLoop, this));
 }
 
@@ -76,25 +105,6 @@ void TcpConnection::CloseInLoop(bool keepReceiving)
         mHandler.Detach();
 }
 
-// Get address of the connection
-// Todo: not safe
-SocketAddress TcpConnection::LocalAddress()
-{
-    SocketAddress addr;
-    socklen_t addrlen = addr.SockAddrLen();
-    mSocket.LocalAddress(addr.SockAddr(), &addrlen);
-    return addr;
-}
-
-// Todo: not safe
-SocketAddress TcpConnection::RemoteAddress()
-{
-    SocketAddress addr;
-    socklen_t addrlen = addr.SockAddrLen();
-    mSocket.RemoteAddress(addr.SockAddr(), &addrlen);
-    return addr;
-}
-
 // Send data over the connection,
 // Directly sent or buffered
 bool TcpConnection::Send(void* p, size_t n)
@@ -105,13 +115,15 @@ bool TcpConnection::Send(void* p, size_t n)
     }
     else
     {
-        mLoop->Invoke(std::bind(&TcpConnection::SendInLoop, this, std::make_shared<StreamBuffer>(p, n)));
+        mLoop->Invoke(std::bind(&TcpConnection::SendInLoop, this, std::make_shared<ByteBuffer>(p, n)));
     }
     return true;
 }
 
 // Send data
-bool TcpConnection::Send(StreamBuffer* buf)
+// The actual data sending must be done on the thread loop 
+// to ensure the order of data sending
+bool TcpConnection::Send(ByteStream* buf)
 {
     if(mLoop->IsInLoopThread())
     {
@@ -120,14 +132,14 @@ bool TcpConnection::Send(StreamBuffer* buf)
     }
     else
     {
-        mLoop->Invoke(std::bind(&TcpConnection::SendInLoop, this, std::make_shared<StreamBuffer>(buf)));
+        mLoop->Invoke(std::bind(&TcpConnection::SendInLoop, this, std::make_shared<ByteBuffer>(buf)));
         buf->Clear(); // ??? 
     }
     return true;
 }
 
 // Thread loop will invoke this function
-void TcpConnection::SendInLoop(StreamBufferPtr buf)
+void TcpConnection::SendInLoop(ByteBufferPtr buf)
 {
     DoSend(buf->Read(), buf->Readable());
 }
@@ -176,7 +188,7 @@ void TcpConnection::OnWrite()
 void TcpConnection::OnRead()
 {
     ssize_t n = 0;
-    if(mInBuffer.Reserve(2048))
+    if(mInBuffer.Writable(2048))
     {
         n = mSocket.Receive(mInBuffer.Write(), mInBuffer.Writable());
     }

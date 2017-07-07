@@ -16,8 +16,6 @@
  */
 
 #include "HttpClient.hpp"
-#include "HttpMessage.hpp"
-#include "TcpConnection.hpp"
 #include "EventLoop.hpp"
 
 NET_BASE_BEGIN
@@ -53,10 +51,10 @@ void HttpClient::OnConnected(TcpConnection* conn)
     mConnection->SetClosedCallback(std::bind(&HttpClient::OnClosed, this, _1));
 }  
 
-void HttpClient::OnReceived(TcpConnection* conn, StreamBuffer* buf)
+void HttpClient::OnReceived(TcpConnection* conn, ByteStream* stream)
 {
     assert(conn == mConnection);
-    if(mResponse.FromBuffer(buf))
+    if(mResponse.FromStream(stream))
     {
         HandleResponse(&mResponse);
         mResponse.Reset();
@@ -72,9 +70,9 @@ void HttpClient::OnClosed(TcpConnection* conn)
 void HttpClient::SendRequest(HttpRequest* request)
 {
     assert(mConnection != NULL);
-    StreamBuffer buf;
-    request->ToBuffer(&buf);
-    mConnection->Send(&buf);
+    ByteBuffer stream;
+    request->ToStream(&stream);
+    mConnection->Send(&stream);
     std::cout << request->Dump() << "\n";
 }
 

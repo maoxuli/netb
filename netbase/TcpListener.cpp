@@ -27,7 +27,6 @@ TcpListener::TcpListener(EventLoop* loop, sa_family_t family)
 , mAddress()
 , mSocket(family, SOCK_STREAM, IPPROTO_TCP)
 , mHandler(loop, mSocket)
-, mListening(false)
 {
     mHandler.SetReadCallback(std::bind(&TcpListener::OnRead, this, _1));
 }
@@ -37,7 +36,6 @@ TcpListener::TcpListener(EventLoop* loop, const char* host, unsigned short port,
 , mAddress(host, port, family)
 , mSocket(family, SOCK_STREAM, IPPROTO_TCP)
 , mHandler(loop, mSocket)
-, mListening(false)
 {
     mHandler.SetReadCallback(std::bind(&TcpListener::OnRead, this, _1));
 }
@@ -47,7 +45,6 @@ TcpListener::TcpListener(EventLoop* loop, const SocketAddress& addr)
 , mAddress(addr)
 , mSocket(addr.Family(), SOCK_STREAM, IPPROTO_TCP)
 , mHandler(loop, mSocket)
-, mListening(false)
 {
     mHandler.SetReadCallback(std::bind(&TcpListener::OnRead, this, _1));
 }
@@ -86,11 +83,16 @@ bool TcpListener::Listen(int backlog)
     {
         return false;
     }
+
+    // Updata actual listening address
+    mAddress.Reset();
+    socklen_t addrlen = mAddress.SockAddrLen();
+    mSocket.LocalAddress(mAddress.SockAddr(), &addrlen);
+    assert(addrlen == mAddress.SockAddrLen());
    
     // Enable async mode to accept incomming connections
     mSocket.Block(false);
     mHandler.EnableReading();
-    mListening = true;
     return true;
 }
 
@@ -114,16 +116,6 @@ bool TcpListener::Listen(const SocketAddress& addr, int backlog)
     }
     mAddress = addr;
     return Listen(backlog);
-}
-
-// Todo: thread safe
-SocketAddress TcpListener::Address() const
-{
-    SocketAddress addr;
-    socklen_t addrlen = addr.SockAddrLen();
-    mSocket.LocalAddress(addr.SockAddr(), &addrlen);
-    assert(addr.SockAddrLen() == addrlen);
-    return addr;
 }
 
 // Read is ready

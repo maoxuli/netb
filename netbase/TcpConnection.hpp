@@ -21,50 +21,55 @@
 #include "Socket.hpp"
 #include "SocketAddress.hpp"
 #include "EventHandler.hpp"
-#include "StreamBuffer.hpp"
+#include "ByteBuffer.hpp"
 
 NET_BASE_BEGIN
 
 //
-// TcpConnection is a wrapper of a connected TCP socket that works in 
-// asynchronous mode. 
-// The socket is sucessfully accepted by TcpListener or connected by 
-// TcpConnector 
+// TcpConnection is a wrapper of a externally connected TCP socket.
+// Send and receive data in asynchronous mode.
 // 
 class EventLoop;
 class TcpConnection
 {
 public: 
+    // Always initialize with external initialized socket
     TcpConnection(EventLoop* loop, SOCKET s);
+    TcpConnection(EventLoop* loop, SOCKET s, const SocketAddress& local, const SocketAddress& remote);
     ~TcpConnection();
 
-    // Notify status of connected 
-    // Set this callback before calling Connected for thread safety
+    // Notification of connected status
+    // Calling back by the thread loop
     typedef std::function<void (TcpConnection*)> ConnectedCallback;
     void SetConnectedCallback(const ConnectedCallback& cb) { mConnectedCallback = cb; }
 
-    // Called only once when the connection is established
-    // by TcpListener or TcpConnector
+    // Once connected status is confirmed
+    // Calling to trigger the notification of status
     void Connected();
 
-    // Local address, or remote address if connected
-    SocketAddress LocalAddress();
-    SocketAddress RemoteAddress();
-
-    // Send data 
-    bool Send(void* p, size_t n);
-    bool Send(StreamBuffer* buf);
-
-    // Async receive
-    typedef std::function<void (TcpConnection*, StreamBuffer*)> ReceivedCallback;
+    // Notification of received data
+    // Calling back by the thread loop
+    typedef std::function<void (TcpConnection*, ByteStream*)> ReceivedCallback;
     void SetReceivedCallback(const ReceivedCallback& cb) { mReceivedCallback = cb; };
 
-    // Close the transceiver
-    void Close(bool keepReceiving = false);
+    // Send data over the connection
+    // Actual sending is done on the thread loop
+    // All data will be sent, buffered for sending if necessary
+    bool Send(void* p, size_t n);
+    bool Send(ByteStream* buf);
 
-    // Notification of closed
+    // Notification of closed status
+    // Calling back from the thread loop
     typedef std::function<void (TcpConnection*, bool keepReceiving)> ClosedCallback;
     void SetClosedCallback(const ClosedCallback& cb) { mClosedCallback = cb; };
+
+    // Close the connection
+    // Calling to shutdown and trigger closed status
+    void Close(bool keepReceiving = false);
+
+    // Local address, remote address
+    const SocketAddress& LocalAddress() const { return mLocalAddress; }
+    const SocketAddress& RemoteAddress() const { return mRemoteAddress; }
 
 private:
     // Functions invoked by the loop for thread safety
@@ -73,8 +78,8 @@ private:
 
     // Buffer is copied and transfered with a shared_ptr
     // it will delete the buffer once it is processed
-    typedef std::shared_ptr<StreamBuffer> StreamBufferPtr;
-    void SendInLoop(StreamBufferPtr buf);
+    typedef std::shared_ptr<ByteBuffer> ByteBufferPtr;
+    void SendInLoop(ByteBufferPtr buf);
 
     void DoSend(void* p, size_t n);
 
@@ -90,6 +95,8 @@ private:
 
     // Connected socket and events handler
     Socket mSocket;
+    SocketAddress mLocalAddress;
+    SocketAddress mRemoteAddress;
     EventHandler mHandler;
     
     // Callbacks to application
@@ -98,8 +105,8 @@ private:
     ClosedCallback mClosedCallback;
     
     // Stream buffer for reading and sending
-    StreamBuffer mInBuffer;
-    StreamBuffer mOutBuffer;
+    ByteBuffer mInBuffer;
+    ByteBuffer mOutBuffer;
 };
 
 NET_BASE_END

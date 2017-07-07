@@ -19,7 +19,7 @@
 #define NET_BASE_STREAM_WRITER_HPP
 
 #include "Uncopyable.hpp"
-#include "StreamBuffer.hpp"
+#include "ByteStream.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -27,19 +27,67 @@
 NET_BASE_BEGIN
 
 //
-// StreamReader and StreamWriter are designed as tool classes to read from and 
-// write to a StreamBuffer. The reader and writer work on a buffer object but 
-// not own the buffer. 
-// Reader read data from the buffer sequentially, and writer write data to the 
-// buffer sequentially. In terms of protocol message packaging, these operations 
-// are kind of serialization.
-// Serialization read data from buffer and assign the value to variables in 
-// protocol message packet, while write the value of variables into buffer. 
-// Reader and Writer support serialization of same types of variables, and 
-// particularly, the operations of reading and writing have compatable names, 
-// i.e., SerializeXXX(). These may let protocol message packet using a some function 
-// to read from buffer or write to buffer, which determined by using StreamReader 
-// or StreamWriter.  
+// ByteStream is designed as the major interface to hold and transfer data. The 
+// implementation objects include ByteBuffer and ByteWrapper. The former owns a 
+// internal memory block, while the latter hold a pointer to a external memory 
+// block. ByteStream interface defined functions to 'streamingly' read and write 
+// data, as well as 'randomly' peek and update data. All the functions work on 
+// 'byte' level, which means the functions always manipulate one or more bytes 
+// per calling. This is inconvenient in some cases, e.g. we may need to read or 
+// write a 'integer number', a 'float number', or a 'string', from or to the 
+// stream buffer. Then, we have to translate all those known 'data type' to kind 
+// of 'byte sequence' every time using the interface. 
+// 
+// StreamReader, StreamWriter, StreamPeeker, and maybe other objects are designed 
+// as tool object to facilitate reading and writing known 'data type' from and to
+// a BytemStream object. These tool objects work on a existing ByteStream object, 
+// i.e. holding a pointer to the external object, hence need the external object 
+// keep valid during all operations. 
+//
+// These tool objects are designed to have 'compatible' inteface so that protocol 
+// data may be packed or unpacked from buffer based on same code, as below:
+//
+// class Packet 
+// {
+// private: 
+//     int a;
+//     float b;
+//     bool c;
+//     std::string d;
+//     unsigned char data[100];
+//     unsigned short data_len;
+// 
+// public:
+//     void ToStream(ByteStream* stream)
+//     {
+//         Serialize(StreamWriter(stream));
+//     }
+//
+//     void FromStream(ByteStream* stream)
+//     {
+//         Serialize(StreamReader(stream));
+//     }
+// 
+//     template<type T> 
+//     void Serialize(const T& serializer)
+//     {
+//         serializer.SerializeInteger(a);
+//         serializer.SerializeFloat(b);
+//         serializer.SerializeBool(c);
+//         serializer.SerializeString(d);
+//         serializer.SerializeBytes(data, data_len);
+//      }
+// };
+//
+// To ensure these strategie working properly, the interfaces of StreamReader, 
+// StreamWriter, StreamPeeker and other possible objects must be 'compatible'.
+// The means their member functions have 'compatible' signatures, and the known 
+// 'data type' is writen into and read from the buffer using same rule. 
+//
+// StreamWriter is used to write data into the stream.
+// StreamReader is used to read data from the stream.
+// StreamPeeker is used to read data from the stream, but the data is not removed 
+// from the stream, i.e., still kept in the stream. 
 //
 class StreamWriter : Uncopyable
 {
@@ -47,12 +95,12 @@ public:
     // If not assign a StreamBuffer at init, 
     // should attach later before serializing operations
     StreamWriter();
-    StreamWriter(StreamBuffer* buf);
-    StreamWriter(StreamBuffer& buf);
+    StreamWriter(ByteStream* buf);
+    StreamWriter(ByteStream& buf);
     ~StreamWriter();
 
-    StreamWriter& Attach(StreamBuffer* buf);
-    StreamWriter& Attach(StreamBuffer& buf);
+    StreamWriter& Attach(ByteStream* buf);
+    StreamWriter& Attach(ByteStream& buf);
 
     // Write n bits to low end of current byte
     bool SerializeBits(const void* p, size_t n);
@@ -87,7 +135,7 @@ public:
     bool SerializeString(const std::string& s, const char* delim);
 
 private:
-    StreamBuffer* mStream;
+    ByteStream* mStream;
 };
 
 NET_BASE_END

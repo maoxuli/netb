@@ -17,8 +17,8 @@
 
 #include "EventLoop.hpp"
 #include "TcpListener.hpp"
-#include "StreamBuffer.hpp"
-#include "StreamPeeker.hpp"
+#include "TcpConnection.hpp"
+#include "ByteBuffer.hpp"
 #include <iostream>
 #include <string>
 #include <map>
@@ -28,10 +28,12 @@
 using namespace netbase;
 using namespace std::placeholders;
 
+// RFC 862
+// TCP listen on port 7
 class EchoServer 
 {
 public: 
-    EchoServer(EventLoop* loop, unsigned short port) 
+    EchoServer(EventLoop* loop, unsigned short port = 7)  // By default, echo service on port 7
     : mLoop(loop)
     , mListener(mLoop, NULL, port)
     {
@@ -57,18 +59,17 @@ public:
 private: 
     void OnConnected(TcpConnection* conn)
     {
-        conn->SetReceivedCallback(std::bind(&EchoServer::OnReceived, this, _1, _2));
         std::cout << "Incoming connection from " << conn->RemoteAddress().ToString() << ".\n";
+        conn->SetReceivedCallback(std::bind(&EchoServer::OnReceived, this, _1, _2));
     }
 
-    void OnReceived(TcpConnection* conn, StreamBuffer* buf)
+    void OnReceived(TcpConnection* conn, ByteStream* stream)
     {
-        std::cout << "Received " << buf->Readable() << " bytes.\n";
-        std::string msg;
-        StreamPeeker(buf).SerializeString(msg, "\r\n");
+        std::cout << "Received " << stream->Readable() << " bytes.\n";
+        std::string msg((const char*)stream->Read(), stream->Readable());
         std::cout << msg << "\n";
-        conn->Send(buf);
-        assert(buf->Empty());
+        conn->Send(stream);
+        assert(stream->Empty());
     }
 
 private: 
@@ -78,11 +79,23 @@ private:
 
 int main(const int argc, char* argv[])
 {
-    EventLoop loop; // Current thread
-    EchoServer server(&loop, 9001);
+    // By default echo server on port 7
+    unsigned short port = 7;
+    if(argc > 1) // echoserver 9007
+    {
+        int n = atoi(argv[1]);
+        if(n > 0 && n <= 65535)
+        {
+            port = (unsigned short)n;
+        }
+    }
+
+    EventLoop loop; // IO on current thread, single thread mode
+    EchoServer server(&loop, port); 
     if(!server.Open())
     {
-        std::cout << "EchoServer failed to open.\n";
+        std::cout << "EchoServer failed to open on port " << port << ".\n";
+        return false;
     }
     loop.Run(); 
     return true;

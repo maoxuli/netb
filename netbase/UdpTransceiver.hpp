@@ -21,7 +21,7 @@
 #include "Socket.hpp"
 #include "SocketAddress.hpp"
 #include "EventHandler.hpp"
-#include "StreamBuffer.hpp"
+#include "ByteBuffer.hpp"
 #include <queue>
 #include <memory>
 
@@ -58,38 +58,40 @@ public:
     // Open on a given address
     bool Open(const SocketAddress& addr);
 
+    // Async receive
+    typedef std::function<void (UdpTransceiver*, ByteStream*, const SocketAddress*)> ReceivedCallback;
+    void SetReceivedCallback(const ReceivedCallback& cb) { mReceivedCallback = cb; };
+
+    // Send data with not connected
+    bool Send(void* p, size_t n, const SocketAddress& addr);
+    bool Send(ByteStream* buf, const SocketAddress& addr);
+
     // Connect to remote address
     bool Connect(const char* host, unsigned short port);
     bool Connect(const SocketAddress& addr);
 
-    // Local address, and remote address if connected
-    SocketAddress LocalAddress();
-    SocketAddress RemoteAddress();
-
-    // Send data with not connected
-    bool Send(void* p, size_t n, const SocketAddress& addr);
-    bool Send(StreamBuffer* buf, const SocketAddress& addr);
-
     // Send data after connected
     bool Send(void* p, size_t n);
-    bool Send(StreamBuffer* buf);
-
-    // Async receive
-    typedef std::function<void (UdpTransceiver*, StreamBuffer*, const SocketAddress*)> ReceivedCallback;
-    void SetReceivedCallback(const ReceivedCallback& cb) { mReceivedCallback = cb; };
-
-    // Close the transceiver
-    void Close(bool keepReceiving = false);
+    bool Send(ByteStream* buf);
 
     // Notification of closed
     typedef std::function<void (UdpTransceiver*, bool keepReceiving)> ClosedCallback;
     void SetClosedCallback(const ClosedCallback& cb) { mClosedCallback = cb; };
 
+    // Close the transceiver
+    void Close(bool keepReceiving = false);
+
+    // Local binded address
+    const SocketAddress& Address() const { return mAddress; }
+
+    // Remote address if connected
+    const SocketAddress& RemoteAddress() const { return mRemoteAddress; }
+
 private:
     // Buffer is copied and transfered with a shared_ptr
     // it will delete the buffer once it is processed
-    typedef std::shared_ptr<StreamBuffer> StreamBufferPtr;
-    void SendInLoop(StreamBufferPtr buf, SocketAddress addr);
+    typedef std::shared_ptr<ByteBuffer> ByteBufferPtr;
+    void SendInLoop(ByteBufferPtr buf, SocketAddress addr);
 
     void DoSend(void* p, size_t n, const SocketAddress& addr);
 
@@ -116,15 +118,15 @@ private:
     ClosedCallback mClosedCallback;
 
     // Callback per received packet
-    StreamBuffer mInBuffer;
+    ByteBuffer mInBuffer;
 
     // UDP send packets one by one always 
     struct BufferAddress
     {
-        BufferAddress(StreamBuffer* b, SocketAddress sa)
+        BufferAddress(ByteBuffer* b, SocketAddress sa)
         : buf(b), addr(sa) { }
         
-        StreamBuffer* buf;
+        ByteBuffer* buf;
         SocketAddress addr;
     };
 

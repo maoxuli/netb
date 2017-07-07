@@ -48,7 +48,7 @@ ssize_t UdpSocket::Send(void* p, size_t n, const SocketAddress& addr)
     return mSocket.SendTo(p, n, addr.SockAddr(), addr.SockAddrLen());
 }
 
-ssize_t UdpSocket::Send(StreamBuffer* buf, const SocketAddress& addr)
+ssize_t UdpSocket::Send(ByteStream* buf, const SocketAddress& addr)
 {
     ssize_t ret = mSocket.SendTo(buf->Read(), buf->Readable(), addr.SockAddr(), addr.SockAddrLen());
     if(ret > 0)
@@ -64,11 +64,11 @@ ssize_t UdpSocket::Receive(void* p, size_t n, SocketAddress* addr)
     return mSocket.ReceiveFrom(p, n, addr->SockAddr(), &addrlen);
 }
 
-ssize_t UdpSocket::Receive(StreamBuffer* buf, SocketAddress* addr)
+ssize_t UdpSocket::Receive(ByteStream* buf, SocketAddress* addr)
 {
     socklen_t addrlen = addr->SockAddrLen();
     ssize_t ret = 0;
-    if(buf->Reserve(2048))
+    if(buf->Writable(2048))
     {
         ret = mSocket.ReceiveFrom(buf->Write(), buf->Writable(), addr->SockAddr(), &addrlen);
         if(ret > 0)
@@ -107,7 +107,7 @@ ssize_t UdpSocket::Send(void* p, size_t n)
     return mSocket.Send(p, n);
 }
 
-ssize_t UdpSocket::Send(StreamBuffer* buf)
+ssize_t UdpSocket::Send(ByteStream* buf)
 {
     ssize_t ret = mSocket.Send(buf->Read(), buf->Readable());
     if(ret > 0)
@@ -122,11 +122,11 @@ ssize_t UdpSocket::Receive(void* p, size_t n)
     return mSocket.Receive(p, n);
 }
 
-ssize_t UdpSocket::Receive(StreamBuffer* buf)
+ssize_t UdpSocket::Receive(ByteStream* buf)
 {
     assert(buf != NULL);
     ssize_t ret = 0;
-    if(buf->Reserve(2048))
+    if(buf->Writable(2048))
     {
         ret = mSocket.Receive(buf->Write(), buf->Writable());
         if(ret > 0)

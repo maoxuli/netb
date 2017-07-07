@@ -18,9 +18,8 @@
 #include "EventLoop.hpp"
 #include "EventLoopThread.hpp"
 #include "TcpConnector.hpp"
-#include "StreamBuffer.hpp"
-#include "StreamWriter.hpp"
-#include "StreamReader.hpp"
+#include "TcpConnection.hpp"
+#include "ByteBuffer.hpp"
 #include <iostream>
 #include <string>
 #include <cstdlib>
@@ -28,6 +27,8 @@
 using namespace netbase;
 using namespace std::placeholders;
 
+// RFC 862
+// TCP echo on port 7
 class EchoClient
 {
 public: 
@@ -44,7 +45,7 @@ public:
 
     }
 
-    bool Connect(const char* host, unsigned short port)
+    bool Connect(const char* host, unsigned short port = 7) // By default, echo service on port 7
     {
         assert(mConnection == NULL);
         return mConnector.Connect(host, port);
@@ -52,7 +53,7 @@ public:
 
     bool SendMessage(const std::string& msg)
     {
-        StreamWriter(mBuffer).SerializeString(msg, "\r\n");
+        mBuffer.Write(msg.data(), msg.length());
         if(mConnection == NULL)
         {
             return false;
@@ -72,16 +73,13 @@ private:
                                              << mConnection->RemoteAddress().ToString() << ".\n";
     }
 
-    void OnReceived(TcpConnection* conn, StreamBuffer* buf)
+    void OnReceived(TcpConnection* conn, ByteStream* stream)
     {
         assert(conn == mConnection);
-        std::cout << "Received " << buf->Readable() << " bytes.\n";
-        std::string msg;
-        StreamReader reader(buf);
-        while(reader.SerializeString(msg, "\r\n"))
-        {
-            std::cout << msg << ".\n";
-        }
+        std::cout << "Received " << stream->Readable() << " bytes.\n";
+        std::string msg((const char*)stream->Read(), stream->Readable());
+        std::cout << msg << ".\n";
+        stream->Clear();        
     }
 
     void OnClosed(TcpConnection* conn, bool keepReceiving)
@@ -96,30 +94,42 @@ private:
     EventLoop* mLoop;
     TcpConnector mConnector;
     TcpConnection* mConnection;
-    StreamBuffer mBuffer;
+    ByteBuffer mBuffer;
 };
 
 int main(const int argc, char* argv[])
 {
     const char* host = NULL;
-    if(argc > 1) // echoclient 192.168.1.1 
+    unsigned short port = 7; // By default, port is 7
+    if(argc > 1) // echoclient 9007
+    {
+        int n = atoi(argv[2]);
+        if(n > 0 && n <= 65535)
+        {
+            port  = n;
+        }
+    }
+    else if(argc > 2) // echoclient 192.168.1.1 9007
     {
         host = argv[1];
+        int n = atoi(argv[2]);
+        if(n > 0 && n <= 65535)
+        {
+            port  = n;
+        }
     }
 
-    EventLoopThread thread; // Separating IO thread
+    EventLoopThread thread; // IO on a separate thread
     EventLoop* loop = thread.Start();
     EchoClient client(loop);
-    if(!client.Connect(host, 9002))
+    if(!client.Connect(host, port))
     {
-        std::cout << "Connect to " << host << ":9002" << "failed.\n";
+        std::cout << "EchoClient failed to connect to " << host << ":" << port << ".\n";
         return 0;
     }
 
-    // UI thread get user input and send to server, repeatedly, untile 
-    // user input exit
-    std::cout << "Connected to " << host << ":9002.\n";
-    std::cout << "Please input a message, input exit to quit.\n";
+    // Current thread is for UI
+    std::cout << "Please input a message, exit to quit.\n";
     std::string msg;
     while(true)
     {

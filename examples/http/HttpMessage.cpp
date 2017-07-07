@@ -16,7 +16,7 @@
  */
 
 #include "HttpMessage.hpp"
-#include "StreamBuffer.hpp"
+#include "ByteStream.hpp"
 #include "StreamReader.hpp"
 #include "StreamWriter.hpp"
 #include <sstream>
@@ -161,26 +161,26 @@ std::string HttpMessage::Dump() const
 }
 
 // Todo: error handling, caused by limit of buffer
-bool HttpMessage::ToBuffer(StreamBuffer* buf) const
+bool HttpMessage::ToStream(ByteStream* stream) const
 {
-    StreamWriter stream(buf);
-    if(!stream.SerializeString(StartLine(), CRLF)) return false;
+    StreamWriter writer(stream);
+    if(!writer.SerializeString(StartLine(), CRLF)) return false;
 
     for(std::vector<Header*>::const_iterator it = mHeaders.begin();
         it != mHeaders.end(); ++it)
     {
         Header* p = *it;
-        if(!stream.SerializeString(p->key, ':')
-           || !stream.SerializeString(p->value, CRLF))
+        if(!writer.SerializeString(p->key, ':')
+           || !writer.SerializeString(p->value, CRLF))
         {
             return false;
         }
     }
-    stream.SerializeString(CRLF, (size_t)2);
+    writer.SerializeString(CRLF, (size_t)2);
 
     if(mBodyLen > 0 && mBody != NULL)
     {
-        stream.SerializeBytes(mBody, mBodyLen);
+        writer.SerializeBytes(mBody, mBodyLen);
     }
 
     return true;
@@ -189,23 +189,23 @@ bool HttpMessage::ToBuffer(StreamBuffer* buf) const
 // Parse a HTTP message from a buffer
 // This function will keep state and loop to complete messages
 // Once a message is completed, return true
-bool HttpMessage::FromBuffer(StreamBuffer* buf)
+bool HttpMessage::FromStream(ByteStream* stream)
 {
-    if(mState == MSG_READY) ReadStartLine(buf);
-    if(mState == MSG_READ_HEADER) ReadHeader(buf);
-    if(mState == MSG_READ_BODY) ReadBody(buf);
+    if(mState == MSG_READY) ReadStartLine(stream);
+    if(mState == MSG_READ_HEADER) ReadHeader(stream);
+    if(mState == MSG_READ_BODY) ReadBody(stream);
 
     return (mState == MSG_OKAY);
 }
 
 // Read start line
 // parsed by derived class
-void HttpMessage::ReadStartLine(StreamBuffer* buf)
+void HttpMessage::ReadStartLine(ByteStream* stream)
 {
     assert(mState == MSG_READY);
 
     std::string line;
-    if(StreamReader(buf).SerializeString(line, CRLF))
+    if(StreamReader(stream).SerializeString(line, CRLF))
     {
         StartLine(line);
         mState = MSG_READ_HEADER;
@@ -214,13 +214,13 @@ void HttpMessage::ReadStartLine(StreamBuffer* buf)
 
 // Read header lines
 // Read each complete line, until a blank line
-void HttpMessage::ReadHeader(StreamBuffer* buf)
+void HttpMessage::ReadHeader(ByteStream* stream)
 {
     assert(mState == MSG_READ_HEADER);
 
     // Read all complete lines
     std::string line;
-    while(StreamReader(buf).SerializeString(line, CRLF))
+    while(StreamReader(stream).SerializeString(line, CRLF))
     {       
         if(line.empty()) // Blank line, Separator line of headers and body, headers are completd
         {
@@ -239,12 +239,12 @@ void HttpMessage::ReadHeader(StreamBuffer* buf)
 }
 
 // Read http message body
-void HttpMessage::ReadBody(StreamBuffer* buf)
+void HttpMessage::ReadBody(ByteStream* stream)
 {
     assert(mState == MSG_READ_BODY);
     assert(mBodyLen > 0);
     if(mBody == NULL) mBody = new unsigned char[mBodyLen];
-    if(StreamReader(buf).SerializeBytes(mBody, mBodyLen))
+    if(StreamReader(stream).SerializeBytes(mBody, mBodyLen))
     {
         mState = MSG_OKAY;
     }
