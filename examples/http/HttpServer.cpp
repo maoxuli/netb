@@ -52,13 +52,13 @@ void HttpServer::OnConnected(TcpConnection* conn)
     conn->SetClosedCallback(std::bind(&HttpServer::OnClosed, this, _1));
 }
 
-void HttpServer::OnReceived(TcpConnection* conn, ByteStream* stream)
+void HttpServer::OnReceived(TcpConnection* conn, StreamBuffer* buf)
 {
     assert(conn != NULL);
     HttpRequest* request = mRequests[conn];
     assert(request != NULL);
 
-    if(request->FromStream(stream))
+    if(request->FromBuffer(buf))
     {
         HandleRequest(conn, request);
         request->Reset();
@@ -75,9 +75,9 @@ void HttpServer::OnClosed(TcpConnection* conn)
 
 void HttpServer::SendResponse(TcpConnection* conn, HttpResponse* response)
 {
-    ByteBuffer stream;
-    response->ToStream(&stream);
-    conn->Send(&stream);
+    ByteBuffer buf;
+    response->ToBuffer(&buf);
+    conn->Send(&buf);
 }
 
 void HttpServer::HandleRequest(TcpConnection* conn, HttpRequest* request)

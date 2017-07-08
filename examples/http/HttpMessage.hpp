@@ -26,7 +26,7 @@
 
 NET_BASE_BEGIN
 
-class ByteStream;
+class StreamBuffer;
 class HttpMessage
 {
 public:
@@ -56,8 +56,8 @@ public:
 	void RemoveHeader(const char* key);
 	
 	virtual void Reset();
-	bool FromStream(ByteStream* stream);
-	bool ToStream(ByteStream* stream) const;
+	bool FromBuffer(StreamBuffer* buf);
+	bool ToBuffer(StreamBuffer* buf) const;
 
 	virtual std::string Dump() const;
 
@@ -87,9 +87,9 @@ protected:
     };
     State mState;
 
-	void ReadStartLine(ByteStream* stream);
-	void ReadHeader(ByteStream* stream);
-	void ReadBody(ByteStream* stream);
+	void ReadStartLine(StreamBuffer* buf);
+	void ReadHeader(StreamBuffer* buf);
+	void ReadBody(StreamBuffer* buf);
 
 	// Parse start line and composite start line
 	// implement by derived classes

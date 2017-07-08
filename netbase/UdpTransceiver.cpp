@@ -71,7 +71,7 @@ bool UdpTransceiver::Connect(const SocketAddress& addr)
     return false;
 }
 
-bool UdpTransceiver::Send(ByteStream* buf)
+bool UdpTransceiver::Send(StreamBuffer* buf)
 {
     return false;
 }
@@ -94,7 +94,7 @@ bool UdpTransceiver::Send(void* p, size_t n, const SocketAddress& addr)
     return true;
 }
 
-bool UdpTransceiver::Send(ByteStream* buf, const SocketAddress& addr)
+bool UdpTransceiver::Send(StreamBuffer* buf, const SocketAddress& addr)
 {
     if(mLoop->IsInLoopThread())
     {

@@ -21,7 +21,7 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/Socket.hpp \
 	   $(INCDIR)/SocketSelector.hpp \
 	   $(INCDIR)/SocketAddress.hpp \
-	   $(INCDIR)/ByteStream.hpp \
+	   $(INCDIR)/StreamBuffer.hpp \
 	   $(INCDIR)/ByteBuffer.hpp \
 	   $(INCDIR)/ByteWrapper.hpp \
 	   $(INCDIR)/StreamWriter.hpp \

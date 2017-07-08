@@ -21,7 +21,7 @@
 #include "Config.hpp"
 #include "Socket.hpp"
 #include "SocketAddress.hpp"
-#include "ByteStream.hpp"
+#include "StreamBuffer.hpp"
 
 NET_BASE_BEGIN
 
@@ -59,11 +59,11 @@ public:
 
     // Send data
     ssize_t Send(void* p, size_t n);
-    ssize_t Send(ByteStream* buf);
+    ssize_t Send(StreamBuffer* buf);
 
     // Receive data
     ssize_t Receive(void* p, size_t n);
-    ssize_t Receive(ByteStream* buf);
+    ssize_t Receive(StreamBuffer* buf);
 
 public:
     // Options

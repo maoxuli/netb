@@ -21,6 +21,7 @@
 #include "Socket.hpp"
 #include "SocketAddress.hpp"
 #include "EventHandler.hpp"
+#include "StreamBuffer.hpp"
 #include "ByteBuffer.hpp"
 #include <queue>
 #include <memory>
@@ -59,12 +60,12 @@ public:
     bool Open(const SocketAddress& addr);
 
     // Async receive
-    typedef std::function<void (UdpTransceiver*, ByteStream*, const SocketAddress*)> ReceivedCallback;
+    typedef std::function<void (UdpTransceiver*, StreamBuffer*, const SocketAddress*)> ReceivedCallback;
     void SetReceivedCallback(const ReceivedCallback& cb) { mReceivedCallback = cb; };
 
     // Send data with not connected
     bool Send(void* p, size_t n, const SocketAddress& addr);
-    bool Send(ByteStream* buf, const SocketAddress& addr);
+    bool Send(StreamBuffer* buf, const SocketAddress& addr);
 
     // Connect to remote address
     bool Connect(const char* host, unsigned short port);
@@ -72,7 +73,7 @@ public:
 
     // Send data after connected
     bool Send(void* p, size_t n);
-    bool Send(ByteStream* buf);
+    bool Send(StreamBuffer* buf);
 
     // Notification of closed
     typedef std::function<void (UdpTransceiver*, bool keepReceiving)> ClosedCallback;

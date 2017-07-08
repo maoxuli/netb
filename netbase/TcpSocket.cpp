@@ -91,7 +91,7 @@ ssize_t TcpSocket::Send(void* p, size_t n)
     return mSocket.Send(p, n);
 }
 
-ssize_t TcpSocket::Send(ByteStream* buf)
+ssize_t TcpSocket::Send(StreamBuffer* buf)
 {
     assert(buf != NULL);
     ssize_t ret = mSocket.Send(buf->Read(), buf->Readable());
@@ -107,7 +107,7 @@ ssize_t TcpSocket::Receive(void* p, size_t n)
     return mSocket.Receive(p, n);
 }
 
-ssize_t TcpSocket::Receive(ByteStream* buf)
+ssize_t TcpSocket::Receive(StreamBuffer* buf)
 {
     assert(buf != NULL);
     ssize_t ret = 0;

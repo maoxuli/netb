@@ -21,6 +21,7 @@
 #include "Socket.hpp"
 #include "SocketAddress.hpp"
 #include "EventHandler.hpp"
+#include "StreamBuffer.hpp"
 #include "ByteBuffer.hpp"
 
 NET_BASE_BEGIN
@@ -49,14 +50,14 @@ public:
 
     // Notification of received data
     // Calling back by the thread loop
-    typedef std::function<void (TcpConnection*, ByteStream*)> ReceivedCallback;
+    typedef std::function<void (TcpConnection*, StreamBuffer*)> ReceivedCallback;
     void SetReceivedCallback(const ReceivedCallback& cb) { mReceivedCallback = cb; };
 
     // Send data over the connection
     // Actual sending is done on the thread loop
     // All data will be sent, buffered for sending if necessary
     bool Send(void* p, size_t n);
-    bool Send(ByteStream* buf);
+    bool Send(StreamBuffer* buf);
 
     // Notification of closed status
     // Calling back from the thread loop

@@ -63,13 +63,13 @@ private:
         conn->SetReceivedCallback(std::bind(&EchoServer::OnReceived, this, _1, _2));
     }
 
-    void OnReceived(TcpConnection* conn, ByteStream* stream)
+    void OnReceived(TcpConnection* conn, StreamBuffer* buf)
     {
-        std::cout << "Received " << stream->Readable() << " bytes.\n";
-        std::string msg((const char*)stream->Read(), stream->Readable());
+        std::cout << "Received " << buf->Readable() << " bytes.\n";
+        std::string msg((const char*)buf->Peek(), buf->Peekable());
         std::cout << msg << "\n";
-        conn->Send(stream);
-        assert(stream->Empty());
+        conn->Send(buf);
+        assert(buf->Empty());
     }
 
 private: 

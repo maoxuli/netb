@@ -39,7 +39,7 @@ protected:
     void OnConnected(TcpConnection* conn);
 
     // TcpConnection::ReceivedCallback
-    void OnReceived(TcpConnection* conn, ByteStream* stream);
+    void OnReceived(TcpConnection* conn, StreamBuffer* buf);
 
     // TcpConnection::ClosedCallback
     void OnClosed(TcpConnection* conn);

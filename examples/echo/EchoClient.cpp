@@ -73,13 +73,13 @@ private:
                                              << mConnection->RemoteAddress().ToString() << ".\n";
     }
 
-    void OnReceived(TcpConnection* conn, ByteStream* stream)
+    void OnReceived(TcpConnection* conn, StreamBuffer* buf)
     {
         assert(conn == mConnection);
-        std::cout << "Received " << stream->Readable() << " bytes.\n";
-        std::string msg((const char*)stream->Read(), stream->Readable());
+        std::cout << "Received " << buf->Readable() << " bytes.\n";
+        std::string msg((const char*)buf->Read(), buf->Readable());
         std::cout << msg << ".\n";
-        stream->Clear();        
+        buf->Clear();        
     }
 
     void OnClosed(TcpConnection* conn, bool keepReceiving)

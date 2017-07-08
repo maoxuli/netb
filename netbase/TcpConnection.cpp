@@ -123,7 +123,7 @@ bool TcpConnection::Send(void* p, size_t n)
 // Send data
 // The actual data sending must be done on the thread loop 
 // to ensure the order of data sending
-bool TcpConnection::Send(ByteStream* buf)
+bool TcpConnection::Send(StreamBuffer* buf)
 {
     if(mLoop->IsInLoopThread())
     {

@@ -51,10 +51,10 @@ void HttpClient::OnConnected(TcpConnection* conn)
     mConnection->SetClosedCallback(std::bind(&HttpClient::OnClosed, this, _1));
 }  
 
-void HttpClient::OnReceived(TcpConnection* conn, ByteStream* stream)
+void HttpClient::OnReceived(TcpConnection* conn, StreamBuffer* buf)
 {
     assert(conn == mConnection);
-    if(mResponse.FromStream(stream))
+    if(mResponse.FromBuffer(buf))
     {
         HandleResponse(&mResponse);
         mResponse.Reset();
@@ -70,9 +70,9 @@ void HttpClient::OnClosed(TcpConnection* conn)
 void HttpClient::SendRequest(HttpRequest* request)
 {
     assert(mConnection != NULL);
-    ByteBuffer stream;
-    request->ToStream(&stream);
-    mConnection->Send(&stream);
+    ByteBuffer buf;
+    request->ToBuffer(&buf);
+    mConnection->Send(&buf);
     std::cout << request->Dump() << "\n";
 }
 

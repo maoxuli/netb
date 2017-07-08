@@ -18,92 +18,52 @@
 #ifndef NET_BASE_BYTE_BUFFER_HPP
 #define NET_BASE_BYTE_BUFFER_HPP
 
+// Buffer size, can be re-defined in Config.hpp
+#define DEFAULT_BUFFER_SIZE     4096 // 4K bytes, enough for two MTU
+#define MAX_BUFFER_SIZE        (1024 * 1024) // 1M bytes
+
 #include "Config.hpp"
-#include "ByteStream.hpp"
-#include <cstddef>
-#include <cstdint>
-#include <string>
+#include "StreamBuffer.hpp"
 #include <vector>
-#include <memory>
-#include <iostream>
 
 NET_BASE_BEGIN
 
 //
-// Stream buffer is basically a bytes buffer, with random access. 
-// The buffer is designed particularly for network IO and message packaging. 
-// It is not thread safe, so can be used within a single thread. That means the 
-// network IO and prottocol message packaging must be done in a same thread. 
-// To be specific, the buffer should be used immediately in ReceivedCallback, 
-// and Send should be done in the same thread of network IO. 
+// It is a stream, and 
+// it is a buffer, and
+// it is a byte sequence buffer
 //
-// It is a vary sized buffer based on internal vary sized std::vector. so 
-// write may be successfully always until reach the max limit of the buffer size. 
-// Meanwhile, any memory position (pointer) is timely valid. It may be invalid 
-// with next time resizing (usually with memory re-allocation).
-// 
-// According to typical protocol message packaging strategies, the buffer support 
-// writing and reading data with a fixed size, or writing data with a ending 
-// delimit and reading data to the delimit. 
-//
-// bool StreamBuffer::Write(void* p, size_t n);
-// bool StreamBuffer::Write(void* p, size_t n, delimit);
-// size_t StreamBuffer::Readable(delimit); // get data size before the delimit
-// bool StreamBuffer::Read(void* p, size_t); 
-//
-// As a IO buffer, it must expose the memory pointer for reading and writing to 
-// IO operations, to avoid more memory copy. 
-// void* Write(); // expose the writing position (pointer) for external writing
-// bool Write(size_t n);  // adjust buffer size according external writing
-// void* Read(); // expose the reading position (pointer) for external reading 
-// bool Read(size_t n); // Adjust buffer size according to external reading
-// 
-// The buffer also support to peek and update data on random position, which is 
-// useful in message packaging. 
-// 
-// The buffer works in bytes basis, all parameters of size or offset are of bytes 
-// count. The exposed pointers are all void* type to support any pointer types.
-// There is no specific data type information other than bytes sequence, so 
-// there is no endinaness concerns.  
-//  
-// The buffer is based on a internal std::vector that can resize by request. 
-// In a typical continuous writing and reading, the buffer may  
-//
-class ByteBuffer : public ByteStream
+class ByteBuffer : public StreamBuffer
 {
 public:
-    virtual ~ByteBuffer();
+    ~ByteBuffer();
 
     // Initialize with initial size and limit size
-    ByteBuffer(size_t init = 4096, size_t limit = 1024 * 1024);
+    ByteBuffer(size_t init = DEFAULT_BUFFER_SIZE, size_t limit = MAX_BUFFER_SIZE);
 
     // Initialize with initial data, initial size and limit size
-    ByteBuffer(const void* p, size_t n, size_t init = 4096, size_t limit = 1024 * 1024);
+    ByteBuffer(const void* p, size_t n, size_t init = DEFAULT_BUFFER_SIZE, size_t limit = MAX_BUFFER_SIZE);
 
     // Initialize with another ByteBuffer object
     // Deep copy and move data to the beginning
     ByteBuffer(const ByteBuffer& b);
     ByteBuffer(const ByteBuffer* b);
 
-    // Initialize with another ByteStream object
+    // Initialize with another StreamBuffer object
     // Deep copy and move data to the beginning
-    ByteBuffer(const ByteStream& s);
-    ByteBuffer(const ByteStream* s);
+    ByteBuffer(const StreamBuffer& s);
+    ByteBuffer(const StreamBuffer* s);
 
-    // Assignment with another ByteBuffer or ByteStream object
+    // Assignment with another ByteBuffer or StreamBuffer object
     // Deep copy and move data to the beginning 
     ByteBuffer& operator=(const ByteBuffer& b);
-    ByteBuffer& operator=(const ByteStream& s);
+    ByteBuffer& operator=(const StreamBuffer& s);
 
     // Swap with another ByteBuffer object
     // No data copy
     ByteBuffer& Swap(ByteBuffer& b)
     {
-        mBytes.swap(b.mBytes);
-        std::swap(mLimit, b.mLimit);
-        std::swap(mReadIndex, b.mReadIndex);
-        std::swap(mWriteIndex, b.mWriteIndex);
-        return *this;
+        return Swap(&b);
     }
 
     ByteBuffer& Swap(ByteBuffer* b)
@@ -115,14 +75,14 @@ public:
         return *this;
     }
 
-    // Swap with another ByteStream object
+    // Swap with another StreamBuffer object
     // No data copy if another object is a ByteBuffer
-    ByteBuffer& Swap(ByteStream& s)
+    ByteBuffer& Swap(StreamBuffer& s)
     {   
         return Swap(&s);
     }
 
-    ByteBuffer& Swap(ByteStream* s)
+    ByteBuffer& Swap(StreamBuffer* s)
     {
         ByteBuffer* b = dynamic_cast<ByteBuffer*>(s);
         if ( b  != NULL )
@@ -133,39 +93,41 @@ public:
             std::swap(mWriteIndex, b->mWriteIndex);
             return *this;
         }
-
         return *this = *s;
     }
 
-    // Is empty?
+    // Readable() + Writable()
+    size_t Size() const 
+    {
+        return mBytes.size() - mReadIndex;
+    }
+
+    // Readable() == 0 ?
     bool Empty() const 
     {
         return mWriteIndex == mReadIndex;
     }
 
-    // Clear the buffer
-    // Todo: Thrink memory occupancy if necessary
+    // Set Empty() == true
     void Clear()
     {
         mReadIndex = 0;
         mWriteIndex = 0; 
     }
 
-    // Size of the buffer
-    // Readable size and writable size
-    size_t Size() const 
+    // Available space to write
+    size_t Writable() const
     {
-        return mBytes.size() - mReadIndex;
+        return mBytes.size() - mWriteIndex;
     }
 
-    // Check and try to get vailable space to write
+    // Ensure Writable() == n
     bool Writable(size_t n)
     {
         if(n == 0 || mBytes.size() - mWriteIndex >= n)
         {
             return true;
         }
-        
         if(mLimit > 0) 
         {
             if(mWriteIndex - mReadIndex + n > mLimit) // the buffer is overflow
@@ -173,31 +135,28 @@ public:
                 return false;
             } 
 
-            if(mWriteIndex + n > mLimit) // Occupancy is beyond limit, shrink
+            if(mWriteIndex + n > mLimit) // Occupancy is beyond limit, compact
             {
-                Shrink();
+                Compact();
             }
         } 
-
         mBytes.resize(mWriteIndex + n);
         return mBytes.size() - mWriteIndex >= n;
     }
 
-    // Check available space to write
-    size_t Writable() const
+    // Pointer to write position 
+    // For external use, such as directly copy data into the buffer 
+    const void* Write() const
     {
-        return mBytes.size() - mWriteIndex;
+        return Begin() + mWriteIndex;
     }
 
-    // Write n bytes
-    bool Write(const void* p, size_t n);
+    void* Write()
+    {
+        return Begin() + mWriteIndex;
+    }
 
-    // Write n bytes with delimit char or string
-    bool Write(const void* p, size_t n, const char delim);
-    bool Write(const void* p, size_t n, const char* delim);
-
-    // Write with only size of bytes
-    // move forward write position only
+    // Virtually write, move write position forward
     bool Write(size_t n)
     {
         if(mBytes.size() - mWriteIndex < n)
@@ -208,70 +167,23 @@ public:
         return true;
     }
 
-    // Write without argument
-    // return a pointer of write position for external use
-    // unsigned char src[100];
-    // buf.Reserve(100);
-    // memcpy(buf.Write(), src, 100);
-    // buf.Write(100);
-    
-    // const pointer used as a position
-    const void* Write() const
+    // Actually write, copy data into the buffer and move write position forward
+    bool Write(const void* p, size_t n);
+    bool Write(const void* p, size_t n, const char delim); // Append delimit char
+    bool Write(const void* p, size_t n, const char* delim); // Append delimit string
+
+    // Available data to read
+    size_t Readable() const
     {
-        return Begin() + mWriteIndex;
+        return mWriteIndex - mReadIndex;
     }
 
-    // pointer used to write
-    void* Write()
-    {
-        return Begin() + mWriteIndex;
-    }
+    // Available data to read
+    ssize_t Readable(const char delimt) const; // Before next delimit char
+    ssize_t Readable(const char* delim) const; // Before next delimit string
 
-    // The available bytes to read
-    size_t Readable(size_t offset = 0) const
-    {
-        return mWriteIndex - mReadIndex - offset;
-    }
-
-    // Readable before the delimit
-    ssize_t Readable(const char delimt, size_t offset = 0) const;
-    ssize_t Readable(const char* delim, size_t offset = 0) const;
-
-    // Read with buffer and size
-    // actual read and move forward read index
-    bool Read(void* p, size_t n);
-
-    // Read with only data size 
-    // move forward read position only
-    bool Read(size_t n)
-    {
-        if(mWriteIndex - mReadIndex < n)
-        {
-            return false;
-        }
-
-        mReadIndex += n;
-        if(mReadIndex == mWriteIndex)
-        {
-            mReadIndex = 0;
-            mWriteIndex = 0;
-        }
-        return true;
-    }
-    
-    // equal to read(n)
-    bool Remove(size_t n)
-    {
-        return Read(n);
-    }
-
-    // Read with no argument
-    // return read position for external use
-    // 
-    // unsigned char dst[20];
-    // memcpy(dst, buf.Read(), 20);
-    // buf.Read(20); [or buf.Remove(20);]
-    //
+    // Pointer to read position
+    // For external use, such as directly copy data from the buffer
     const void* Read() const
     {
         return Begin() + mReadIndex;
@@ -282,24 +194,59 @@ public:
         return Begin() + mReadIndex;
     }
 
-    // Peek data in buffer on given offset from reading position 
-    // return first byte position of peek for external use
+    // Virtually read, move read position forward
+    bool Read(size_t n)
+    {
+        if(mWriteIndex - mReadIndex < n)
+        {
+            return false;
+        }
+        mReadIndex += n;
+        if(mReadIndex == mWriteIndex)
+        {
+            mReadIndex = 0;
+            mWriteIndex = 0;
+        }
+        return true;
+    }
+    
+    bool Remove(size_t n)
+    {
+        return Read(n);
+    }
+
+    // Actually read, copy data from the buffer and move read position forward
+    bool Read(void* p, size_t n);
+
+    // Available data to peek, using offset for random access
+    ssize_t Peekable(size_t offset = 0) const
+    {
+        return mWriteIndex - mReadIndex - offset;
+    }
+
+    // Available data to peek, using offset for random access
+    ssize_t Peekable(const char delim, size_t offset = 0) const; // Before next delimit char
+    ssize_t Peekable(const char* delim, size_t offset = 0) const; // Before next delimit string
+
+    // Pointer to peek position, using offset for random access
+    // For external use, such as directly copy data from the buffer
     const void* Peek(size_t offset = 0) const
     {
-        return mWriteIndex - mReadIndex > offset ? Begin() + mReadIndex + offset : NULL;
+        return mWriteIndex - mReadIndex < offset ? NULL : Begin() + mReadIndex + offset;
     }
 
-    // for update
-    void* Peek(size_t offset)
+    void* Peek(size_t offset = 0) 
     {
-        return mWriteIndex - mReadIndex > offset ? Begin() + mReadIndex + offset : NULL;
+        return mWriteIndex - mReadIndex < offset ? NULL : Begin() + mReadIndex + offset;
     }
 
-    // Peek bytes
+    // Peek data, copy data from the buffer but not move read position
+    // using offset for random access
     bool Peek(void* p, size_t n, size_t offset = 0);
 
-    // Update bytes
-    bool Update(void* p, size_t n, size_t offset = 0);
+    // Update data, replace data in the buffer
+    // using offset for random access
+    bool Replace(void* p, size_t n, size_t offset = 0);
 
 protected:
     
@@ -312,11 +259,16 @@ protected:
     //
     //                 |                   -Size()-                      |
     // Buffer |--------|xxxxxxxxxxxxxxxxxxxxxxxxx|***********************|.............|
-    //                        -Readable()-              -Writable()-
+    //        |        |       -Readable()-      |       -Writable()-    |
     //      Begin() mReadIndex              mWriteIndex                  
     //
     //
     
+    std::vector<unsigned char> mBytes;
+    size_t mLimit; // Limit of the max footprint of the buffer
+    size_t mReadIndex; // Index of first readable byte
+    size_t mWriteIndex; // Index of first writable byte
+
     const unsigned char* Begin() const
     {
         return &mBytes[0];
@@ -327,17 +279,13 @@ protected:
         return &mBytes[0];
     }
 
-    void Shrink()
+    // Move data to the beginning
+    void Compact()
     {
         std::rotate(mBytes.begin(), mBytes.begin() + mReadIndex, mBytes.begin() + mWriteIndex - mReadIndex);
         mWriteIndex -= mReadIndex;
         mReadIndex = 0;
     }
-
-    std::vector<unsigned char> mBytes;
-    size_t mLimit; // Limit of the max footprint of the buffer
-    size_t mReadIndex; // Index of first readable byte
-    size_t mWriteIndex; // Index of first writable byte
 };
 
 NET_BASE_END

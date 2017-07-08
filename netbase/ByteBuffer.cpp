@@ -20,20 +20,20 @@
 
 NET_BASE_BEGIN
 
-// Constructor with inital size and limit size
+// Initialize with initial size and limit size
 ByteBuffer::ByteBuffer(size_t init, size_t limit)
-: mBytes(init) // Initial buffer size
-, mLimit(limit) // Limit of memory occupancy
+: mBytes(init)
+, mLimit(limit)
 , mReadIndex(0)
 , mWriteIndex(0)
 {
     assert(limit >= init);   
 }
 
-// Contructor with inital data, initial size and limit size
+// Initialize with initial data, initial size and limit size
 ByteBuffer::ByteBuffer(const void* p, size_t n, size_t init, size_t limit)
-: mBytes(init) // Initial buffer size
-, mLimit(limit) // limit of footprint
+: mBytes(init)
+, mLimit(limit)
 , mReadIndex(0)
 {
     assert(init >= n);
@@ -42,9 +42,8 @@ ByteBuffer::ByteBuffer(const void* p, size_t n, size_t init, size_t limit)
     mWriteIndex = n;
 }
 
-// Initialize with a ByteBuffer object
-// Copy data and get a resizable buffer
-// Can write and read data to and from the buffer
+// Initialize with another ByteBuffer object
+// Deep copy and move data to the beginning
 ByteBuffer::ByteBuffer(const ByteBuffer& b)
 : mBytes(b.Readable())
 , mLimit(b.mLimit)
@@ -54,9 +53,8 @@ ByteBuffer::ByteBuffer(const ByteBuffer& b)
     mWriteIndex = b.Readable();
 }
 
-// Initialize with a ByteBuffer object
-// Copy data and get a resizable buffer
-// Can write and read data to and from the buffer
+// Initialize with another ByteBuffer object
+// Deep copy and move data to the beginning
 ByteBuffer::ByteBuffer(const ByteBuffer* b)
 : mBytes(b->Readable())
 , mLimit(b->mLimit)
@@ -66,24 +64,22 @@ ByteBuffer::ByteBuffer(const ByteBuffer* b)
     mWriteIndex = b->Readable();
 }
 
-// Initialize with a stream object
-// Initially construct a buffer only for readable data
-// Can resize up to the size of the stream object
-ByteBuffer::ByteBuffer(const ByteStream& s)
+// Initialize with another StreamBuffer object
+// Deep copy and move data to the beginning
+ByteBuffer::ByteBuffer(const StreamBuffer& s)
 : mBytes(s.Readable())
-, mLimit(s.Size())
+, mLimit(s.Size()) // !!!
 {
     memcpy(Begin(), s.Read(), s.Readable());
     mReadIndex = 0;
     mWriteIndex = s.Readable();
 }
 
-// Initialize with a stream object
-// Initially construct a buffer only for readable data
-// Can resize up to the size of the stream object
-ByteBuffer::ByteBuffer(const ByteStream* s)
+// Initialize with another StreamBuffer object
+// Deep copy and move data to the beginning
+ByteBuffer::ByteBuffer(const StreamBuffer* s)
 : mBytes(s->Readable())
-, mLimit(s->Size())
+, mLimit(s->Size()) // !!!
 {
     memcpy(Begin(), s->Read(), s->Readable());
     mReadIndex = 0;
@@ -95,7 +91,8 @@ ByteBuffer::~ByteBuffer()
     
 }
 
-// Copy from another buffer
+// Assignment with another ByteBuffer object
+// Deep copy and move data to the beginning 
 ByteBuffer& ByteBuffer::operator=(const ByteBuffer& b)
 {
     if(mLimit < b.Size())
@@ -112,8 +109,9 @@ ByteBuffer& ByteBuffer::operator=(const ByteBuffer& b)
     return *this;
 }
 
-// Copy from another stream
-ByteBuffer& ByteBuffer::operator=(const ByteStream& s)
+// Assignment with another StreamBuffer object
+// Deep copy and move data to the beginning 
+ByteBuffer& ByteBuffer::operator=(const StreamBuffer& s)
 {
     if(mLimit < s.Size())
     {
@@ -129,19 +127,20 @@ ByteBuffer& ByteBuffer::operator=(const ByteStream& s)
     return *this;
 }
 
-// Write n bytes
+// Actually write, copy data into the buffer and move write position forward
 bool ByteBuffer::Write(const void* p, size_t n)
 {
     if(!Writable(n))
     {
         return false;
     }
-
     memcpy(Write(), p, n);
     Write(n);
     return true;
 }
 
+// Actually write, copy data into the buffer and move write position forward
+// Append a delimit char
 bool ByteBuffer::Write(const void* p, size_t n, const char delim)
 {
     if(Write(p, n))
@@ -151,6 +150,8 @@ bool ByteBuffer::Write(const void* p, size_t n, const char delim)
     return false;
 }
 
+// Actually write, copy data into the buffer and move write position forward
+// Append a delimit string
 bool ByteBuffer::Write(const void* p, size_t n, const char* delim)
 {
     if(Write(p, n))
@@ -160,74 +161,108 @@ bool ByteBuffer::Write(const void* p, size_t n, const char* delim)
     return false;
 }
 
-ssize_t ByteBuffer::Readable(const char delim, size_t offset) const
+// Available data to read
+// Before next delimit char
+ssize_t ByteBuffer::Readable(const char delim) const
 {
-    if(Readable(offset) < sizeof(delim))
+    if(Readable() < sizeof(delim))
     {
         return -1;
     }
-    
-    const unsigned char* p1 = (const unsigned char*)Peek(offset);
-    const unsigned char* p2 = std::find(p1, (const unsigned char*)Write(), delim);
+    const char* p1 = (const char*)Read();
+    const char* p2 = std::find(p1, (const char*)Write(), delim);
     if(p2 == Write())
     {
         return -1;
     }
-
     return p2 - p1;
 }
 
-ssize_t ByteBuffer::Readable(const char* delim, size_t offset) const
+// Available data to read
+// Before next delimit string
+ssize_t ByteBuffer::Readable(const char* delim) const
 {
-    if(Readable(offset) < strlen(delim))
+    if(Readable() < strlen(delim))
     {
         return -1;
     }
-    
-    const unsigned char* p1 = (const unsigned char*)Peek(offset);
-    const unsigned char* p2 = std::find_first_of(p1, (const unsigned char*)Write(), delim, delim + strlen(delim));
+    const char* p1 = (const char*)Read();
+    const char* p2 = std::find_first_of(p1, (const char*)Write(), delim, delim + strlen(delim));
     if(p2 == Write())
     {
         return -1;
     }
-    
     return p2 - p1;
 }
 
-// Read into a bytes array
+// Actually read, copy data from the buffer and move read position forward
 bool ByteBuffer::Read(void* p, size_t n)
 {
     if(Readable() < n)
     {
         return false;
     }
-    
     memcpy(p, Read(), n);
     Read(n);
     return true;
 }
 
+// Available data to peek, using offset for random access
+// Before next delimit char
+ssize_t ByteBuffer::Peekable(const char delim, size_t offset) const
+{
+    if(Peekable(offset) < sizeof(delim))
+    {
+        return -1;
+    }
+    const char* p1 = (const char*)Peek(offset);
+    const char* p2 = std::find(p1, (const char*)Write(), delim);
+    if(p2 == Write())
+    {
+        return -1;
+    }
+    return p2 - p1;
+}
+
+// Available data to peek, using offset for random access
+// Before next delimit string
+ssize_t ByteBuffer::Peekable(const char* delim, size_t offset) const
+{
+    if(Peekable(offset) < strlen(delim))
+    {
+        return -1;
+    }
+    const char* p1 = (const char*)Peek(offset);
+    const char* p2 = std::find_first_of(p1, (const char*)Write(), delim, delim + strlen(delim));
+    if(p2 == Write())
+    {
+        return -1;
+    }
+    return p2 - p1;
+}
+
+// Peek data, copy data from the buffer but not move read position
+// using offset for random access
 bool ByteBuffer::Peek(void* p, size_t n, size_t offset)
 {
-    if(Readable(offset) < n) 
+    if(Peekable(offset) < n) 
     {
         return false;
     }
-
     memcpy(p, Peek(offset), n);
     return true;
 }
 
-
-bool ByteBuffer::Update(void* p, size_t n, size_t offset)
+// Update data, replace data in the buffer
+// using offset for random access
+bool ByteBuffer::Replace(void* p, size_t n, size_t offset)
 {
-    if(Readable(offset) < n) 
+    if(Peekable(offset) < n) 
     {
         return false;
     }
-
     memcpy(Peek(offset), p, n);
-    return false;
+    return true;
 }
 
 NET_BASE_END

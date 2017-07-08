@@ -20,7 +20,7 @@
 
 NET_BASE_BEGIN
 
-// Initialize with external buffer
+// Initialize with external buffer and initial data
 ByteWrapper::ByteWrapper(const void* p, size_t size, size_t& data_len)
 : mBytes((unsigned char*)p)
 , mSize(size)
@@ -36,7 +36,7 @@ ByteWrapper::~ByteWrapper()
 
 }
 
-// Write n bytes
+// Actually write, copy data into the buffer and move write position forward
 bool ByteWrapper::Write(const void* p, size_t n)
 {
     if(Writable(n))
@@ -48,6 +48,8 @@ bool ByteWrapper::Write(const void* p, size_t n)
     return false;
 }
 
+// Actually write, copy data into the buffer and move write position forward
+// Append a delimit char
 bool ByteWrapper::Write(const void* p, size_t n, const char delim)
 {
     if(Write(p, n))
@@ -57,6 +59,8 @@ bool ByteWrapper::Write(const void* p, size_t n, const char delim)
     return false;
 }
 
+// Actually write, copy data into the buffer and move write position forward
+// Append a delimit string
 bool ByteWrapper::Write(const void* p, size_t n, const char* delim)
 {
     if(Write(p, n))
@@ -66,72 +70,106 @@ bool ByteWrapper::Write(const void* p, size_t n, const char* delim)
     return false;
 }
 
-ssize_t ByteWrapper::Readable(const char delim, size_t offset) const
+// Available data to read
+// Before next delimit char
+ssize_t ByteWrapper::Readable(const char delim) const
 {
-    if(Readable() < sizeof(delim) + offset)
+    if(Readable() < sizeof(delim))
     {
         return -1;
     }
-    
-    const unsigned char* p1 = (const unsigned char*)Peek(offset);
+    const unsigned char* p1 = (const unsigned char*)Read();
     const unsigned char* p2 = std::find(p1, (const unsigned char*)Write(), delim);
     if(p2 == Write())
     {
         return -1;
     }
-
     return p2 - p1;
 }
 
-ssize_t ByteWrapper::Readable(const char* delim, size_t offset) const
+// Available data to read
+// Before next delimit string
+ssize_t ByteWrapper::Readable(const char* delim) const
 {
-    if(Readable() < strlen(delim) + offset)
+    if(Readable() < strlen(delim))
     {
         return -1;
     }
-    
-    const unsigned char* p1 = (const unsigned char*)Peek(offset);
+    const unsigned char* p1 = (const unsigned char*)Read();
     const unsigned char* p2 = std::find_first_of(p1, (const unsigned char*)Write(), delim, delim + strlen(delim));
     if(p2 == Write())
     {
         return -1;
     }
-    
     return p2 - p1;
 }
 
-// Read into a bytes array
+// Actually read, copy data from the buffer and move read position forward
 bool ByteWrapper::Read(void* p, size_t n)
 {
     if(Readable() < n)
     {
         return false;
     }
-    
     memcpy(p, Read(), n);
     Read(n);
     return true;
 }
 
+// Available data to peek, using offset for random access
+// Before next delimit char
+ssize_t ByteWrapper::Peekable(const char delim, size_t offset) const
+{
+    if(Peekable(offset) < sizeof(delim))
+    {
+        return -1;
+    }
+    const char* p1 = (const char*)Peek(offset);
+    const char* p2 = std::find(p1, (const char*)Write(), delim);
+    if(p2 == Write())
+    {
+        return -1;
+    }
+    return p2 - p1;
+}
+
+// Available data to peek, using offset for random access
+// Before next delimit string
+ssize_t ByteWrapper::Peekable(const char* delim, size_t offset) const
+{
+    if(Peekable(offset) < strlen(delim))
+    {
+        return -1;
+    }
+    const char* p1 = (const char*)Peek(offset);
+    const char* p2 = std::find_first_of(p1, (const char*)Write(), delim, delim + strlen(delim));
+    if(p2 == Write())
+    {
+        return -1;
+    }
+    return p2 - p1;
+}
+
+// Peek data, copy data from the buffer but not move read position
+// using offset for random access
 bool ByteWrapper::Peek(void* p, size_t n, size_t offset)
 {
-    if(Readable() - offset < n) 
+    if(Peekable(offset) < n) 
     {
         return false;
     }
-
     memcpy(p, Peek(offset), n);
     return true;
 }
 
-
-bool ByteWrapper::Update(void* p, size_t n, size_t offset)
+// Update data, replace data in the buffer
+// using offset for random access
+bool ByteWrapper::Replace(void* p, size_t n, size_t offset)
 {
-    if(Readable() - offset < n) 
+    if(Peekable(offset) < n) 
     {
         return false;
     }
-
     memcpy(Peek(offset), p, n);
     return true;
 }
