@@ -160,7 +160,9 @@ std::string HttpMessage::Dump() const
     return oss.str();
 }
 
-// Todo: error handling, caused by limit of buffer
+// Todo: error handling
+// How about if error occured during packaging?
+// An incomplete packet is in the buffer. 
 bool HttpMessage::ToBuffer(StreamBuffer* buf) const
 {
     StreamWriter writer(buf);
@@ -200,6 +202,7 @@ bool HttpMessage::FromBuffer(StreamBuffer* buf)
 
 // Read start line
 // parsed by derived class
+// Todo: detect error before reading
 void HttpMessage::ReadStartLine(StreamBuffer* buf)
 {
     assert(mState == MSG_READY);

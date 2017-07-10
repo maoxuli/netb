@@ -64,8 +64,8 @@ private:
 
     void OnReceived(TcpConnection* conn, StreamBuffer* buf)
     {
-        std::cout << "Received " << buf->Readable() << " bytes.\n";
-        std::string msg((const char*)buf->Peek(), buf->Peekable());
+        std::cout << "Received " << buf->Addressable() << " bytes.\n";
+        std::string msg((const char*)buf->Address(), buf->Addressable());
         std::cout << msg << "\n";
         conn->Send(buf);
         assert(buf->Empty());

@@ -43,7 +43,7 @@ private:
 public:
 	// ss_family == AF_UNSPEC means the address is empty and the length of 
 	// address is sizeof(sockaddr_storage)
-	void Clear() { memset(&mAddress, 0, sizeof(struct sockaddr_storage)); }
+	void Reset() { memset(&mAddress, 0, sizeof(struct sockaddr_storage)); }
 	bool Empty() const { return mAddress.ss_family == AF_UNSPEC; }
 
 	sa_family_t Family() const { return mAddress.ss_family; }

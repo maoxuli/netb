@@ -26,6 +26,10 @@
 
 NET_BASE_BEGIN
 
+// 
+// HTTP message 
+// Todo: copy constructor with deep copy
+// 
 class StreamBuffer;
 class HttpMessage
 {

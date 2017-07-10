@@ -85,7 +85,7 @@ bool TcpListener::Listen(int backlog)
     }
 
     // Updata actual listening address
-    mAddress.Clear();
+    mAddress.Reset();
     socklen_t addrlen = mAddress.Length();
     mSocket.LocalAddress(mAddress.SockAddr(), &addrlen);
     assert(addrlen == mAddress.Length());

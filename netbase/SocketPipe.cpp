@@ -40,7 +40,7 @@ bool SocketPipe::MakePair(Socket& reader, Socket& writer)
     reader.Bind(addr.SockAddr(), addr.Length());
     reader.Listen(1); // reader works as server socket
 
-    addr.Clear();
+    addr.Reset();
     socklen_t addrlen = addr.Length();
     reader.LocalAddress(addr.SockAddr(), &addrlen); // Get actual listening address
 
