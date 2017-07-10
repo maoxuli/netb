@@ -75,9 +75,9 @@ bool StreamPeeker::SerializeBytes(void* p, size_t n)
 bool StreamPeeker::SerializeString(std::string& s, size_t n)
 {
     if(mStream == NULL) return false;
-    if(mStream->Lockable(mOffset) < n) return false;
+    if(mStream->Addressable(mOffset) < n) return false;
 
-    const unsigned char* p = (const unsigned char*)mStream->Lock(mOffset);
+    const unsigned char* p = (const unsigned char*)mStream->Address(mOffset);
     std::string(p, p + n).swap(s);
     mOffset += n;
     return true;
@@ -86,9 +86,9 @@ bool StreamPeeker::SerializeString(std::string& s, size_t n)
 bool StreamPeeker::SerializeString(std::string& s, const char delim)
 {
     if(mStream == NULL) return false;
-    if(mStream->Lockable(mOffset) < sizeof(delim)) return false;
+    if(mStream->Addressable(mOffset) < sizeof(delim)) return false;
 
-    ssize_t n = mStream->Lockable(delim);
+    ssize_t n = mStream->Addressable(delim, mOffset);
     if(n < 0) return false;
     if(n == 0) 
     {
@@ -96,7 +96,7 @@ bool StreamPeeker::SerializeString(std::string& s, const char delim)
         return true;
     }
 
-    const unsigned char* p = (const unsigned char*)mStream->Lock(mOffset);
+    const unsigned char* p = (const unsigned char*)mStream->Address(mOffset);
     std::string(p, p + n).swap(s);
     mOffset += n + sizeof(delim);
     return true;
@@ -105,9 +105,9 @@ bool StreamPeeker::SerializeString(std::string& s, const char delim)
 bool StreamPeeker::SerializeString(std::string& s, const char* delim)
 {
     if(mStream == NULL) return false;
-    if(mStream->Lockable() < strlen(delim)) return false;
+    if(mStream->Addressable(mOffset) < strlen(delim)) return false;
 
-    ssize_t n = mStream->Lockable(delim);
+    ssize_t n = mStream->Addressable(delim, mOffset);
     if(n < 0) return false;
     if(n == 0) 
     {
@@ -115,7 +115,7 @@ bool StreamPeeker::SerializeString(std::string& s, const char* delim)
         return true;
     }
     
-    const unsigned char* p = (const unsigned char*)mStream->Lock(mOffset);
+    const unsigned char* p = (const unsigned char*)mStream->Address(mOffset);
     std::string(p, p + n).swap(s);
     mOffset += n + strlen(delim);
     return true;

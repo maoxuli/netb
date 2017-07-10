@@ -194,25 +194,25 @@ public:
     // Actually read, copy data from the buffer and move read position forward
     bool Read(void* p, size_t n);
 
-    // Available data from position that offset to the reading position
-    ssize_t Lockable(size_t offset = 0) const
+    // Addressable data from position that offset to the reading position
+    ssize_t Addressable(size_t offset = 0) const
     {
         return mWriteIndex - mReadIndex - offset;
     }
 
-    // Available data from position that offset to the reading position 
+    // Addressable data from position that offset to the reading position 
     // to next delimit char or string
-    ssize_t Lockable(const char delim, size_t offset = 0) const; 
-    ssize_t Lockable(const char* delim, size_t offset = 0) const; 
+    ssize_t Addressable(const char delim, size_t offset = 0) const; 
+    ssize_t Addressable(const char* delim, size_t offset = 0) const; 
 
     // Pointer to position that offset to the reading position 
     // For external use, such as peek or update data in buffer 
-    const void* Lock(size_t offset = 0) const
+    const void* Address(size_t offset = 0) const
     {
         return mWriteIndex - mReadIndex < offset ? NULL : Begin() + mReadIndex + offset;
     }
 
-    void* Lock(size_t offset = 0) 
+    void* Address(size_t offset = 0) 
     {
         return mWriteIndex - mReadIndex < offset ? NULL : Begin() + mReadIndex + offset;
     }
