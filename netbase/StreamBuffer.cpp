@@ -169,13 +169,13 @@ bool StreamBuffer::Read(void* p, size_t n)
 
 // Available data from position that offset the reading position
 // to next delimit char
-ssize_t StreamBuffer::Peekable(const char delim, size_t offset) const
+ssize_t StreamBuffer::Lockable(const char delim, size_t offset) const
 {
-    if(Peekable(offset) < sizeof(delim))
+    if(Lockable(offset) < sizeof(delim))
     {
         return -1;
     }
-    const char* p1 = (const char*)Peek(offset);
+    const char* p1 = (const char*)Lock(offset);
     const char* p2 = std::find(p1, (const char*)Write(), delim);
     if(p2 == Write())
     {
@@ -186,13 +186,13 @@ ssize_t StreamBuffer::Peekable(const char delim, size_t offset) const
 
 // Available data from position that offset the reading position
 // to next delimit string
-ssize_t StreamBuffer::Peekable(const char* delim, size_t offset) const
+ssize_t StreamBuffer::Lockable(const char* delim, size_t offset) const
 {
-    if(Peekable(offset) < strlen(delim))
+    if(Lockable(offset) < strlen(delim))
     {
         return -1;
     }
-    const char* p1 = (const char*)Peek(offset);
+    const char* p1 = (const char*)Lock(offset);
     const char* p2 = std::find_first_of(p1, (const char*)Write(), delim, delim + strlen(delim));
     if(p2 == Write())
     {
@@ -205,11 +205,11 @@ ssize_t StreamBuffer::Peekable(const char* delim, size_t offset) const
 // Copy data from buffer but not affect reading and writing position
 bool StreamBuffer::Peek(void* p, size_t n, size_t offset)
 {
-    if(Peekable(offset) < n) 
+    if(Lockable(offset) < n) 
     {
         return false;
     }
-    memcpy(p, Peek(offset), n);
+    memcpy(p, Lock(offset), n);
     return true;
 }
 
@@ -217,11 +217,11 @@ bool StreamBuffer::Peek(void* p, size_t n, size_t offset)
 // Update data in buffer but not affect reading and writing position
 bool StreamBuffer::Update(void* p, size_t n, size_t offset)
 {
-    if(Peekable(offset) < n) 
+    if(Lockable(offset) < n) 
     {
         return false;
     }
-    memcpy(Peek(offset), p, n);
+    memcpy(Lock(offset), p, n);
     return true;
 }
 

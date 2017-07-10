@@ -153,6 +153,12 @@ public:
         return mWriteIndex - mReadIndex;
     }
 
+    // Check if Readable() >= n
+    bool Readable(size_t n) const
+    {
+        return mWriteIndex - mReadIndex >= n;
+    }
+
     // Available data to read before next delimit char or string
     ssize_t Readable(const char delim) const;
     ssize_t Readable(const char* delim) const; 
@@ -189,24 +195,24 @@ public:
     bool Read(void* p, size_t n);
 
     // Available data from position that offset to the reading position
-    ssize_t Peekable(size_t offset = 0) const
+    ssize_t Lockable(size_t offset = 0) const
     {
         return mWriteIndex - mReadIndex - offset;
     }
 
     // Available data from position that offset to the reading position 
     // to next delimit char or string
-    ssize_t Peekable(const char delim, size_t offset = 0) const; 
-    ssize_t Peekable(const char* delim, size_t offset = 0) const; 
+    ssize_t Lockable(const char delim, size_t offset = 0) const; 
+    ssize_t Lockable(const char* delim, size_t offset = 0) const; 
 
     // Pointer to position that offset to the reading position 
     // For external use, such as peek or update data in buffer 
-    const void* Peek(size_t offset = 0) const
+    const void* Lock(size_t offset = 0) const
     {
         return mWriteIndex - mReadIndex < offset ? NULL : Begin() + mReadIndex + offset;
     }
 
-    void* Peek(size_t offset = 0) 
+    void* Lock(size_t offset = 0) 
     {
         return mWriteIndex - mReadIndex < offset ? NULL : Begin() + mReadIndex + offset;
     }
