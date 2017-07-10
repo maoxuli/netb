@@ -28,8 +28,6 @@ SocketAddress::SocketAddress(const char* host, unsigned short port, sa_family_t 
 {
     memset(&mAddress, 0, sizeof(sockaddr_storage));
 
-    memset(&mAddress, 0, sizeof(sockaddr_storage));
-
     if(host == NULL)
     {
         if(family == AF_INET)
@@ -82,17 +80,25 @@ SocketAddress::SocketAddress(const char* host, unsigned short port, sa_family_t 
     }
 }
 
-sa_family_t SocketAddress::Family() const 
+socklen_t SocketAddress::Length() const
 {
-    return mAddress.ss_family;
+    if(mAddress.ss_family == AF_INET)
+    {
+        return sizeof(sockaddr_in);
+    }
+    if(mAddress.ss_family == AF_INET6)
+    {
+        return sizeof(sockaddr_in6);
+    }
+    return sizeof(sockaddr_storage);
 }
 
-std::string SocketAddress::Host() const 
+std::string SocketAddress::Host() const
 {
     return "";
 }
 
-void SocketAddress::Port(unsigned short port) 
+void SocketAddress::Port(unsigned short port)
 {
     assert(false);
 }
@@ -114,37 +120,11 @@ std::string SocketAddress::ToString() const
 {    
     char namebuf[1024];
     namebuf[0] = '\0';
-    getnameinfo(SockAddr(), SockAddrLen(), namebuf, sizeof(namebuf), 0, 0, NI_NUMERICHOST);
+    getnameinfo((sockaddr*)&mAddress, Length(), namebuf, sizeof(namebuf), 0, 0, NI_NUMERICHOST);
     
     std::ostringstream oss;
     oss << namebuf << ":" << Port();
     return oss.str();
-}
-
-struct sockaddr* SocketAddress::SockAddr() 
-{
-    return (sockaddr*)&mAddress;
-}
-
-const struct sockaddr* SocketAddress::SockAddr() const
-{
-    return (sockaddr*)&mAddress;
-}
-
-// sockaddr_storage::ss_len is ignored in this implementation
-// Address length is determined by ss_family
-// full lenth of sockaddr_sotrage is returned if the ss_family is AF_UNSPEC 
-socklen_t SocketAddress::SockAddrLen() const 
-{
-    if(mAddress.ss_family == AF_INET)
-    {
-        return sizeof(sockaddr_in);
-    }
-    if(mAddress.ss_family == AF_INET6)
-    {
-        return sizeof(sockaddr_in6);
-    }
-    return sizeof(sockaddr_storage);
 }
 
 bool SocketAddress::operator==(const SocketAddress& a) const throw()

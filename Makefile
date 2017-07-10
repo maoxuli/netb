@@ -22,8 +22,6 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/SocketSelector.hpp \
 	   $(INCDIR)/SocketAddress.hpp \
 	   $(INCDIR)/StreamBuffer.hpp \
-	   $(INCDIR)/ByteBuffer.hpp \
-	   $(INCDIR)/ByteWrapper.hpp \
 	   $(INCDIR)/StreamWriter.hpp \
 	   $(INCDIR)/StreamReader.hpp \
 	   $(INCDIR)/StreamPeeker.hpp \
@@ -45,8 +43,7 @@ OBJ	:= $(OBJDIR)/SocketError.o \
 	   $(OBJDIR)/Socket.o \
 	   $(OBJDIR)/SocketSelector.o \
 	   $(OBJDIR)/SocketAddress.o \
-	   $(OBJDIR)/ByteBuffer.o \
-	   $(OBJDIR)/ByteWrapper.o \
+	   $(OBJDIR)/StreamBuffer.o \
 	   $(OBJDIR)/StreamWriter.o \
 	   $(OBJDIR)/StreamReader.o \
 	   $(OBJDIR)/StreamPeeker.o \

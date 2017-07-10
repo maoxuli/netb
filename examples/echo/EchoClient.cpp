@@ -19,7 +19,7 @@
 #include "EventLoopThread.hpp"
 #include "TcpConnector.hpp"
 #include "TcpConnection.hpp"
-#include "ByteBuffer.hpp"
+#include "StreamBuffer.hpp"
 #include <iostream>
 #include <string>
 #include <cstdlib>
@@ -94,7 +94,7 @@ private:
     EventLoop* mLoop;
     TcpConnector mConnector;
     TcpConnection* mConnection;
-    ByteBuffer mBuffer;
+    StreamBuffer mBuffer;
 };
 
 int main(const int argc, char* argv[])

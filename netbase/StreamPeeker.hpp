@@ -26,18 +26,16 @@
 NET_BASE_BEGIN
 
 //
-// StreamBuffer is designed as the major interface to hold and transfer data. The 
-// implementation objects include ByteBuffer and ByteWrapper. The former owns a 
-// internal memory block, while the latter hold a pointer to a external memory 
-// block. StreamBuffer interface defined functions to 'streamingly' read and write 
-// data, as well as 'randomly' peek and update data. The interface of StreamBuffer 
-// works on 'byte' level, which means the functions always manipulate one or more 
-// bytes. This is inconvenient in some cases, for example, we may need to read or 
-// write a 'integer number', a 'float number', or a 'string', from the buffer or 
-// to the buffer. In those cases, we have to translate all known 'data type' to 
-// a kind of 'byte sequence' to adapt to the StreamBuffer interface. 
+// StreamBuffer is designed as an object to hold and transfer data. It defined 
+// functions to 'streamingly' read and write data, as well as 'randomly' peek 
+// and update data. The interface of StreamBuffer works on 'byte' level, which 
+// means the functions always take a byte sequece (one or more bytes) as input 
+// or output parameters. This is inconvenient in some cases, for example, we 
+// may need to write or read 'integer number', 'float number', or 'string'
+// to/from the buffer. In all cases, we have to translate the known 'data type' 
+// to a kind of 'byte sequence' to adapt to StreamBuffer interface. 
 // 
-// StreamReader, StreamWriter, and StreamPeeker are designed as tool objects to 
+// StreamWriter, StreamReader, and StreamPeeker are designed as tool objects to 
 // facilitate reading and writing known 'data type' from and to a StreamBuffer 
 // object, which is also known as serialization in network protocol programming. 
 // These tool objects work on a existing StreamBuffer object, holding a pointer 
@@ -46,7 +44,7 @@ NET_BASE_BEGIN
 //
 // To make network protocol programming further easier, these tool objects are 
 // designed to have 'compatible' inteface so that protocol data may be packed 
-// and unpacked from StreamBuffer based on the same code, somehow as below:
+// and unpacked to/from StreamBuffer based on the same code, somehow as below:
 //
 // class Packet 
 // {
@@ -80,15 +78,14 @@ NET_BASE_BEGIN
 //      }
 // };
 //
-// To ensure this strategy working properly, the interfaces of StreamReader, 
-// StreamWriter, StreamPeeker and other possible tool objects must be 'compatible'.
-// That means their member functions have 'compatible' signatures, and the known 
-// 'data type' is writen into and read from the buffer using same rule. 
+// To ensure this strategy working properly, the interfaces of StreamWriter, 
+// StreamReader, and StreamPeeker must be 'compatible'. That means their member 
+// functions have 'compatible' signatures, and the known 'data types' are writen 
+// and read to/from the buffer using the same rules. 
 //
 // StreamWriter is used to write data into the buffer.
 // StreamReader is used to read data from the buffer.
-// StreamPeeker is used to read data from the buffer, but the data is not removed 
-// from the buffer, i.e., still kept in the buffer. 
+// StreamPeeker is used to peek data from the buffer, while keep data in buffer.
 //
 class StreamPeeker : Uncopyable
 {
@@ -96,8 +93,8 @@ public:
     // If not assign a StreamBuffer at init, 
     // should attach later before serializing operations
     StreamPeeker();
-    StreamPeeker(StreamBuffer* buf);
-    StreamPeeker(StreamBuffer& buf);
+    explicit StreamPeeker(StreamBuffer* buf);
+    explicit StreamPeeker(StreamBuffer& buf);
     ~StreamPeeker();
 
     StreamPeeker& Attach(StreamBuffer* buf);

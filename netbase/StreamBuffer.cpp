@@ -15,13 +15,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ByteBuffer.hpp"
+#include "StreamBuffer.hpp"
 #include <cassert>
 
 NET_BASE_BEGIN
 
 // Initialize with initial size and limit size
-ByteBuffer::ByteBuffer(size_t init, size_t limit)
+StreamBuffer::StreamBuffer(size_t init, size_t limit)
 : mBytes(init)
 , mLimit(limit)
 , mReadIndex(0)
@@ -31,7 +31,7 @@ ByteBuffer::ByteBuffer(size_t init, size_t limit)
 }
 
 // Initialize with initial data, initial size and limit size
-ByteBuffer::ByteBuffer(const void* p, size_t n, size_t init, size_t limit)
+StreamBuffer::StreamBuffer(const void* p, size_t n, size_t init, size_t limit)
 : mBytes(init)
 , mLimit(limit)
 , mReadIndex(0)
@@ -42,9 +42,9 @@ ByteBuffer::ByteBuffer(const void* p, size_t n, size_t init, size_t limit)
     mWriteIndex = n;
 }
 
-// Initialize with another ByteBuffer object
+// Copy constructor
 // Deep copy and move data to the beginning
-ByteBuffer::ByteBuffer(const ByteBuffer& b)
+StreamBuffer::StreamBuffer(const StreamBuffer& b)
 : mBytes(b.Readable())
 , mLimit(b.mLimit)
 {
@@ -53,9 +53,9 @@ ByteBuffer::ByteBuffer(const ByteBuffer& b)
     mWriteIndex = b.Readable();
 }
 
-// Initialize with another ByteBuffer object
+// Copy constructor
 // Deep copy and move data to the beginning
-ByteBuffer::ByteBuffer(const ByteBuffer* b)
+StreamBuffer::StreamBuffer(const StreamBuffer* b)
 : mBytes(b->Readable())
 , mLimit(b->mLimit)
 {
@@ -64,36 +64,14 @@ ByteBuffer::ByteBuffer(const ByteBuffer* b)
     mWriteIndex = b->Readable();
 }
 
-// Initialize with another StreamBuffer object
-// Deep copy and move data to the beginning
-ByteBuffer::ByteBuffer(const StreamBuffer& s)
-: mBytes(s.Readable())
-, mLimit(s.Size()) // !!!
-{
-    memcpy(Begin(), s.Read(), s.Readable());
-    mReadIndex = 0;
-    mWriteIndex = s.Readable();
-}
-
-// Initialize with another StreamBuffer object
-// Deep copy and move data to the beginning
-ByteBuffer::ByteBuffer(const StreamBuffer* s)
-: mBytes(s->Readable())
-, mLimit(s->Size()) // !!!
-{
-    memcpy(Begin(), s->Read(), s->Readable());
-    mReadIndex = 0;
-    mWriteIndex = s->Readable();
-}
-
-ByteBuffer::~ByteBuffer()
+StreamBuffer::~StreamBuffer()
 {
     
 }
 
-// Assignment with another ByteBuffer object
+// Assignment operator
 // Deep copy and move data to the beginning 
-ByteBuffer& ByteBuffer::operator=(const ByteBuffer& b)
+StreamBuffer& StreamBuffer::operator=(const StreamBuffer& b)
 {
     if(mLimit < b.Size())
     {
@@ -109,26 +87,8 @@ ByteBuffer& ByteBuffer::operator=(const ByteBuffer& b)
     return *this;
 }
 
-// Assignment with another StreamBuffer object
-// Deep copy and move data to the beginning 
-ByteBuffer& ByteBuffer::operator=(const StreamBuffer& s)
-{
-    if(mLimit < s.Size())
-    {
-        mLimit = s.Size();
-    }
-    if(mBytes.size() < s.Readable())
-    {
-        mBytes.resize(s.Readable());
-    }
-    memcpy(Begin(), s.Read(), s.Readable());
-    mReadIndex = 0;
-    mWriteIndex = s.Readable();
-    return *this;
-}
-
 // Actually write, copy data into the buffer and move write position forward
-bool ByteBuffer::Write(const void* p, size_t n)
+bool StreamBuffer::Write(const void* p, size_t n)
 {
     if(!Writable(n))
     {
@@ -141,7 +101,7 @@ bool ByteBuffer::Write(const void* p, size_t n)
 
 // Actually write, copy data into the buffer and move write position forward
 // Append a delimit char
-bool ByteBuffer::Write(const void* p, size_t n, const char delim)
+bool StreamBuffer::Write(const void* p, size_t n, const char delim)
 {
     if(Write(p, n))
     {
@@ -152,7 +112,7 @@ bool ByteBuffer::Write(const void* p, size_t n, const char delim)
 
 // Actually write, copy data into the buffer and move write position forward
 // Append a delimit string
-bool ByteBuffer::Write(const void* p, size_t n, const char* delim)
+bool StreamBuffer::Write(const void* p, size_t n, const char* delim)
 {
     if(Write(p, n))
     {
@@ -163,7 +123,7 @@ bool ByteBuffer::Write(const void* p, size_t n, const char* delim)
 
 // Available data to read
 // Before next delimit char
-ssize_t ByteBuffer::Readable(const char delim) const
+ssize_t StreamBuffer::Readable(const char delim) const
 {
     if(Readable() < sizeof(delim))
     {
@@ -180,7 +140,7 @@ ssize_t ByteBuffer::Readable(const char delim) const
 
 // Available data to read
 // Before next delimit string
-ssize_t ByteBuffer::Readable(const char* delim) const
+ssize_t StreamBuffer::Readable(const char* delim) const
 {
     if(Readable() < strlen(delim))
     {
@@ -196,7 +156,7 @@ ssize_t ByteBuffer::Readable(const char* delim) const
 }
 
 // Actually read, copy data from the buffer and move read position forward
-bool ByteBuffer::Read(void* p, size_t n)
+bool StreamBuffer::Read(void* p, size_t n)
 {
     if(Readable() < n)
     {
@@ -207,9 +167,9 @@ bool ByteBuffer::Read(void* p, size_t n)
     return true;
 }
 
-// Available data to peek, using offset for random access
-// Before next delimit char
-ssize_t ByteBuffer::Peekable(const char delim, size_t offset) const
+// Available data from position that offset the reading position
+// to next delimit char
+ssize_t StreamBuffer::Peekable(const char delim, size_t offset) const
 {
     if(Peekable(offset) < sizeof(delim))
     {
@@ -224,9 +184,9 @@ ssize_t ByteBuffer::Peekable(const char delim, size_t offset) const
     return p2 - p1;
 }
 
-// Available data to peek, using offset for random access
-// Before next delimit string
-ssize_t ByteBuffer::Peekable(const char* delim, size_t offset) const
+// Available data from position that offset the reading position
+// to next delimit string
+ssize_t StreamBuffer::Peekable(const char* delim, size_t offset) const
 {
     if(Peekable(offset) < strlen(delim))
     {
@@ -241,9 +201,9 @@ ssize_t ByteBuffer::Peekable(const char* delim, size_t offset) const
     return p2 - p1;
 }
 
-// Peek data, copy data from the buffer but not move read position
-// using offset for random access
-bool ByteBuffer::Peek(void* p, size_t n, size_t offset)
+// Peek data at position that offset to the reading position
+// Copy data from buffer but not affect reading and writing position
+bool StreamBuffer::Peek(void* p, size_t n, size_t offset)
 {
     if(Peekable(offset) < n) 
     {
@@ -253,9 +213,9 @@ bool ByteBuffer::Peek(void* p, size_t n, size_t offset)
     return true;
 }
 
-// Update data, replace data in the buffer
-// using offset for random access
-bool ByteBuffer::Replace(void* p, size_t n, size_t offset)
+// Update data at position that offset to the reading position
+// Update data in buffer but not affect reading and writing position
+bool StreamBuffer::Update(void* p, size_t n, size_t offset)
 {
     if(Peekable(offset) < n) 
     {

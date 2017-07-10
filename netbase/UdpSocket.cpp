@@ -35,22 +35,22 @@ UdpSocket::~UdpSocket()
 bool UdpSocket::Bind(const char* host, unsigned short port)
 {
     SocketAddress addr(host, port);
-    return mSocket.Bind(addr.SockAddr(), addr.SockAddrLen());
+    return mSocket.Bind(addr.SockAddr(), addr.Length());
 }
 
 bool UdpSocket::Bind(const SocketAddress& addr)
 {
-    return mSocket.Bind(addr.SockAddr(), addr.SockAddrLen());
+    return mSocket.Bind(addr.SockAddr(), addr.Length());
 }
 
 ssize_t UdpSocket::Send(void* p, size_t n, const SocketAddress& addr)
 {
-    return mSocket.SendTo(p, n, addr.SockAddr(), addr.SockAddrLen());
+    return mSocket.SendTo(p, n, addr.SockAddr(), addr.Length());
 }
 
 ssize_t UdpSocket::Send(StreamBuffer* buf, const SocketAddress& addr)
 {
-    ssize_t ret = mSocket.SendTo(buf->Read(), buf->Readable(), addr.SockAddr(), addr.SockAddrLen());
+    ssize_t ret = mSocket.SendTo(buf->Read(), buf->Readable(), addr.SockAddr(), addr.Length());
     if(ret > 0)
     {
         buf->Read(ret);
@@ -60,13 +60,13 @@ ssize_t UdpSocket::Send(StreamBuffer* buf, const SocketAddress& addr)
 
 ssize_t UdpSocket::Receive(void* p, size_t n, SocketAddress* addr)
 {
-    socklen_t addrlen = addr->SockAddrLen();
+    socklen_t addrlen = addr->Length();
     return mSocket.ReceiveFrom(p, n, addr->SockAddr(), &addrlen);
 }
 
 ssize_t UdpSocket::Receive(StreamBuffer* buf, SocketAddress* addr)
 {
-    socklen_t addrlen = addr->SockAddrLen();
+    socklen_t addrlen = addr->Length();
     ssize_t ret = 0;
     if(buf->Writable(2048))
     {
@@ -82,23 +82,23 @@ ssize_t UdpSocket::Receive(StreamBuffer* buf, SocketAddress* addr)
 bool UdpSocket::Connect(const char* host, unsigned short port)
 {
     SocketAddress addr(host, port);
-    return mSocket.Connect(addr.SockAddr(), addr.SockAddrLen());
+    return mSocket.Connect(addr.SockAddr(), addr.Length());
 }
 
 bool UdpSocket::Connect(const SocketAddress& addr)
 {
-    return mSocket.Connect(addr.SockAddr(), addr.SockAddrLen());
+    return mSocket.Connect(addr.SockAddr(), addr.Length());
 }
 
 bool UdpSocket::LocalAddress(SocketAddress* addr) const
 {
-    socklen_t addrlen = addr->SockAddrLen();
+    socklen_t addrlen = addr->Length();
     return mSocket.LocalAddress(addr->SockAddr(), &addrlen);
 }
 
 bool UdpSocket::RemoteAddress(SocketAddress* addr) const 
 {
-    socklen_t addrlen = addr->SockAddrLen();
+    socklen_t addrlen = addr->Length();
     return mSocket.RemoteAddress(addr->SockAddr(), &addrlen);
 }
 

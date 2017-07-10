@@ -37,15 +37,15 @@ bool SocketPipe::MakePair(Socket& reader, Socket& writer)
 {
     SocketAddress addr(NULL, 0); // Local loopback address
     reader.Block(true); 
-    reader.Bind(addr.SockAddr(), addr.SockAddrLen());
+    reader.Bind(addr.SockAddr(), addr.Length());
     reader.Listen(1); // reader works as server socket
 
-    addr.Reset();
-    socklen_t addrlen = addr.SockAddrLen();
+    addr.Clear();
+    socklen_t addrlen = addr.Length();
     reader.LocalAddress(addr.SockAddr(), &addrlen); // Get actual listening address
 
     writer.Block(true);
-    writer.Connect(addr.SockAddr(), addr.SockAddrLen()); // Writer works as client socket
+    writer.Connect(addr.SockAddr(), addr.Length()); // Writer works as client socket
 
     SOCKET s = reader.Accept(); // Established connection
     reader.Attach(s); // reader shift to connection, and close server socket 

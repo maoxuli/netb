@@ -70,7 +70,7 @@ void HttpClient::OnClosed(TcpConnection* conn)
 void HttpClient::SendRequest(HttpRequest* request)
 {
     assert(mConnection != NULL);
-    ByteBuffer buf;
+    StreamBuffer buf;
     request->ToBuffer(&buf);
     mConnection->Send(&buf);
     std::cout << request->Dump() << "\n";

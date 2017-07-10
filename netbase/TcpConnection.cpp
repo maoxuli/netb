@@ -59,16 +59,16 @@ void TcpConnection::Connected()
 {
     if(mLocalAddress.Empty())
     {
-        socklen_t addrlen = mLocalAddress.SockAddrLen();
+        socklen_t addrlen = mLocalAddress.Length();
         mSocket.LocalAddress(mLocalAddress.SockAddr(), &addrlen);
-        assert(addrlen == mLocalAddress.SockAddrLen());
+        assert(addrlen == mLocalAddress.Length());
     }
 
     if(mRemoteAddress.Empty())
     {
-        socklen_t addrlen = mRemoteAddress.SockAddrLen();
+        socklen_t addrlen = mRemoteAddress.Length();
         mSocket.LocalAddress(mRemoteAddress.SockAddr(), &addrlen);
-        assert(addrlen == mRemoteAddress.SockAddrLen());
+        assert(addrlen == mRemoteAddress.Length());
     }
 
     mLoop->Invoke(std::bind(&TcpConnection::ConnectedInLoop, this));
@@ -115,7 +115,7 @@ bool TcpConnection::Send(void* p, size_t n)
     }
     else
     {
-        mLoop->Invoke(std::bind(&TcpConnection::SendInLoop, this, std::make_shared<ByteBuffer>(p, n)));
+        mLoop->Invoke(std::bind(&TcpConnection::SendInLoop, this, std::make_shared<StreamBuffer>(p, n)));
     }
     return true;
 }
@@ -132,14 +132,14 @@ bool TcpConnection::Send(StreamBuffer* buf)
     }
     else
     {
-        mLoop->Invoke(std::bind(&TcpConnection::SendInLoop, this, std::make_shared<ByteBuffer>(buf)));
+        mLoop->Invoke(std::bind(&TcpConnection::SendInLoop, this, std::make_shared<StreamBuffer>(buf)));
         buf->Clear(); // ??? 
     }
     return true;
 }
 
 // Thread loop will invoke this function
-void TcpConnection::SendInLoop(ByteBufferPtr buf)
+void TcpConnection::SendInLoop(StreamBufferPtr buf)
 {
     DoSend(buf->Read(), buf->Readable());
 }

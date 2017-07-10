@@ -22,7 +22,6 @@
 #include "SocketAddress.hpp"
 #include "EventHandler.hpp"
 #include "StreamBuffer.hpp"
-#include "ByteBuffer.hpp"
 #include <queue>
 #include <memory>
 
@@ -91,8 +90,8 @@ public:
 private:
     // Buffer is copied and transfered with a shared_ptr
     // it will delete the buffer once it is processed
-    typedef std::shared_ptr<ByteBuffer> ByteBufferPtr;
-    void SendInLoop(ByteBufferPtr buf, SocketAddress addr);
+    typedef std::shared_ptr<StreamBuffer> StreamBufferPtr;
+    void SendInLoop(StreamBufferPtr buf, SocketAddress addr);
 
     void DoSend(void* p, size_t n, const SocketAddress& addr);
 
@@ -119,15 +118,15 @@ private:
     ClosedCallback mClosedCallback;
 
     // Callback per received packet
-    ByteBuffer mInBuffer;
+    StreamBuffer mInBuffer;
 
     // UDP send packets one by one always 
     struct BufferAddress
     {
-        BufferAddress(ByteBuffer* b, SocketAddress sa)
+        BufferAddress(StreamBuffer* b, SocketAddress sa)
         : buf(b), addr(sa) { }
         
-        ByteBuffer* buf;
+        StreamBuffer* buf;
         SocketAddress addr;
     };
 

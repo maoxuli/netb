@@ -75,7 +75,7 @@ void HttpServer::OnClosed(TcpConnection* conn)
 
 void HttpServer::SendResponse(TcpConnection* conn, HttpResponse* response)
 {
-    ByteBuffer buf;
+    StreamBuffer buf;
     response->ToBuffer(&buf);
     conn->Send(&buf);
 }

@@ -22,7 +22,6 @@
 #include "SocketAddress.hpp"
 #include "EventHandler.hpp"
 #include "StreamBuffer.hpp"
-#include "ByteBuffer.hpp"
 
 NET_BASE_BEGIN
 
@@ -79,8 +78,8 @@ private:
 
     // Buffer is copied and transfered with a shared_ptr
     // it will delete the buffer once it is processed
-    typedef std::shared_ptr<ByteBuffer> ByteBufferPtr;
-    void SendInLoop(ByteBufferPtr buf);
+    typedef std::shared_ptr<StreamBuffer> StreamBufferPtr;
+    void SendInLoop(StreamBufferPtr buf);
 
     void DoSend(void* p, size_t n);
 
@@ -106,8 +105,8 @@ private:
     ClosedCallback mClosedCallback;
     
     // Stream buffer for reading and sending
-    ByteBuffer mInBuffer;
-    ByteBuffer mOutBuffer;
+    StreamBuffer mInBuffer;
+    StreamBuffer mOutBuffer;
 };
 
 NET_BASE_END

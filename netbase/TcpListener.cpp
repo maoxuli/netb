@@ -73,7 +73,7 @@ bool TcpListener::Listen(int backlog)
 {
     // If address is not assigned, listen without bind
     // Otherwise bind
-    if(!mAddress.Empty() && !mSocket.Bind(mAddress.SockAddr(), mAddress.SockAddrLen()))
+    if(!mAddress.Empty() && !mSocket.Bind(mAddress.SockAddr(), mAddress.Length()))
     {
         return false;
     }
@@ -85,10 +85,10 @@ bool TcpListener::Listen(int backlog)
     }
 
     // Updata actual listening address
-    mAddress.Reset();
-    socklen_t addrlen = mAddress.SockAddrLen();
+    mAddress.Clear();
+    socklen_t addrlen = mAddress.Length();
     mSocket.LocalAddress(mAddress.SockAddr(), &addrlen);
-    assert(addrlen == mAddress.SockAddrLen());
+    assert(addrlen == mAddress.Length());
    
     // Enable async mode to accept incomming connections
     mSocket.Block(false);

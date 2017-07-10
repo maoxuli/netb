@@ -36,12 +36,12 @@ TcpSocket::~TcpSocket()
 bool TcpSocket::Bind(const char* host, unsigned short port)
 {
     SocketAddress addr(host, port, mSocket.Family());
-    return mSocket.Bind(addr.SockAddr(), addr.SockAddrLen());
+    return mSocket.Bind(addr.SockAddr(), addr.Length());
 }
 
 bool TcpSocket::Bind(const SocketAddress& addr)
 {
-    return mSocket.Bind(addr.SockAddr(), addr.SockAddrLen());
+    return mSocket.Bind(addr.SockAddr(), addr.Length());
 }
 
 bool TcpSocket::Listen(int backlog)
@@ -57,32 +57,32 @@ SOCKET TcpSocket::Accept()
 SOCKET TcpSocket::Accept(SocketAddress* addr)
 {
     assert(addr != NULL);
-    socklen_t addrlen = addr->SockAddrLen();
+    socklen_t addrlen = addr->Length();
     return mSocket.Accept(addr->SockAddr(), &addrlen);
 }
 
 bool TcpSocket::Connect(const char* host, unsigned short port)
 {
     SocketAddress addr(host, port, mSocket.Family());
-    return mSocket.Connect(addr.SockAddr(), addr.SockAddrLen());
+    return mSocket.Connect(addr.SockAddr(), addr.Length());
 }
 
 bool TcpSocket::Connect(const SocketAddress& addr)
 {
-    return mSocket.Connect(addr.SockAddr(), addr.SockAddrLen());
+    return mSocket.Connect(addr.SockAddr(), addr.Length());
 }
 
 bool TcpSocket::LocalAddress(SocketAddress* addr) const
 {
     assert(addr != NULL);
-    socklen_t addrlen = addr->SockAddrLen();
+    socklen_t addrlen = addr->Length();
     return mSocket.LocalAddress(addr->SockAddr(), &addrlen);
 }
 
 bool TcpSocket::RemoteAddress(SocketAddress* addr) const 
 {
     assert(addr != NULL);
-    socklen_t addrlen = addr->SockAddrLen();
+    socklen_t addrlen = addr->Length();
     return mSocket.RemoteAddress(addr->SockAddr(), &addrlen);
 }
 

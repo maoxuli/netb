@@ -27,51 +27,56 @@
 
 NET_BASE_BEGIN
 
+//
+// SocketAddress is an wrapper object that is compatible to the major data 
+// structures used for socket address, such as struct sockaddr, struct sockaddr_in, 
+// and struct sockaddr_storage. 
+// 
 class SocketAddress
 {
 private:
-	// Address is keped in sockaddr_storage
-	// It is a 128 bytes long structure that is enough for any kind of socket address
+	// sockaddr_storage is big enough for all fmilies of socket address
 	// ss_len is ignored in this implementation
 	// The actual lenth of the adress is determined by ss_family
 	sockaddr_storage mAddress;
 
 public:
-	// Reset the address to empty, thus ss_family is AF_UNSPEC
-	void Reset() { memset(&mAddress, 0, sizeof(sockaddr_storage)); }
-    void Port(unsigned short port);
+	// ss_family == AF_UNSPEC means the address is empty and the length of 
+	// address is sizeof(sockaddr_storage)
+	void Clear() { memset(&mAddress, 0, sizeof(struct sockaddr_storage)); }
+	bool Empty() const { return mAddress.ss_family == AF_UNSPEC; }
 
-	// Address information
-	bool Empty() const { return Family() == AF_UNSPEC; }
-	sa_family_t Family() const;
+	sa_family_t Family() const { return mAddress.ss_family; }
+	socklen_t Length() const;
+
 	std::string Host() const;
 	unsigned short Port() const;
+	void Port(unsigned short port);
 	std::string ToString() const;
 
-	// Socket APIs use struct sockaddr as socket address interface
-	struct sockaddr* SockAddr();
-	const struct sockaddr* SockAddr() const;
+	const struct sockaddr* SockAddr() const 
+	{
+		return (struct sockaddr*)&mAddress;
+	}
 
-	// The actual lenth of current socket address, determined by ss_family
-	// return the size of sockaddr_storage only if ss_family is AF_UNSPEC
-	socklen_t SockAddrLen() const;
+	struct sockaddr* SockAddr() 
+	{
+		return (struct sockaddr*)&mAddress;
+	}
 
 public: 
-	// Empty address, all set to 0, AF_UNSPEC
+	// Constructor, empty address, all set to 0, AF_UNSPEC
 	SocketAddress() throw() { memset(&mAddress, 0, sizeof(sockaddr_storage)); }
 
+	// Constructor
 	// if host is null and port is 0, loopback address, used for local host only
 	// if host is null and port is non 0, wildcard address, used for server 
 	SocketAddress(const char* host, unsigned short port, sa_family_t family = AF_INET) throw();
 
-public: 
-	// Copy constructor, and assigment operator, from other data structure
+	// Copy constructor
 	SocketAddress(const SocketAddress& sa) throw() { memcpy(&mAddress, &sa.mAddress,sizeof(sockaddr_storage)); }
-	SocketAddress(const struct sockaddr_storage& ss) throw() { *this = ss; }
-	SocketAddress(const struct sockaddr& sa) throw() { *this = sa; }
-	SocketAddress(const struct sockaddr_in& sa) throw() { *this = sa; }
-	SocketAddress(const struct sockaddr_in6& sa) throw() { *this = sa; }
 
+	// Assignment operator
 	inline SocketAddress& operator=(const SocketAddress& sa) throw()
 	{
 		if(&sa != this) 
@@ -79,13 +84,21 @@ public:
 		return *this;
 	}
 
-	inline SocketAddress& operator=(const struct sockaddr_storage& ss) throw()
-	{
-		if(&ss != &mAddress)
-			memcpy(&mAddress, &ss,sizeof(struct sockaddr_storage));
-		return *this;
-	}
+public: 
+	// Copy counstructor, from data structures used in socket address
+	SocketAddress(const struct sockaddr& sa) throw() { *this = sa; }
+	explicit SocketAddress(const struct sockaddr* sa) throw() { *this = *sa; }
 
+	SocketAddress(const struct sockaddr_in& sa) throw() { *this = sa; }
+	explicit SocketAddress(const struct sockaddr_in* sa) throw() { *this = *sa; }
+
+	SocketAddress(const struct sockaddr_in6& sa) throw() { *this = sa; }
+	explicit SocketAddress(const struct sockaddr_in6* sa) throw() { *this = *sa; }
+	
+	SocketAddress(const struct sockaddr_storage& sa) throw() { *this = sa; }
+	explicit SocketAddress(const struct sockaddr_storage* sa) throw() { *this = *sa; }
+
+	// Assignment operator, from data structures used in socket address
 	inline SocketAddress& operator=(const struct sockaddr& sa) throw()
 	{
 		if(reinterpret_cast<const struct sockaddr_storage*>(&sa) != &mAddress) 
@@ -124,8 +137,15 @@ public:
 		return *this;
 	}
 
+	inline SocketAddress& operator=(const struct sockaddr_storage& sa) throw()
+	{
+		if(&sa != &mAddress)
+			memcpy(&mAddress, &sa,sizeof(struct sockaddr_storage));
+		return *this;
+	}
+
 public:
-	// Comparing operators
+	// Comparing operators, necessary for values in collection objects
 	bool operator==(const SocketAddress& a) const throw();
 	bool operator<(const SocketAddress& a) const throw();
 	inline bool operator!=(const SocketAddress& a) const throw() { return !(*this == a); }

@@ -27,15 +27,15 @@ StreamPeeker::StreamPeeker()
 
 }
 
-StreamPeeker::StreamPeeker(StreamBuffer& buf)
-: mStream(&buf)
+StreamPeeker::StreamPeeker(StreamBuffer* buf)
+: mStream(buf)
 , mOffset(0)
 {
 
 }
 
-StreamPeeker::StreamPeeker(StreamBuffer* buf)
-: mStream(buf)
+StreamPeeker::StreamPeeker(StreamBuffer& buf)
+: mStream(&buf)
 , mOffset(0)
 {
 
@@ -46,16 +46,16 @@ StreamPeeker::~StreamPeeker()
 
 }
 
-StreamPeeker& StreamPeeker::Attach(StreamBuffer& buf)
+StreamPeeker& StreamPeeker::Attach(StreamBuffer* buf)
 {
-    mStream = &buf;
+    mStream = buf;
     mOffset = 0;
     return *this;
 }
 
-StreamPeeker& StreamPeeker::Attach(StreamBuffer* buf)
+StreamPeeker& StreamPeeker::Attach(StreamBuffer& buf)
 {
-    mStream = buf;
+    mStream = &buf;
     mOffset = 0;
     return *this;
 }

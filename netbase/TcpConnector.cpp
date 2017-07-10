@@ -68,8 +68,8 @@ bool TcpConnector::Connect(const SocketAddress& addr)
 
     Socket sock(mAddress.Family(), SOCK_STREAM, IPPROTO_TCP);
     sock.Block(true);
-    sock.Bind(mAddress.SockAddr(), mAddress.SockAddrLen());
-    if(!sock.Connect(addr.SockAddr(), addr.SockAddrLen()))
+    sock.Bind(mAddress.SockAddr(), mAddress.Length());
+    if(!sock.Connect(addr.SockAddr(), addr.Length()))
     {
         return false;
     }

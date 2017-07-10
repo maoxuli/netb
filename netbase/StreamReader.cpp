@@ -26,14 +26,14 @@ StreamReader::StreamReader()
 
 }
 
-StreamReader::StreamReader(StreamBuffer& buf)
-: mStream(&buf)
+StreamReader::StreamReader(StreamBuffer* buf)
+: mStream(buf)
 {
 
 }
 
-StreamReader::StreamReader(StreamBuffer* buf)
-: mStream(buf)
+StreamReader::StreamReader(StreamBuffer& buf)
+: mStream(&buf)
 {
 
 }
@@ -43,15 +43,15 @@ StreamReader::~StreamReader()
 
 }
 
-StreamReader& StreamReader::Attach(StreamBuffer& buf)
-{
-    mStream = &buf;
-    return *this;
-}
-
 StreamReader& StreamReader::Attach(StreamBuffer* buf)
 {
     mStream = buf;
+    return *this;
+}
+
+StreamReader& StreamReader::Attach(StreamBuffer& buf)
+{
+    mStream = &buf;
     return *this;
 }
 
