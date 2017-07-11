@@ -21,24 +21,10 @@
 
 NET_BASE_BEGIN
 
-EventLoop::EventLoop()
-: mThreadID(std::this_thread::get_id())
-, mStop(false)
-, mSource(new EventSelector())
-, mCurrentHandler(NULL)
-, mEventHandling(false)
-, mFunctionInvoking(false)
-, mWakeupPipe()
-, mWakeupReadHandler(this, mWakeupPipe.ReadSocket())
-{
-    // Handle reading event of wake up
-    mWakeupReadHandler.SetReadCallback(std::bind(&EventLoop::OnWakeupRead, this));
-}
-
 EventLoop::EventLoop(EventSource* source)
 : mThreadID(std::this_thread::get_id())
 , mStop(false)
-, mSource(source)
+, mSource(source ? source : new EventSelector())
 , mCurrentHandler(NULL)
 , mEventHandling(false)
 , mFunctionInvoking(false)

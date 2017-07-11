@@ -6,8 +6,7 @@ A thin wrapper of socket API:
 - SocketSelector
 
 Utility classes:  
-- ByteBuffer
-- ByteWrapper
+- StreamBuffer
 - StreamWriter
 - StreamReader
 - StreamPeeker

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 20113, Maoxu Li. Email: maoxu@lebula.com
+ * Copyright (C) 2013, Maoxu Li. Email: maoxu@lebula.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,15 +51,28 @@ public:
         return mConnector.Connect(host, port);
     }
 
-    bool SendMessage(const std::string& msg)
+    void Run()
     {
-        mBuffer.Write(msg.data(), msg.length());
-        if(mConnection == NULL)
+        std::cout << "Please input message, exit to quit.\n";
+        std::cout << "<";
+        std::string msg;
+        while(true)
         {
-            return false;
+            std::cin >> msg;
+            if(msg.empty())
+            {
+                continue;
+            }
+            if(msg == "exit")
+            {
+                break;
+            }
+            if(mConnection == NULL)
+            {
+                std::cout << "Not connected, please try again.\n";
+            }
+            mConnection->Send(msg.data(), msg.length());
         }
-        mConnection->Send(&mBuffer);
-        return true;
     }
 
 private: 
@@ -76,10 +89,10 @@ private:
     void OnReceived(TcpConnection* conn, StreamBuffer* buf)
     {
         assert(conn == mConnection);
-        std::cout << "Received " << buf->Readable() << " bytes.\n";
         std::string msg((const char*)buf->Read(), buf->Readable());
-        std::cout << msg << ".\n";
-        buf->Clear();        
+        std::cout << ">" << msg << ".\n";
+        buf->Clear();  
+        std::cout << "<";      
     }
 
     void OnClosed(TcpConnection* conn, bool keepReceiving)
@@ -101,15 +114,15 @@ int main(const int argc, char* argv[])
 {
     const char* host = NULL;
     unsigned short port = 7; // By default, port is 7
-    if(argc > 1) // echoclient 9007
+    if(argc == 2) // echoclient 9007
     {
-        int n = atoi(argv[2]);
+        int n = atoi(argv[1]);
         if(n > 0 && n <= 65535)
         {
             port  = n;
         }
     }
-    else if(argc > 2) // echoclient 192.168.1.1 9007
+    else if(argc == 3) // echoclient 192.168.1.1 9007
     {
         host = argv[1];
         int n = atoi(argv[2]);
@@ -127,18 +140,6 @@ int main(const int argc, char* argv[])
         std::cout << "EchoClient failed to connect to " << host << ":" << port << ".\n";
         return 0;
     }
-
-    // Current thread is for UI
-    std::cout << "Please input a message, exit to quit.\n";
-    std::string msg;
-    while(true)
-    {
-        std::cin >> msg;
-        if(msg == "exit")
-        {
-            break;
-        }
-        client.SendMessage(msg);
-    }
+    client.Run(); // Current thread is for UI
     return 0;
 }

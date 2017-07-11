@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 20113, Maoxu Li. Email: maoxu@lebula.com
+ * Copyright (C) 2013, Maoxu Li. Email: maoxu@lebula.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +48,6 @@ public:
     {
         if(mListener.Listen())
         {
-            
             std::cout << "EchoSever opened on " << mListener.Address().ToString() << ".\n";
             return true;
         }
@@ -80,7 +79,7 @@ int main(const int argc, char* argv[])
 {
     // By default echo server on port 7
     unsigned short port = 7;
-    if(argc > 1) // echoserver 9007
+    if(argc == 2) // echoserver 9007
     {
         int n = atoi(argv[1]);
         if(n > 0 && n <= 65535)

@@ -58,7 +58,7 @@ public:
     bool RemoteAddress(SocketAddress* addr) const;
 
     // Send data
-    ssize_t Send(void* p, size_t n);
+    ssize_t Send(const void* p, size_t n);
     ssize_t Send(StreamBuffer* buf);
 
     // Receive data

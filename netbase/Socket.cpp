@@ -68,17 +68,18 @@ SOCKET Socket::Detach()
     return s;
 }
 
-void Socket::Attach(SOCKET s)
+Socket& Socket::Attach(SOCKET s)
 {
     if(fd == s)
     {
-        return;
+        return *this;
     }
     if(fd != INVALID_SOCKET)
     {
         Close();
     }
     fd = s;
+    return *this;
 }
 
 int Socket::Domain() const
@@ -185,7 +186,7 @@ bool Socket::RemoteAddress(struct sockaddr* addr, socklen_t* addrlen) const
     return true;
 }
 
-ssize_t Socket::Send(void* p, size_t n)
+ssize_t Socket::Send(const void* p, size_t n)
 {
     ssize_t ret = 0;
     while(true)
@@ -219,7 +220,7 @@ ssize_t Socket::Receive(void* p, size_t n)
     return ret;
 }
 
-ssize_t Socket::SendTo(void* p, size_t n, const struct sockaddr* addr, socklen_t addrlen)
+ssize_t Socket::SendTo(const void* p, size_t n, const struct sockaddr* addr, socklen_t addrlen)
 {
     ssize_t ret = 0;
     while(true)

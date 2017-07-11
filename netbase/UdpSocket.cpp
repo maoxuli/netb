@@ -43,7 +43,7 @@ bool UdpSocket::Bind(const SocketAddress& addr)
     return mSocket.Bind(addr.SockAddr(), addr.Length());
 }
 
-ssize_t UdpSocket::Send(void* p, size_t n, const SocketAddress& addr)
+ssize_t UdpSocket::Send(const void* p, size_t n, const SocketAddress& addr)
 {
     return mSocket.SendTo(p, n, addr.SockAddr(), addr.Length());
 }
@@ -102,7 +102,7 @@ bool UdpSocket::RemoteAddress(SocketAddress* addr) const
     return mSocket.RemoteAddress(addr->SockAddr(), &addrlen);
 }
 
-ssize_t UdpSocket::Send(void* p, size_t n)
+ssize_t UdpSocket::Send(const void* p, size_t n)
 {
     return mSocket.Send(p, n);
 }

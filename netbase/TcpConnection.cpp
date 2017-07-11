@@ -67,7 +67,7 @@ void TcpConnection::Connected()
     if(mRemoteAddress.Empty())
     {
         socklen_t addrlen = mRemoteAddress.Length();
-        mSocket.LocalAddress(mRemoteAddress.SockAddr(), &addrlen);
+        mSocket.RemoteAddress(mRemoteAddress.SockAddr(), &addrlen);
         assert(addrlen == mRemoteAddress.Length());
     }
 
@@ -107,7 +107,7 @@ void TcpConnection::CloseInLoop(bool keepReceiving)
 
 // Send data over the connection,
 // Directly sent or buffered
-bool TcpConnection::Send(void* p, size_t n)
+bool TcpConnection::Send(const void* p, size_t n)
 {
     if(mLoop->IsInLoopThread())
     {
@@ -145,7 +145,7 @@ void TcpConnection::SendInLoop(StreamBufferPtr buf)
 }
 
 // This function must be called in the thread
-void TcpConnection::DoSend(void* p, size_t n)
+void TcpConnection::DoSend(const void* p, size_t n)
 {    
     // Try send directly if out buffer is empty
     ssize_t sent = 0;

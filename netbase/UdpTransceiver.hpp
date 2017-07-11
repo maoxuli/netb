@@ -63,7 +63,7 @@ public:
     void SetReceivedCallback(const ReceivedCallback& cb) { mReceivedCallback = cb; };
 
     // Send data with not connected
-    bool Send(void* p, size_t n, const SocketAddress& addr);
+    bool Send(const void* p, size_t n, const SocketAddress& addr);
     bool Send(StreamBuffer* buf, const SocketAddress& addr);
 
     // Connect to remote address
@@ -71,7 +71,7 @@ public:
     bool Connect(const SocketAddress& addr);
 
     // Send data after connected
-    bool Send(void* p, size_t n);
+    bool Send(const void* p, size_t n);
     bool Send(StreamBuffer* buf);
 
     // Notification of closed
@@ -93,7 +93,7 @@ private:
     typedef std::shared_ptr<StreamBuffer> StreamBufferPtr;
     void SendInLoop(StreamBufferPtr buf, SocketAddress addr);
 
-    void DoSend(void* p, size_t n, const SocketAddress& addr);
+    void DoSend(const void* p, size_t n, const SocketAddress& addr);
 
 private:
     // EventHandler::EventCallback

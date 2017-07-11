@@ -24,7 +24,7 @@ using namespace std::placeholders;
 
 TcpConnector::TcpConnector(EventLoop* loop, sa_family_t family)
 : mLoop(loop)
-, mAddress() 
+, mAddress(NULL, 0, family) 
 {
 
 }

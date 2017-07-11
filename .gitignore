@@ -3,7 +3,11 @@
 build/*.o
 lib/*.a
 bin/*.dSYM
+bin/echoserver_at
+bin/echoclient_at
+bin/echoserver_st
+bin/echoclient_st
+bin/echoserver_su
+bin/echoclient_su
 bin/httpclient
 bin/httpserver
-bin/echoclient
-bin/echoserver

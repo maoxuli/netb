@@ -55,7 +55,7 @@ public:
     // Send data over the connection
     // Actual sending is done on the thread loop
     // All data will be sent, buffered for sending if necessary
-    bool Send(void* p, size_t n);
+    bool Send(const void* p, size_t n);
     bool Send(StreamBuffer* buf);
 
     // Notification of closed status
@@ -81,7 +81,7 @@ private:
     typedef std::shared_ptr<StreamBuffer> StreamBufferPtr;
     void SendInLoop(StreamBufferPtr buf);
 
-    void DoSend(void* p, size_t n);
+    void DoSend(const void* p, size_t n);
 
 private:
     // EventHandler::EventCallback

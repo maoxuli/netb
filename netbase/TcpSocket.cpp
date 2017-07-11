@@ -86,7 +86,7 @@ bool TcpSocket::RemoteAddress(SocketAddress* addr) const
     return mSocket.RemoteAddress(addr->SockAddr(), &addrlen);
 }
 
-ssize_t TcpSocket::Send(void* p, size_t n)
+ssize_t TcpSocket::Send(const void* p, size_t n)
 {
     return mSocket.Send(p, n);
 }

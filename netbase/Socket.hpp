@@ -66,7 +66,7 @@ public:
 
     // Attach a external socket to the object
     // If current socket is not INVALID_SOCKET, it will be closed
-    void Attach(SOCKET s);
+    Socket& Attach(SOCKET s);
 
     // Basically Socket is a wrapper of a socket descriptor and operations on it,
     // so a Socket object has a corresponding socket descriptor always, although
@@ -104,11 +104,11 @@ public:
     bool RemoteAddress(struct sockaddr* addr, socklen_t* addrlen) const;
 
     // Send and receive data via a connected socket
-    ssize_t Send(void* p, size_t n);
+    ssize_t Send(const void* p, size_t n);
     ssize_t Receive(void* p, size_t n);
 
     // Send and receive data via a non-connected socket
-    ssize_t SendTo(void* p, size_t n, const struct sockaddr* addr, socklen_t addrlen);
+    ssize_t SendTo(const void* p, size_t n, const struct sockaddr* addr, socklen_t addrlen);
     ssize_t ReceiveFrom(void* p, size_t n, struct sockaddr* addr, socklen_t* addrlen);
 
 public:

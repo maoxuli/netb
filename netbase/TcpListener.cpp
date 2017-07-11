@@ -129,7 +129,7 @@ void TcpListener::OnRead(SOCKET s)
     SOCKET sock = mSocket.Accept();
     TcpConnection* conn = new TcpConnection(mLoop, sock);
     assert(conn != NULL);
-    mConnections[sock] = conn;
+    mConnections.push_back(conn);
     conn->SetConnectedCallback(mConnectedCallback);
     conn->Connected();
 }

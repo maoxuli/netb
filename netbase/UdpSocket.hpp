@@ -43,7 +43,7 @@ public:
     bool Bind(const SocketAddress& addr);
 
     // Send (non-connection)
-    ssize_t Send(void* p, size_t n, const SocketAddress& addr);
+    ssize_t Send(const void* p, size_t n, const SocketAddress& addr);
     ssize_t Send(StreamBuffer* buf, const SocketAddress& addr);
 
     // Receive (non-connection)
@@ -59,7 +59,7 @@ public:
     bool RemoteAddress(SocketAddress* addr) const;
 
     // Send (connection)
-    ssize_t Send(void* p, size_t n);
+    ssize_t Send(const void* p, size_t n);
     ssize_t Send(StreamBuffer* buf);
 
     // Receive (connection)

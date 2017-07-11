@@ -71,10 +71,14 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(INC)
 .PHONY: examples clean cleanall
 
 examples:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoserver_at examples/echo/EchoServerAT.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoclient_at examples/echo/EchoClientAT.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoserver_st examples/echo/EchoServerST.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoclient_st examples/echo/EchoClientST.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoserver_su examples/echo/EchoServerSU.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoclient_su examples/echo/EchoClientSU.cpp 
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/httpclient examples/http/HttpMessage.cpp examples/http/HttpClient.cpp 
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/httpserver examples/http/HttpMessage.cpp examples/http/HttpServer.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoclient examples/echo/EchoClient.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoserver examples/echo/EchoServer.cpp 
 
 clean:
 	rm -f $(OBJDIR)/*.o
@@ -82,7 +86,11 @@ clean:
 cleanall: clean
 	rm -f $(LIBDIR)/$(OUT)
 	rm -r $(BINDIR)/*.dSYM
-	rm -f $(BINDIR)/httpclient
+	rm -f $(BINDIR)/echoserver_at
+	rm -f $(BINDIR)/echoclient_at
+	rm -f $(BINDIR)/echoserver_st
+	rm -f $(BINDIR)/echoclient_st
+	rm -f $(BINDIR)/echoserver_su
+	rm -f $(BINDIR)/echoclient_su
 	rm -f $(BINDIR)/httpserver
-	rm -f $(BINDIR)/echoclient
-	rm -f $(BINDIR)/echoserver
+	rm -f $(BINDIR)/httpclient

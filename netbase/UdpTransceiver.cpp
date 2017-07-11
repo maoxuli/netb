@@ -76,12 +76,12 @@ bool UdpTransceiver::Send(StreamBuffer* buf)
     return false;
 }
 
-bool UdpTransceiver::Send(void* p, size_t n)
+bool UdpTransceiver::Send(const void* p, size_t n)
 {
     return false;
 }
 
-bool UdpTransceiver::Send(void* p, size_t n, const SocketAddress& addr)
+bool UdpTransceiver::Send(const void* p, size_t n, const SocketAddress& addr)
 {
     if(mLoop->IsInLoopThread())
     {
@@ -115,7 +115,7 @@ void UdpTransceiver::SendInLoop(StreamBufferPtr buf, SocketAddress addr)
 }
 
 // Send to given address
-void UdpTransceiver::DoSend(void* p, size_t n, const SocketAddress& addr)
+void UdpTransceiver::DoSend(const void* p, size_t n, const SocketAddress& addr)
 {
     ssize_t sent = 0;
     if(mOutBuffers.empty())

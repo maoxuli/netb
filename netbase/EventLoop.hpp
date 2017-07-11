@@ -35,8 +35,7 @@ NET_BASE_BEGIN
 class EventLoop
 {
 public:    
-    EventLoop();
-    EventLoop(EventSource* source);
+    EventLoop(EventSource* source = NULL);
     ~EventLoop();
     
     // Run the loop
