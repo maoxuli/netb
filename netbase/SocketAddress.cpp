@@ -16,6 +16,7 @@
  */
 
 #include "SocketAddress.hpp"
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <sstream>
 #include <cassert>
@@ -26,25 +27,22 @@ NET_BASE_BEGIN
 // if host is null and port is non 0, wildcard address, used for server 
 SocketAddress::SocketAddress(const char* host, unsigned short port, sa_family_t family) throw()
 {
-    memset(&mAddress, 0, sizeof(sockaddr_storage));
-
+    memset(this, 0, sizeof(struct sockaddr_storage));
     if(host == NULL)
     {
         if(family == AF_INET)
         {
-            sockaddr_in* addrin = reinterpret_cast<sockaddr_in*>(&mAddress);
-            addrin->sin_len = sizeof(sockaddr_in);
+            struct sockaddr_in* addrin = reinterpret_cast<struct sockaddr_in*>(this);
             addrin->sin_family = AF_INET;
             addrin->sin_port = htons(port);
-            addrin->sin_addr.s_addr = port == 0 ? htonl(INADDR_LOOPBACK) : htonl(INADDR_ANY);
+            addrin->sin_addr.s_addr = (port == 0 ? htonl(INADDR_LOOPBACK) : htonl(INADDR_ANY));
         }
         else if(family == AF_INET6) 
         {
-            sockaddr_in6* addrin6 = reinterpret_cast<sockaddr_in6*>(&mAddress);
-            addrin6->sin6_len = sizeof(sockaddr_in6);
+            struct sockaddr_in6* addrin6 = reinterpret_cast<struct sockaddr_in6*>(this);
             addrin6->sin6_family = AF_INET6;
             addrin6->sin6_port = htons(port);
-            addrin6->sin6_addr = port == 0 ? in6addr_loopback : in6addr_any;
+            addrin6->sin6_addr = (port == 0 ? in6addr_loopback : in6addr_any);
         }
         else // unsupported family
         {
@@ -74,7 +72,7 @@ SocketAddress::SocketAddress(const char* host, unsigned short port, sa_family_t 
 
         if(res != NULL)
         {
-            memcpy(&mAddress, res->ai_addr, res->ai_addrlen);
+            memcpy(this, res->ai_addr, res->ai_addrlen);
             freeaddrinfo(res);
         }
     }
@@ -82,36 +80,63 @@ SocketAddress::SocketAddress(const char* host, unsigned short port, sa_family_t 
 
 socklen_t SocketAddress::Length() const
 {
-    if(mAddress.ss_family == AF_INET)
+    if(this->ss_family == AF_INET)
     {
-        return sizeof(sockaddr_in);
+        return sizeof(struct sockaddr_in);
     }
-    if(mAddress.ss_family == AF_INET6)
+    if(this->ss_family == AF_INET6)
     {
-        return sizeof(sockaddr_in6);
+        return sizeof(struct sockaddr_in6);
     }
-    return sizeof(sockaddr_storage);
+    return sizeof(struct sockaddr_storage);
 }
 
 std::string SocketAddress::Host() const
 {
+    if(this->ss_family == AF_INET)
+    {
+        const struct sockaddr_in* addr = reinterpret_cast<const struct sockaddr_in*>(this);
+        char host[INET_ADDRSTRLEN];
+        if(inet_ntop(AF_INET, &addr->sin_addr, host, INET_ADDRSTRLEN) != NULL)
+        {
+            return host;
+        }
+    }
+    else if(this->ss_family == AF_INET6)
+    {
+        const struct sockaddr_in6* addr = reinterpret_cast<const struct sockaddr_in6*>(this);
+        char host[INET6_ADDRSTRLEN];
+        if(inet_ntop(AF_INET6, &addr->sin6_addr, host, INET6_ADDRSTRLEN) != NULL)
+        {
+            return host;
+        }
+    }
     return "";
 }
 
 void SocketAddress::Port(unsigned short port)
 {
-    assert(false);
+    if(this->ss_family == AF_INET)
+    {
+        struct sockaddr_in* addr = reinterpret_cast<struct sockaddr_in*>(this);
+        addr->sin_port = htons(port);
+    }
+    else if(this->ss_family == AF_INET6)
+    {
+        struct sockaddr_in6* addr = reinterpret_cast<struct sockaddr_in6*>(this);
+        addr->sin6_port = htons(port);
+    }
 }
 
 unsigned short SocketAddress::Port() const
 {
-    if(mAddress.ss_family == AF_INET)
+    if(this->ss_family == AF_INET)
     {
-        return ntohs(reinterpret_cast<const struct sockaddr_in*>(&mAddress)->sin_port);
+        return ntohs(reinterpret_cast<const struct sockaddr_in*>(this)->sin_port);
     }
-    if(mAddress.ss_family == AF_INET6)
+    if(this->ss_family == AF_INET6)
     {
-        return ntohs(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_port);
+        return ntohs(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_port);
     }
     return 0;
 }
@@ -120,7 +145,7 @@ std::string SocketAddress::ToString() const
 {    
     char namebuf[1024];
     namebuf[0] = '\0';
-    getnameinfo((sockaddr*)&mAddress, Length(), namebuf, sizeof(namebuf), 0, 0, NI_NUMERICHOST);
+    getnameinfo(SockAddr(), Length(), namebuf, sizeof(namebuf), 0, 0, NI_NUMERICHOST);
     
     std::ostringstream oss;
     oss << namebuf << ":" << Port();
@@ -129,24 +154,24 @@ std::string SocketAddress::ToString() const
 
 bool SocketAddress::operator==(const SocketAddress& a) const throw()
 {
-	if(mAddress.ss_family == a.Family()) 
+	if(this->ss_family == a.ss_family) 
     {
-		switch(mAddress.ss_family) 
+		switch(a.ss_family) 
         {
 			case AF_INET:
 				return (
-					(reinterpret_cast<const struct sockaddr_in*>(&mAddress)->sin_port == reinterpret_cast<const struct sockaddr_in*>(&a)->sin_port)&&
-					(reinterpret_cast<const struct sockaddr_in*>(&mAddress)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in*>(&a)->sin_addr.s_addr));
+					(reinterpret_cast<const struct sockaddr_in*>(this)->sin_port == reinterpret_cast<const struct sockaddr_in*>(&a)->sin_port)&&
+					(reinterpret_cast<const struct sockaddr_in*>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in*>(&a)->sin_addr.s_addr));
 				break;
 			case AF_INET6:
 				return (
-					(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_port == reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_port)&&
-					(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_flowinfo == reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_flowinfo)&&
-					(memcmp(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_addr.s6_addr,16) == 0)&&
-					(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_scope_id == reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_scope_id));
+					(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_port == reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_port)&&
+					(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_flowinfo == reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_flowinfo)&&
+					(memcmp(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_addr.s6_addr,16) == 0)&&
+					(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_scope_id == reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_scope_id));
 				break;
 			default:
-				return (memcmp(&mAddress, &a, sizeof(SocketAddress)) == 0);
+				return (memcmp(this, &a, sizeof(SocketAddress)) == 0);
 		}
 	}
 	return false;
@@ -154,37 +179,37 @@ bool SocketAddress::operator==(const SocketAddress& a) const throw()
 
 bool SocketAddress::operator<(const SocketAddress& a) const throw()
 {
-	if(mAddress.ss_family < a.Family())
+	if(this->ss_family < a.ss_family)
     {
 		return true;
     }
-    if(mAddress.ss_family == a.Family()) 
+    if(this->ss_family == a.ss_family) 
     {
-		switch(mAddress.ss_family) 
+		switch(a.ss_family) 
         {
 			case AF_INET:
-				if(reinterpret_cast<const struct sockaddr_in*>(&mAddress)->sin_port < reinterpret_cast<const struct sockaddr_in*>(&a)->sin_port)
+				if(reinterpret_cast<const struct sockaddr_in*>(this)->sin_port < reinterpret_cast<const struct sockaddr_in*>(&a)->sin_port)
 					return true;
-				else if(reinterpret_cast<const struct sockaddr_in*>(&mAddress)->sin_port == reinterpret_cast<const struct sockaddr_in*>(&a)->sin_port) 
+				else if(reinterpret_cast<const struct sockaddr_in*>(this)->sin_port == reinterpret_cast<const struct sockaddr_in*>(&a)->sin_port) 
                 {
-					if(reinterpret_cast<const struct sockaddr_in*>(&mAddress)->sin_addr.s_addr < reinterpret_cast<const struct sockaddr_in*>(&a)->sin_addr.s_addr)
+					if(reinterpret_cast<const struct sockaddr_in*>(this)->sin_addr.s_addr < reinterpret_cast<const struct sockaddr_in*>(&a)->sin_addr.s_addr)
 						return true;
 				}
 				break;
 			case AF_INET6:
-				if(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_port < reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_port)
+				if(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_port < reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_port)
 					return true;
-				else if(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_port == reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_port) 
+				else if(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_port == reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_port) 
                 {
-					if(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_flowinfo < reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_flowinfo)
+					if(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_flowinfo < reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_flowinfo)
 						return true;
-					else if(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_flowinfo == reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_flowinfo) 
+					else if(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_flowinfo == reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_flowinfo) 
                     {
-						if(memcmp(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_addr.s6_addr,16) < 0)
+						if(memcmp(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_addr.s6_addr,16) < 0)
 							return true;
-						else if(memcmp(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_addr.s6_addr,16) == 0) 
+						else if(memcmp(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_addr.s6_addr,16) == 0) 
                         {
-							if(reinterpret_cast<const struct sockaddr_in6*>(&mAddress)->sin6_scope_id < reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_scope_id)
+							if(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_scope_id < reinterpret_cast<const struct sockaddr_in6*>(&a)->sin6_scope_id)
 								return true;
 						}
 					}

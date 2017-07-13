@@ -2,16 +2,14 @@
 
 A thin wrapper of socket API:  
 - Socket
-- SocketError
+- SocketAddress
 - SocketSelector
-
-Utility classes:  
+- SocketError
+- SocketPipe
 - StreamBuffer
 - StreamWriter
 - StreamReader
 - StreamPeeker
-- SocketAddress
-- SocketPipe
 
 Wrapper of TCP, UDP, and RAW socket:  
 - TcpSocket
