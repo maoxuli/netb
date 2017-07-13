@@ -58,7 +58,7 @@ ssize_t SocketPipe::Read(void* p, size_t n)
     return mReader.Receive(p, n);
 }
 
-ssize_t SocketPipe::Write(void* p, size_t n)
+ssize_t SocketPipe::Write(const void* p, size_t n)
 {
     return mWriter.Send(p, n);
 }

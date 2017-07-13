@@ -39,7 +39,7 @@ public:
 
     // Blocked reading and writing
     ssize_t Read(void* p, size_t n);
-    ssize_t Write(void* p, size_t n);
+    ssize_t Write(const void* p, size_t n);
    
 private:
     Socket mReader;
