@@ -1,5 +1,5 @@
 #
-# Todo: depedency rules on hpp files
+# Todo: depedency rules on header files
 #
 
 INCDIR := netbase
@@ -16,28 +16,27 @@ CPPFLAGS := -I./$(INCDIR)
 AR := ar
 ARFLAGS := rcs
 
-INC := $(INCDIR)/Config.hpp \
-	   $(INCDIR)/SocketError.hpp \
-	   $(INCDIR)/Socket.hpp \
-	   $(INCDIR)/SocketSelector.hpp \
-	   $(INCDIR)/SocketAddress.hpp \
-	   $(INCDIR)/StreamBuffer.hpp \
-	   $(INCDIR)/StreamWriter.hpp \
-	   $(INCDIR)/StreamReader.hpp \
-	   $(INCDIR)/StreamPeeker.hpp \
-	   $(INCDIR)/TcpSocket.hpp \
-	   $(INCDIR)/UdpSocket.hpp \
-	   $(INCDIR)/RawSocket.hpp \
-	   $(INCDIR)/SocketPipe.hpp \
-	   $(INCDIR)/EventHandler.hpp \
-	   $(INCDIR)/EventSource.hpp \
-	   $(INCDIR)/EventSelector.hpp \
-	   $(INCDIR)/EventLoop.hpp \
-	   $(INCDIR)/EventLoopThread.hpp \
-	   $(INCDIR)/TcpListener.hpp \
-	   $(INCDIR)/TcpConnector.hpp \
-	   $(INCDIR)/TcpConnection.hpp \
-	   $(INCDIR)/UdpTransceiver.hpp
+INC := $(INCDIR)/Config.h \
+	   $(INCDIR)/SocketDef.h \
+	   $(INCDIR)/SocketError.h \
+	   $(INCDIR)/Socket.h \
+	   $(INCDIR)/SocketSelector.h \
+	   $(INCDIR)/SocketAddress.h \
+	   $(INCDIR)/StreamBuffer.h \
+	   $(INCDIR)/StreamWriter.h \
+	   $(INCDIR)/StreamReader.h \
+	   $(INCDIR)/StreamPeeker.h \
+	   $(INCDIR)/TcpAcceptor.h \
+	   $(INCDIR)/TcpSocket.h \
+	   $(INCDIR)/UdpSocket.h \
+	   $(INCDIR)/SocketPipe.h \
+	   $(INCDIR)/EventHandler.h \
+	   $(INCDIR)/EventSelector.h \
+	   $(INCDIR)/EventLoop.h \
+	   $(INCDIR)/EventLoopThread.h \
+	   $(INCDIR)/AsyncAcceptor.h \
+	   $(INCDIR)/AsyncTcpSocket.h \
+	   $(INCDIR)/AsyncUdpSocket.h
 	  
 OBJ	:= $(OBJDIR)/SocketError.o \
 	   $(OBJDIR)/Socket.o \
@@ -47,18 +46,17 @@ OBJ	:= $(OBJDIR)/SocketError.o \
 	   $(OBJDIR)/StreamWriter.o \
 	   $(OBJDIR)/StreamReader.o \
 	   $(OBJDIR)/StreamPeeker.o \
+	   $(OBJDIR)/TcpAcceptor.o \
 	   $(OBJDIR)/TcpSocket.o \
 	   $(OBJDIR)/UdpSocket.o \
-	   $(OBJDIR)/RawSocket.o \
 	   $(OBJDIR)/SocketPipe.o \
 	   $(OBJDIR)/EventHandler.o \
 	   $(OBJDIR)/EventSelector.o \
 	   $(OBJDIR)/EventLoop.o \
 	   $(OBJDIR)/EventLoopThread.o \
-	   $(OBJDIR)/TcpListener.o \
-	   $(OBJDIR)/TcpConnector.o \
-	   $(OBJDIR)/TcpConnection.o \
-	   $(OBJDIR)/UdpTransceiver.o	   
+	   $(OBJDIR)/AsyncTcpAcceptor.o \
+	   $(OBJDIR)/AsyncTcpSocket.o \
+	   $(OBJDIR)/AsyncUdpSocket.o
 
 all: $(LIBDIR)/$(OUT)
 

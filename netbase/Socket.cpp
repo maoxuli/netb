@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Socket.hpp"
-#include "SocketError.hpp"
+#include "Socket.h"
+#include "SocketError.h"
 #include <cassert>
 
 NET_BASE_BEGIN
@@ -68,6 +68,17 @@ SOCKET Socket::Detach()
     return s;
 }
 
+Socket& Socket::Create(int domain, int type, int protocol)
+{
+    if(fd != INVALID_SOCKET)
+    {
+        Close();
+    }
+    fd = ::socket(domain, type, protocol);
+    assert(fd != INVALID_SOCKET);
+    return *this;
+}
+
 Socket& Socket::Attach(SOCKET s)
 {
     if(fd == s)
@@ -84,16 +95,24 @@ Socket& Socket::Attach(SOCKET s)
 
 int Socket::Domain() const
 {
-    return 0;
-}
-
-sa_family_t Socket::Family() const 
-{
-    return 0;
+    struct sockaddr_storage addr;
+    memset(&addr, 0, sizeof(struct sockaddr_storage));
+    socklen_t addrlen = sizeof(struct sockaddr_storage);
+    if(::getsockname(fd, (sockaddr*)&addr, &addrlen) == 0)
+    {
+        return addr.ss_family;
+    }
+    return PF_UNSPEC;
 }
 
 int Socket::Type() const
 {
+    int type;
+    socklen_t len = sizeof(type);
+    if(::getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &len) ==  0)
+    {
+        return type;
+    }
     return 0;
 }
 
@@ -256,6 +275,7 @@ ssize_t Socket::ReceiveFrom(void* p, size_t n, struct sockaddr* addr, socklen_t*
 
 //////////////////////////////////////////////////////////////////////////////////
 
+// socket IO control, block mode or non-block mode
 bool Socket::Block(bool block)
 {
     if(block)
@@ -269,7 +289,6 @@ bool Socket::Block(bool block)
 #else
         int flags = ::fcntl(fd, F_GETFL);
         flags &= ~O_NONBLOCK;
-        
         if(::fcntl(fd, F_SETFL, flags) == SOCKET_ERROR)
         {
             return false;
@@ -293,10 +312,10 @@ bool Socket::Block(bool block)
         }
 #endif
     }
-    
     return true;
 }
 
+// socket option of reuse address
 bool Socket::ReuseAddress(bool reuse)
 {
     int flag = reuse ? 1 : 0;
@@ -307,64 +326,22 @@ bool Socket::ReuseAddress(bool reuse)
     return true;
 }
 
-bool Socket::NoDelay(bool no)
+// socket option of reuse port
+bool Socket::ReusePort(bool reuse)
 {
-    int flag = no ? 1 : 0;
-    if(::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, int(sizeof(int))) == SOCKET_ERROR)
-    {
-        return false;
-    }
-    return true;
+    return false;
 }
 
-bool Socket::KeepAlive(bool keep)
+// Set socket options
+bool Socket::SetOption(int level, int name, const void* val, socklen_t len)
 {
-    int flag = keep ? 1 : 0;
-    if(::setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char*)&flag, int(sizeof(int))) == SOCKET_ERROR)
-    {
-        return false;
-    }
-    return true;
+    return false;
 }
 
-bool Socket::SendBuffer(size_t size)
+// Get socket options
+bool Socket::GetOption(int level, int name, void* val, socklen_t* len) const
 {
-    if(::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char*)&size, int(sizeof(int))) == SOCKET_ERROR)
-    {
-        return false;
-    }
-    return true;
-}
-
-size_t Socket::SendBuffer() const
-{
-    int size;
-    socklen_t len = sizeof(size);
-    if(::getsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char*)&size, &len) == SOCKET_ERROR || len != sizeof(size))
-    {
-        return -1;
-    }
-    return size;
-}
-
-bool Socket::ReceiveBuffer(size_t size)
-{
-    if(::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char*)&size, int(sizeof(int))) == SOCKET_ERROR)
-    {
-        return false;
-    }
-    return true;
-}
-
-size_t Socket::ReceiveBuffer() const
-{
-    int size;
-    socklen_t len = sizeof(size);
-    if(::getsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char*)&size, &len) == SOCKET_ERROR || len != sizeof(size))
-    {
-        return -1;
-    }
-    return size;
+    return false;
 }
 
 NET_BASE_END

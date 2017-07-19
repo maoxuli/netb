@@ -15,7 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "StreamWriter.hpp"
+#include "StreamWriter.h"
 #include <cassert>
 
 NET_BASE_BEGIN

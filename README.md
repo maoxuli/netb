@@ -1,6 +1,6 @@
 # NetBase
 
-A lightweight C++ API for socket programming.
+A lightweight C++ socket API.
 
 make  
 make all  

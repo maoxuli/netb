@@ -5,26 +5,25 @@ A thin wrapper of socket API:
 - SocketAddress
 - SocketSelector
 - SocketError
-- SocketPipe
+
+Stream buffer used for protocol buffer:  
 - StreamBuffer
 - StreamWriter
 - StreamReader
 - StreamPeeker
 
-Wrapper of TCP, UDP, and RAW socket:  
+A easy-used wrapper of TCP and UDP socket:  
+- TcpAcceptor
 - TcpSocket
 - UdpSocket
-- RawSocket
 
 Asynchronous facility:  
 - EventHandler
-- EventSource
 - EventSelector
 - EventLoop
 - EventLoopThread
 
 Asynchronous socket API:  
-- TcpListener
-- TcpConnector
-- TcpConnection
-- UdpTransceiver
+- AsyncTcpAcceptor
+- AsyncTcpSocket
+- AsyncUdpSocket

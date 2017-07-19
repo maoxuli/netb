@@ -15,7 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SocketAddress.hpp"
+#include "SocketAddress.h"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sstream>

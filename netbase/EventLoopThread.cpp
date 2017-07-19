@@ -15,22 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "EventLoopThread.hpp"
-#include "EventLoop.hpp"
-#include "EventSource.hpp"
+#include "EventLoopThread.h"
+#include "EventLoop.h"
 
 NET_BASE_BEGIN
 
 EventLoopThread::EventLoopThread()
-: mSource(NULL)
-, mLoop(NULL)
-{
-    
-}
-
-EventLoopThread::EventLoopThread(EventSource* source)
-: mSource(source)
-, mLoop(NULL)
+: mLoop(NULL)
 {
     
 }
@@ -59,7 +50,7 @@ EventLoop* EventLoopThread::Start()
 
 void EventLoopThread::ThreadFunc()
 {
-    EventLoop loop(mSource);
+    EventLoop loop;
     {
         std::unique_lock<std::mutex> lock(mMutex);
         mLoop = &loop;

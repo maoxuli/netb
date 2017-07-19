@@ -15,7 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "StreamPeeker.hpp"
+#include "StreamPeeker.h"
 #include <cassert>
 
 NET_BASE_BEGIN

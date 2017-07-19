@@ -15,10 +15,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "HttpMessage.hpp"
-#include "StreamBuffer.hpp"
-#include "StreamReader.hpp"
-#include "StreamWriter.hpp"
+#include "HttpMessage.h"
+#include "StreamBuffer.h"
+#include "StreamReader.h"
+#include "StreamWriter.h"
 #include <sstream>
 #include <cassert>
 

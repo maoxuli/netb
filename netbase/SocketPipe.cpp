@@ -15,8 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SocketPipe.hpp"
-#include "SocketAddress.hpp"
+#include "SocketPipe.h"
 
 NET_BASE_BEGIN
 
@@ -29,27 +28,31 @@ SocketPipe::SocketPipe()
 
 SocketPipe::~SocketPipe()
 {
-    mReader.Shutdown();
-    mWriter.Shutdown();
+
 }
 
 bool SocketPipe::MakePair(Socket& reader, Socket& writer)
 {
-    SocketAddress addr(NULL, 0); // Local loopback address
-    reader.Block(true); 
-    reader.Bind(addr.SockAddr(), addr.Length());
-    reader.Listen(1); // reader works as server socket
+    // Reader socket listen on any port of local loopback address 
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(struct sockaddr_in));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-    addr.Reset();
-    socklen_t addrlen = addr.Length();
-    reader.LocalAddress(addr.SockAddr(), &addrlen); // Get actual listening address
+    reader.Bind((sockaddr*)&addr, sizeof(struct sockaddr_in));
+    reader.Listen(1);
 
-    writer.Block(true);
-    writer.Connect(addr.SockAddr(), addr.Length()); // Writer works as client socket
+    // Get actual listening address
+    memset(&addr, 0, sizeof(struct sockaddr_in));
+    socklen_t addrlen = sizeof(struct sockaddr_in);
+    reader.Address((sockaddr*)&addr, &addrlen); 
 
-    SOCKET s = reader.Accept(); // Established connection
-    reader.Attach(s); // reader shift to connection, and close server socket 
+    // Establish connection from writer socket to reader socket
+    writer.Connect((sockaddr*)&addr, addrlen);
+    SOCKET s = reader.Accept();
 
+    // Close reader socket and keep connection socket
+    reader.Attach(s);
     return true;
 }
 

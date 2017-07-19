@@ -15,16 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "EventLoop.hpp"
-#include "EventSelector.hpp"
+#include "EventLoop.h"
 #include <functional>
 
 NET_BASE_BEGIN
 
-EventLoop::EventLoop(EventSource* source)
+EventLoop::EventLoop()
 : mThreadID(std::this_thread::get_id())
 , mStop(false)
-, mSource(source ? source : new EventSelector())
+, mSelector()
 , mCurrentHandler(NULL)
 , mEventHandling(false)
 , mFunctionInvoking(false)
@@ -51,7 +50,7 @@ void EventLoop::Run()
     {
         // Seleting on events
         mActiveHandlers.clear();
-        mSource->WaitEvents(mActiveHandlers, -1); // Block to wait for active events
+        mSelector.WaitEvents(mActiveHandlers, -1); // Block to wait for active events
         // Events handling
         mEventHandling = true;
         for(std::vector<EventHandler*>::iterator it = mActiveHandlers.begin();
@@ -91,7 +90,7 @@ void EventLoop::Stop()
 void EventLoop::SetupHandler(EventHandler* handler)
 {
     AssertInLoopThread();
-    mSource->SetupHandler(handler);
+    mSelector.SetupHandler(handler);
 }
 
 // Remove a event handler from selector, remove all events
@@ -104,7 +103,7 @@ void EventLoop::RemoveHandler(EventHandler* handler)
                || std::find(mActiveHandlers.begin(), mActiveHandlers.end(),
                 handler) == mActiveHandlers.end()); // Not active handler
     }
-    mSource->RemoveHandler(handler);
+    mSelector.RemoveHandler(handler);
 }
 
 // Set a function that will be invoked in the loop

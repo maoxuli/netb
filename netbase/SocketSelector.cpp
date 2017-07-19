@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SocketSelector.hpp"
-#include "SocketError.hpp"
+#include "SocketSelector.h"
+#include "SocketError.h"
 
 NET_BASE_BEGIN
 

@@ -1,5 +1,4 @@
 .DS_Store
-
 build/*.o
 lib/*.a
 bin/*.dSYM

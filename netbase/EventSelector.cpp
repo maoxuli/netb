@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "EventSelector.hpp"
-#include "EventHandler.hpp"
+#include "EventSelector.h"
+#include "EventHandler.h"
 #include <cassert>
 
 NET_BASE_BEGIN

@@ -7,6 +7,3 @@ Examples of HTTP server and HTTP client.
 
 - echo    
 Examples of echo server and echo client.
-
-- chat  
-Examples of chat server and chat client.

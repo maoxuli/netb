@@ -15,13 +15,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Socket.hpp"
-#include "SocketAddress.hpp"
-#include "StreamBuffer.hpp"
-#include "EventLoop.hpp"
-#include "EventLoopThread.hpp"
-#include "TcpConnector.hpp"
-#include "TcpConnection.hpp"
+#include "SocketAddress.h"
+#include "SocketSelector.h"
+#include "StreamBuffer.h"
+#include "Socket.h"
+#include "TcpAcceptor.h"
+#include "TcpSocket.h"
+#include "UdpSocket.h"
+#include "AsyncTcpAcceptor.h"
+#include "AsyncTcpSocket.h"
+#include "AsyncUdpSocket.h"
 #include <string>
 #include <cstdlib>
 

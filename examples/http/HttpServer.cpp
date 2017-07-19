@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "HttpServer.hpp"
-#include "EventLoop.hpp"
+#include "HttpServer.h"
+#include "EventLoop.h"
 
 NET_BASE_BEGIN
 

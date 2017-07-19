@@ -12,7 +12,7 @@
             // Show the output window only if unrecognized errors occur.
             "showOutput": "always",
             // No args
-            "args": ["examples"],
+            "args": ["all"],
             // Use the standard less compilation problem matcher.
             "problemMatcher": {
                 "owner": "cpp",

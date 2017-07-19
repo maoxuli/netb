@@ -15,101 +15,131 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "UdpSocket.hpp"
+#include "UdpSocket.h"
 #include <cassert>
 
 NET_BASE_BEGIN
 
-// Open a socket internally
-UdpSocket::UdpSocket(int domain)
-: mSocket(domain, SOCK_DGRAM, IPPROTO_UDP)
+// Create an unbound, unconnected UDP socket
+// The domain of the socket is not determined before calling of Open() or Connect()
+UdpSocket::UdpSocket()
+: Socket() // Invalid socket
+, mAddress() // Empty address
+, mOpened(false)
+, mConnected(false)
 {
 
 }
 
+// Create an unbound, unconnected UDP socket
+// The domain of the socket is given
+UdpSocket::UdpSocket(int domain)
+: Socket(domain, SOCK_STREAM, IPPROTO_TCP)
+, mAddress((sa_family_t)domain)
+, mOpened(false)
+, mConnected(false)
+{
+    assert(!Socket::Invalid());
+}
+
+// Create a UDP socket that bound to given local address
+// The domain of the socket is determined by address family
+// see socket options of SO_REUSEADDR and SO_REUSEPORT for reuseaddr and reuseport 
+UdpSocket::UdpSocket(const SocketAddress& addr, bool reuseaddr, bool reuseport)
+: Socket(addr.Family(), SOCK_STREAM, IPPROTO_TCP)
+, mAddress(addr) 
+, mOpened(false)
+, mConnected(false)
+{
+    assert(!Socket::Invalid());
+    Socket::ReuseAddress(reuseaddr);
+    Socket::ReusePort(reuseport);
+}
+
+// Destructor, derivation is allowed for extension
 UdpSocket::~UdpSocket()
 {
 
 }
 
-bool UdpSocket::Bind(const char* host, unsigned short port)
+bool UdpSocket::Open()
 {
-    SocketAddress addr(host, port);
-    return mSocket.Bind(addr.SockAddr(), addr.Length());
-}
-
-bool UdpSocket::Bind(const SocketAddress& addr)
-{
-    return mSocket.Bind(addr.SockAddr(), addr.Length());
-}
-
-ssize_t UdpSocket::Send(const void* p, size_t n, const SocketAddress& addr)
-{
-    return mSocket.SendTo(p, n, addr.SockAddr(), addr.Length());
-}
-
-ssize_t UdpSocket::Send(StreamBuffer* buf, const SocketAddress& addr)
-{
-    ssize_t ret = mSocket.SendTo(buf->Read(), buf->Readable(), addr.SockAddr(), addr.Length());
-    if(ret > 0)
+    if(mAddress.Empty())
     {
-        buf->Read(ret);
+        mAddress.Reset(AF_INET);
     }
-    return ret;
-}
-
-ssize_t UdpSocket::Receive(void* p, size_t n, SocketAddress* addr)
-{
-    socklen_t addrlen = addr->Length();
-    return mSocket.ReceiveFrom(p, n, addr->SockAddr(), &addrlen);
-}
-
-ssize_t UdpSocket::Receive(StreamBuffer* buf, SocketAddress* addr)
-{
-    socklen_t addrlen = addr->Length();
-    ssize_t ret = 0;
-    if(buf->Writable(2048))
+    if(Socket::Invalid())
     {
-        ret = mSocket.ReceiveFrom(buf->Write(), buf->Writable(), addr->SockAddr(), &addrlen);
-        if(ret > 0)
-        {
-            buf->Write(ret);
-        }
+        Socket::Create(mAddress.Family(), SOCK_STREAM, IPPROTO_TCP);
     }
-    return ret;
+    assert(!Socket::Invalid());
+    return (mOpened = Socket::Bind(mAddress.SockAddr(), mAddress.Length()));
 }
 
-bool UdpSocket::Connect(const char* host, unsigned short port)
+bool UdpSocket::Open(const SocketAddress& addr, bool reuseaddr, bool reuseport)
 {
-    SocketAddress addr(host, port);
-    return mSocket.Connect(addr.SockAddr(), addr.Length());
+    if(Socket::Invalid())
+    {
+        Socket::Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP);
+    }
+    assert(!Socket::Invalid());
+    s::ReuseAddress(reuseaddr);
+    s::ReusePort(reuseport);
+    if(Socket::Bind(addr.SockAddr(), addr.Length()))
+    {
+        mAddress = addr;
+        mOpened = true;
+        return true;
+    }
+    return false;
 }
 
 bool UdpSocket::Connect(const SocketAddress& addr)
 {
-    return mSocket.Connect(addr.SockAddr(), addr.Length());
+    if(Socket::Invalid())
+    {
+        Socket::Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP);
+    }
+    assert(!Socket::Invalid());
+    return (mConnected = Socket::Connect(addr.SockAddr(), addr.Length()));
 }
 
-bool UdpSocket::LocalAddress(SocketAddress* addr) const
+void UdpSocket::Disconnect()
 {
-    socklen_t addrlen = addr->Length();
-    return mSocket.LocalAddress(addr->SockAddr(), &addrlen);
+    mConnected = !Socket::Connect(NULL, 0);
 }
 
-bool UdpSocket::RemoteAddress(SocketAddress* addr) const 
+SocketAddress UdpSocket::ConnectedAddress() const 
 {
-    socklen_t addrlen = addr->Length();
-    return mSocket.RemoteAddress(addr->SockAddr(), &addrlen);
+    SocketAddress addr;
+    if(mConnected)
+    {
+        socklen_t addrlen = addr.Length();
+        Socket::ConnectedAddress((sockaddr*)&addr, &addrlen);
+    }
+    return addr;
 }
 
-ssize_t UdpSocket::Send(const void* p, size_t n)
+ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress& addr, int flags)
 {
-    return mSocket.Send(p, n);
+    if(Socket::Invalid())
+    {
+        Socket::Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP);
+    }
+    assert(!Socket::Invalid());
+    assert(p != NULL);
+    return Socket::SendTo(p, n, addr.SockAddr(), addr.Length(), flags);
 }
 
-ssize_t UdpSocket::Send(StreamBuffer* buf)
+ssize_t UdpSocket::SendTo(StreamBuffer* buf, const SocketAddress& addr, int flags)
 {
-    ssize_t ret = mSocket.Send(buf->Read(), buf->Readable());
+    if(Socket::Invalid())
+    {
+        InitSocket(addr.Family());
+    }
+    assert(!Socket::Invalid());
+    assert(buf != NULL);
+    ssize_t ret = Socket::SendTo(buf->Read(), buf->Readable(), addr.SockAddr(), addr.Length(), flags);
     if(ret > 0)
     {
         buf->Read(ret);
@@ -117,22 +147,61 @@ ssize_t UdpSocket::Send(StreamBuffer* buf)
     return ret;
 }
 
-ssize_t UdpSocket::Receive(void* p, size_t n)
+ssize_t UdpSocket::Send(const void* p, size_t n, int flags)
 {
-    return mSocket.Receive(p, n);
+    return Socket::Send(p, n, flags);
 }
 
-ssize_t UdpSocket::Receive(StreamBuffer* buf)
+ssize_t UdpSocket::Send(StreamBuffer* buf, int flags)
 {
     assert(buf != NULL);
-    ssize_t ret = 0;
-    if(buf->Writable(2048))
+    ssize_t ret = Socket::Send(buf->Read(), buf->Readable(), flags);
+    if(ret > 0)
     {
-        ret = mSocket.Receive(buf->Write(), buf->Writable());
-        if(ret > 0)
-        {
-            buf->Write(ret);
-        }
+        buf->Read(ret);
+    }
+    return ret;
+}
+
+ssize_t UdpSocket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags)
+{
+    assert(p != NULL);
+    assert(addr != NULL);
+    socklen_t addrlen = addr->Length();
+    return mSocket.ReceiveFrom(p, n, addr->SockAddr(), &addrlen, flags);
+}
+
+// Writable space is ensured by external
+ssize_t UdpSocket::ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags)
+{
+    assert(buf != NULL);
+    assert(buf->Writable() > 0);
+    assert(addr != NULL);
+    socklen_t addrlen = addr->Length();
+    ssize_t ret = mSocket.ReceiveFrom(buf->Write(), buf->Writable(), addr->SockAddr(), &addrlen, flags);
+    if(ret > 0)
+    {
+        buf->Write(ret);
+    }
+    return ret;
+}
+
+ssize_t UdpSocket::Receive(void* p, size_t n, int flags)
+{
+    assert(p != NULL);
+    assert(n > 0);
+    return Socket::Receive(p, n, flags);
+}
+
+// The writable space is ensured externally
+ssize_t UdpSocket::Receive(StreamBuffer* buf, int flags)
+{
+    assert(buf != NULL);
+    assert(buf->Writable() > 0);
+    ssize_t ret = Socket::Receive(buf->Write(), buf->Writable(), flags);
+    if(ret > 0)
+    {
+        buf->Write(ret);
     }
     return ret;
 }
@@ -141,42 +210,12 @@ ssize_t UdpSocket::Receive(StreamBuffer* buf)
 
 bool UdpSocket::Block() const 
 {
-    return mSocket.Block();
+    return Socket::Block();
 }
 
 bool UdpSocket::Block(bool block) 
 {
-    return mSocket.Block(block);
-}
-
-bool UdpSocket::ReuseAddress() const 
-{
-    return mSocket.ReuseAddress();
-}
-
-bool UdpSocket::ReuseAddress(bool reuse)
-{
-    return mSocket.ReuseAddress(reuse);
-}
-
-size_t UdpSocket::SendBuffer() const 
-{
-    return mSocket.SendBuffer();
-}
-
-bool UdpSocket::SendBuffer(size_t size)
-{
-    return mSocket.SendBuffer(size);
-}
-
-size_t UdpSocket::ReceiveBuffer() const 
-{
-    return mSocket.ReceiveBuffer();
-}
-
-bool UdpSocket::ReceiveBuffer(size_t size)
-{
-    return mSocket.ReceiveBuffer(size);
+    return Socket::Block(block);
 }
 
 NET_BASE_END 
