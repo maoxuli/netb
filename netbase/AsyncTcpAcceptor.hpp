@@ -55,12 +55,24 @@ public:
     virtual bool Close(Error* e = NULL) noexcept;
 
     // Accept a connection, in block or non-block mode
-    virtual SOCKET Accept(); // thow on errors
-    virtual SOCKET Accept(Error* e) noexcept;
+    virtual SOCKET Accept() // thow on errors
+    {
+        return INVALID_SOCKET;
+    }
+    virtual SOCKET Accept(Error* e) noexcept
+    {
+        return INVALID_SOCKET;
+    }
 
     // address is a pointer rather a reference, so could be NULL
-    virtual SOCKET AcceptFrom(SocketAddress* addr); // throw on errors
-    virtual SOCKET AcceptFrom(SocketAddress* addr, Error* e) noexcept;
+    virtual SOCKET AcceptFrom(SocketAddress* addr) // throw on errors
+    {
+        return INVALID_SOCKET;
+    }
+    virtual SOCKET AcceptFrom(SocketAddress* addr, Error* e) noexcept
+    {
+        return INVALID_SOCKET;
+    }
 
     // Notificaiton of connection is accepted
     // Address is a const pointer, rather than a reference, so it could be NULL

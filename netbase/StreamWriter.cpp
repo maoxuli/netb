@@ -61,6 +61,12 @@ bool StreamWriter::Bytes(const void* p, size_t n)
     return _stream->Write(p, n);
 }
 
+bool StreamWriter::String(const std::string& s)
+{
+    if(_stream == NULL) return false;
+    return _stream->Write(s.data(), s.length());
+}
+
 bool StreamWriter::String(const std::string& s, size_t n)
 {
     if(_stream == NULL) return false;

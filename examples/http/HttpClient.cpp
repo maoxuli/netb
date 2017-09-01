@@ -16,6 +16,7 @@
  */
 
 #include "TcpSocket.hpp"
+#include "HttpMessage.h"
 
 // HTTP client
 int main(const int argc, char* argv[])
@@ -43,7 +44,7 @@ int main(const int argc, char* argv[])
 
     netbase::TcpSocket client;
     client.Block(10000); // block with 10s timeout
-    if(!client.Connect(SocketAddress(host, port)))
+    if(!client.Connect(netbase::SocketAddress(host, port), NULL))
     {
         std::cout << "HTTP client failed to connect: " << host << ":" << port << "\n";
         return -1;
@@ -51,7 +52,7 @@ int main(const int argc, char* argv[])
 
     // Send out a request
     netbase::HttpRequest request;
-    StreamBuffer buf;
+    netbase::StreamBuffer buf;
     request.ToBuffer(&buf);
     if(client.Send(&buf) <= 0)
     {
@@ -67,7 +68,7 @@ int main(const int argc, char* argv[])
         std::cout << "Receive response failed.\n";
         return -1;
     }
-    netbase::HttpResponse reponse;
+    netbase::HttpResponse response;
     response.FromBuffer(&buf);
     std::cout << "Response: " << response.ToString();
     return 0;

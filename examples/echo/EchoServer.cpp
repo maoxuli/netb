@@ -15,162 +15,107 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SocketAddress.h"
-#include "SocketSelector.h"
-#include "StreamBuffer.h"
-#include "Socket.h"
-#include "TcpAcceptor.h"
-#include "TcpSocket.h"
-#include "UdpSocket.h"
-#include "AsyncTcpAcceptor.h"
-#include "AsyncTcpSocket.h"
-#include "AsyncUdpSocket.h"
+#include "AsyncUdpSocket.hpp"
+#include "AsyncTcpAcceptor.hpp"
+#include "AsyncTcpSocket.hpp"
+#include "StreamBuffer.hpp"
+#include "StreamPeeker.hpp"
+#include "StreamReader.hpp"
+#include "StreamWriter.hpp"
 #include <string>
 #include <map>
-#include <cstdlib>
+
+NET_BASE_BEGIN
 
 // RFC 862
 // Echo server
-class EchoServer 
+
+using namespace std::placeholders;
+
+// UDP
+class UdpEchoServer : public AsyncUdpSocket
 {
 public:
-    virtual ~EchoServer() { }
-    virtual bool Open(unsigned short port) = 0;
-    virtual bool Open(unsigned short port, Error* e) = 0; 
-}
-
-// RFC 862/UDP
-// Using simple socket API
-class EchoServerSU
-{
-public: 
-    EchoServerSU(unsigned short port = 9007)  // By default, echo service on port 9007
-    : mPort(port)
+    UdpEchoServer(EventLoop* loop, unsigned short port = 9007)
+    : AsyncUdpSocket(loop, SocketAddress(port))
     {
-
+        SetReceivedCallback(std::bind(&UdpEchoServer::OnReceived, this, _1, _2, _3));
+        ReuseAddress(true);
+        ReusePort(true);
     }
 
-    // return false if failed to open, and return details in e
-    bool Open(Error* e = NULL)
+private:
+    void OnReceived(AsyncUdpSocket* sock, StreamBuffer* buf, const SocketAddress* addr)
     {
-        if(!mSocket.Create(PF_INET, SOCK_DGRAM, IPPROTO_UDP, e);
+        assert(buf != NULL);
+        std::string s;
+        if(StreamPeeker(buf).String(s, buf->Readable()))
         {
-            return false;
+            std::cout << "Received: " << s << "\n";
         }
-        if(!mSocket.Bind(SocketAddress(mPort)), e)
-        { 
-            return false;
-        }
-        return false;
+        assert(sock != NULL);
+        assert(addr != NULL);
+        sock->SendTo(buf, addr);
     }
-
-    void Run()
-    {
-        ssize_t ret = 0;
-        char* buf = new char[2048]; // enough for a MTU
-        netbase::SocketAddress addr;
-        socklen_t addrlen = addr.Length();
-        while((ret = mSocket.ReceiveFrom(buf, 2048, (sockaddr*)&addr, &addrlen)) > 0)
-        {
-            mSocket.SendTo(buf, ret, addr.SockAddr(), addr.Length());
-        }
-    }
-
-private: 
-    netbase::Socket mSocket;
-    unsigned short mPort;
 };
 
-// RFC 862/TCP
-// Based on simple socket API
-class EchoServerST : public EchoServer
+// TCP
+class TcpEchoServer : public AsyncTcpAcceptor
 {
-public: 
-    EchoServerST(unsigned short port = 9007)  // By default, echo service on port 9007
-    : mSocket(PF_INET, SOCK_STREAM, IPPROTO_TCP)
-    , _address(NULL, port)
+public:
+    TcpEchoServer(EventLoop* loop, unsigned short port = 9007)
+    : AsyncTcpAcceptor(loop, SocketAddress(port))
     {
-        assert(mSocket.Valid());
-        mSocket.Block(true);
+        SetAcceptedCallback(std::bind(&TcpEchoServer::OnAccepted, this, _1, _2, _3));
+        ReuseAddress(true);
+        ReusePort(true);
     }
 
-    bool Open()
+private:
+    std::map<SOCKET, AsyncTcpSocket*> _connections;
+
+    bool OnAccepted(AsyncTcpAcceptor* acceptor, SOCKET s, const SocketAddress* addr)
     {
-        if(mSocket.Bind(_address.SockAddr(), _address.Length()) && mSocket.Listen())
+        assert(s != INVALID_SOCKET);
+        assert(_connections.find(s) == _connections.end());
+        std::cout << "Connected: " << s << "\n";
+        AsyncTcpSocket* conn = new AsyncTcpSocket(GetLoop(), s, addr);
+        assert(conn != NULL);
+        conn->SetConnectedCallback(std::bind(&TcpEchoServer::OnConnected, this, _1, _2));
+        conn->SetReceivedCallback(std::bind(&TcpEchoServer::OnReceived, this, _1, _2));
+        conn->Connected();
+        _connections[s] = conn;
+        return true;
+    }
+
+    void OnConnected(AsyncTcpSocket* conn, bool connected)
+    {
+        assert(conn != NULL);
+        if(!connected)
         {
-            std::cout << "EchoSever opened on " << _address.ToString() << ".\n";
-            return true;
+            std::cout << "Disconnected: " << conn->GetSocket() << "\n";
+            auto it = _connections.find(conn->GetSocket());
+            assert(it != _connections.end());
+            delete it->second;
+            _connections.erase(it);
         }
-        return false;
     }
 
-    void Run()
+    void OnReceived(AsyncTcpSocket* conn, StreamBuffer* buf)
     {
-        netbase::Socket s;
-        ssize_t ret = 0;
-        char* buf = new char[2048]; // enough for a MTU
-        while(s.Attach(mSocket.Accept()).Valid())
+        assert(conn != NULL);
+        std::string s;
+        if(StreamPeeker(buf).String(s, buf->Readable()))
         {
-            s.Block(true);
-            while((ret = s.Receive(buf, 2048)) > 0)
-            {
-                std::cout << "Received " << ret << " bytes.\n";
-                s.Send(buf, ret);
-            }
+            std::cout << "Received: " << s << "\n";
         }
-    }
-
-private: 
-    netbase::Socket mSocket;
-    netbase::SocketAddress _address;
-};
-
-// RFC 862/TCP
-// Based on async socket API
-using namespace netbase;
-using namespace std::placeholders;
-class EchoServerAT : public EchoServer
-{
-public: 
-    EchoServerAT(unsigned short port = 9007)  // By default, echo service on port 9007
-    : _loop()
-    , mListener(&_loop, NULL, port)
-    {
-        mListener.SetConnectedCallback(std::bind(&EchoServerAT::OnConnected, this, _1));
-    }
-
-    bool Open()
-    {
-        if(mListener.Listen())
-        {
-            std::cout << "EchoSever opened on " << mListener.Address().ToString() << ".\n";
-            return true;
-        }
-        return false;
-    }
-
-    void Run()
-    {
-        _loop.Run();
-    }
-
-private: 
-    void OnConnected(TcpConnection* conn)
-    {
-        conn->SetReceivedCallback(std::bind(&EchoServerAT::OnReceived, this, _1, _2));
-        std::cout << "Incoming connection from " << conn->RemoteAddress().ToString() << ".\n";
-    }
-
-    void OnReceived(TcpConnection* conn, StreamBuffer* buf)
-    {
-        std::cout << "Received " << buf->Addressable() << " bytes.\n";
         conn->Send(buf);
     }
-
-private: 
-    EventLoop _loop;
-    TcpListener mListener;
 };
+
+NET_BASE_END
+
+/////////////////////////////////////////////////////////////////////////////
 
 // Open echo server on given port, by default 9007
 int main(const int argc, char* argv[])
@@ -186,21 +131,21 @@ int main(const int argc, char* argv[])
         }
     }
 
-    // Default server
-    EchoServer server(port);
-    Error e;
-    if(!server.Open(&e))
+    // Thread loop
+    netbase::EventLoop loop;
+    netbase::Error e;
+    netbase::UdpEchoServer udps(&loop, port);
+    netbase::TcpEchoServer tcps(&loop, port);
+    if(!udps.Open(&e))
     {
-        std::cout << "Echo server open failed on " << port << ".\n";
-        std::cout << e.Class().Name() << ":" << e.Code() << ":" << e.Infor() << "\n";
-        return -1;
+        std::cout << "UDP server open failed. " << e.Info() << "\n";
     }
-    if(!server.Run(e))
+    std::cout << "UDP server opened on: " << udps.Address().ToString() << "\n";
+    if(!tcps.Open(&e))
     {
-        std::cout << Echo server 
+        std::cout << "TCP server open failed. " << e.Info() << "\n";
     }
-
-    // 
-
+    std::cout << "TCP server opened on: " << tcps.Address().ToString() << "\n";
+    loop.Run();
     return 0;
 }

@@ -62,8 +62,14 @@ public:
     virtual ssize_t Send(StreamBuffer* buf, int flags = 0) noexcept;
 
     // Receive data from the connection
-    virtual ssize_t Receive(void* p, size_t n, int flags = 0) noexcept;
-    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0) noexcept;
+    virtual ssize_t Receive(void* p, size_t n, int flags = 0) noexcept
+    {
+        return -1;
+    }
+    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0) noexcept
+    {
+        return -1;
+    }
 
     // Notification of connected
     typedef std::function<void (AsyncTcpSocket*, bool)> ConnectedCallback;

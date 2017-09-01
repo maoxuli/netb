@@ -73,26 +73,32 @@ public:
     virtual ssize_t Send(StreamBuffer* buf, int flags = 0) noexcept;
 
     // Receive data and get remote address
-    virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0) noexcept;
-    virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0) noexcept;
+    virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0) noexcept
+    {
+        return -1;
+    }
+    virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0) noexcept
+    {
+        return -1;
+    }
 
     // Receive data from connected address
-    virtual ssize_t Receive(void* p, size_t n, int flags = 0) noexcept;
-    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0) noexcept;
+    virtual ssize_t Receive(void* p, size_t n, int flags = 0) noexcept
+    {
+        return -1;
+    }
+    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0) noexcept
+    {
+        return -1;
+    }
 
     // Notification of data is sent
-    typedef std::function<void (AsyncUdpSocket*, size_t, const SocketAddress&)> SentCallback;
+    typedef std::function<void (AsyncUdpSocket*, size_t, const SocketAddress*)> SentCallback;
     void SetSentCallback(const SentCallback& cb) { _sent_callback = cb; }
 
     // Notification of data is received
-    typedef std::function<void (AsyncUdpSocket*, StreamBuffer*, const SocketAddress&)> ReceivedCallback;
+    typedef std::function<void (AsyncUdpSocket*, StreamBuffer*, const SocketAddress*)> ReceivedCallback;
     void SetReceivedCallback(const ReceivedCallback& cb) { _received_callback = cb; };
-
-public:
-    // IO mode
-    // -1: block, 0: non-block, >0: block with timeout
-    virtual void Block(int timeout); // throw on erros
-    virtual bool Block(int timeout, Error* e) noexcept;
 
 private:
     // Aysnc facility

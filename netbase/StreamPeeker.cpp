@@ -22,21 +22,21 @@ NET_BASE_BEGIN
 
 StreamPeeker::StreamPeeker()
 : _stream(NULL)
-, mOffset(0)
+, _offset(0)
 {
 
 }
 
 StreamPeeker::StreamPeeker(StreamBuffer* buf)
 : _stream(buf)
-, mOffset(0)
+, _offset(0)
 {
 
 }
 
 StreamPeeker::StreamPeeker(StreamBuffer& buf)
 : _stream(&buf)
-, mOffset(0)
+, _offset(0)
 {
 
 }
@@ -49,14 +49,14 @@ StreamPeeker::~StreamPeeker()
 StreamPeeker& StreamPeeker::Attach(StreamBuffer* buf)
 {
     _stream = buf;
-    mOffset = 0;
+    _offset = 0;
     return *this;
 }
 
 StreamPeeker& StreamPeeker::Attach(StreamBuffer& buf)
 {
     _stream = &buf;
-    mOffset = 0;
+    _offset = 0;
     return *this;
 }
 
@@ -64,41 +64,49 @@ bool StreamPeeker::Bytes(void* p, size_t n)
 {
     if(_stream == NULL) return false;
 
-    if(_stream->Peek(p, n, mOffset))
+    if(_stream->Peek(p, n, _offset))
     {
-        mOffset += n;
+        _offset += n;
         return true;
     }
     return false;
 }
 
+bool StreamPeeker::String(std::string& s)
+{
+    if(_stream == NULL) return false;
+    size_t n = _stream->Addressable(_offset);
+    if(n == 0) return false;
+    return String(s, n);
+}
+
 bool StreamPeeker::String(std::string& s, size_t n)
 {
     if(_stream == NULL) return false;
-    if(_stream->Addressable(mOffset) < n) return false;
+    if(_stream->Addressable(_offset) < n) return false;
 
-    const unsigned char* p = (const unsigned char*)_stream->Address(mOffset);
+    const unsigned char* p = (const unsigned char*)_stream->Address(_offset);
     std::string(p, p + n).swap(s);
-    mOffset += n;
+    _offset += n;
     return true;
 }
 
 bool StreamPeeker::String(std::string& s, const char* delim)
 {
     if(_stream == NULL) return false;
-    if(_stream->Addressable(mOffset) < strlen(delim)) return false;
+    if(_stream->Addressable(_offset) < strlen(delim)) return false;
 
-    ssize_t n = _stream->Addressable(delim, mOffset);
+    ssize_t n = _stream->Addressable(delim, _offset);
     if(n < 0) return false;
     if(n == 0) 
     {
-        mOffset += strlen(delim);
+        _offset += strlen(delim);
         return true;
     }
     
-    const unsigned char* p = (const unsigned char*)_stream->Address(mOffset);
+    const unsigned char* p = (const unsigned char*)_stream->Address(_offset);
     std::string(p, p + n).swap(s);
-    mOffset += n + strlen(delim);
+    _offset += n + strlen(delim);
     return true;
 }
 

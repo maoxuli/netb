@@ -147,6 +147,12 @@ bool AsyncUdpSocket::Open(const SocketAddress& addr, Error* e) noexcept
     return UdpSocket::Open(addr, e) && EnableReading(e);
 }
 
+bool AsyncUdpSocket::Close(Error* e) noexcept
+{
+    assert(false);
+    return false;
+}
+
 ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, int flags) noexcept
 {
     // Out of thread sending, lock and buffer
@@ -178,6 +184,18 @@ ssize_t AsyncUdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int
         buf->Read(sent);
     }
     return sent;
+}
+
+ssize_t AsyncUdpSocket::Send(const void* p, size_t n, int flags) noexcept
+{
+    assert(false);
+    return -1;
+}
+
+ssize_t AsyncUdpSocket::Send(StreamBuffer* buf, int flags) noexcept
+{
+    assert(false);
+    return -1;
 }
 
 // EventHandler::EventCallback

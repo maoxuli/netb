@@ -123,6 +123,9 @@ public:
     bool Float(float v);
     bool Double(double v);
 
+    // Writer string 
+    bool String(const std::string& s);
+
     // Writer n bytes of string from the begining
     bool String(const std::string& s, size_t n);
 

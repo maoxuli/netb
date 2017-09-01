@@ -63,6 +63,14 @@ bool StreamReader::Bytes(void* p, size_t n)
     return _stream->Read(p, n);
 }
 
+bool StreamReader::String(std::string& s)
+{
+    if(_stream == NULL) return false;
+    size_t n = _stream->Readable();
+    if(n == 0) return false;
+    return String(s, n);
+}
+
 bool StreamReader::String(std::string& s, size_t n)
 {
     if(_stream == NULL) return false;

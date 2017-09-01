@@ -122,6 +122,13 @@ bool TcpAcceptor::Close(Error* e) noexcept
     return Socket::Close(e); 
 }
 
+SocketAddress TcpAcceptor::Address(Error* e) const noexcept
+{
+    if(IsOpened())
+        return Socket::Address();
+    return _address;
+}
+
 // Accept a connection
 SOCKET TcpAcceptor::Accept()
 {

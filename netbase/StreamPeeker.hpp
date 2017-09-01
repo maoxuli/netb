@@ -123,6 +123,9 @@ public:
     bool Float(float& v);
     bool Double(double& v);
 
+    // Read all as a string
+    bool String(std::string& s);
+
     // Read a string that has n bytes length
     bool String(std::string& s, size_t n);
 
@@ -131,7 +134,7 @@ public:
 
 protected:
     StreamBuffer* _stream;
-    size_t mOffset;
+    size_t _offset;
 };
 
 NET_BASE_END
