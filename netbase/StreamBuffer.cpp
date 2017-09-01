@@ -15,53 +15,53 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "StreamBuffer.h"
+#include "StreamBuffer.hpp"
 #include <cassert>
 
 NET_BASE_BEGIN
 
 // Initialize with initial size and limit size
 StreamBuffer::StreamBuffer(size_t init, size_t limit)
-: mBytes(init)
-, mLimit(limit)
-, mReadIndex(0)
-, mWriteIndex(0)
+: _bytes(init)
+, _limit(limit)
+, _read_index(0)
+, _write_index(0)
 {
     assert(limit >= init);   
 }
 
 // Initialize with initial data, initial size and limit size
 StreamBuffer::StreamBuffer(const void* p, size_t n, size_t init, size_t limit)
-: mBytes(init)
-, mLimit(limit)
-, mReadIndex(0)
+: _bytes(init)
+, _limit(limit)
+, _read_index(0)
 {
     assert(init >= n);
     assert(limit >= init);
     memcpy(Begin(), p, n);
-    mWriteIndex = n;
+    _write_index = n;
 }
 
 // Copy constructor
 // Deep copy and move data to the beginning
 StreamBuffer::StreamBuffer(const StreamBuffer& b)
-: mBytes(b.Readable())
-, mLimit(b.mLimit)
+: _bytes(b.Readable())
+, _limit(b._limit)
 {
     memcpy(Begin(), b.Read(), b.Readable());
-    mReadIndex = 0;
-    mWriteIndex = b.Readable();
+    _read_index = 0;
+    _write_index = b.Readable();
 }
 
 // Copy constructor
 // Deep copy and move data to the beginning
 StreamBuffer::StreamBuffer(const StreamBuffer* b)
-: mBytes(b->Readable())
-, mLimit(b->mLimit)
+: _bytes(b->Readable())
+, _limit(b->_limit)
 {
     memcpy(Begin(), b->Read(), b->Readable());
-    mReadIndex = 0;
-    mWriteIndex = b->Readable();
+    _read_index = 0;
+    _write_index = b->Readable();
 }
 
 StreamBuffer::~StreamBuffer()
@@ -73,17 +73,17 @@ StreamBuffer::~StreamBuffer()
 // Deep copy and move data to the beginning 
 StreamBuffer& StreamBuffer::operator=(const StreamBuffer& b)
 {
-    if(mLimit < b.Size())
+    if(_limit < b.Size())
     {
-        mLimit = b.Size();
+        _limit = b.Size();
     }
-    if(mBytes.size() < b.Readable())
+    if(_bytes.size() < b.Readable())
     {
-        mBytes.resize(b.Readable());
+        _bytes.resize(b.Readable());
     }
     memcpy(Begin(), b.Read(), b.Readable());
-    mReadIndex = 0;
-    mWriteIndex = b.Readable();
+    _read_index = 0;
+    _write_index = b.Readable();
     return *this;
 }
 

@@ -15,87 +15,186 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SocketSelector.h"
-#include "SocketError.h"
+#include "SocketSelector.hpp"
+#include <cassert>
 
 NET_BASE_BEGIN
 
-SocketSelector::SocketSelector()
+SocketSelector::SocketSelector() noexcept
 {
-    mMaxSocket = 0;
-    FD_ZERO(&mReadFdSet);
-    FD_ZERO(&mWriteFdSet);
-    FD_ZERO(&mExceptFdSet);
+    FD_ZERO(&_read_set);
+    FD_ZERO(&_write_set);
+    FD_ZERO(&_except_set);
 }
 
-SocketSelector::~SocketSelector()
+SocketSelector::SocketSelector(SOCKET s, int events) noexcept
+{
+    FD_ZERO(&_read_set);
+    FD_ZERO(&_write_set);
+    FD_ZERO(&_except_set);
+    SetupEvents(s, events);
+}
+SocketSelector::SocketSelector(const std::vector<SocketEvents>& sockets) noexcept
+{
+    FD_ZERO(&_read_set);
+    FD_ZERO(&_write_set);
+    FD_ZERO(&_except_set);
+    assert(false);
+}
+
+SocketSelector::SocketSelector(const fd_set* read, const fd_set* write, const fd_set* except) noexcept
+{
+    assert(!read);
+    FD_COPY(read, &_read_set);
+    assert(!write);
+    FD_COPY(write, &_write_set);
+    assert(!except);
+    FD_COPY(except, &_except_set);
+}
+
+SocketSelector::~SocketSelector() noexcept
 {
     
 }
 
-// @param timout 0 for immediate return, -1 for wait unlimited
-bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout)
+// Setup interested socket and events
+// May result in adding or removing socket and events
+void SocketSelector::SetupEvents(SOCKET s, int events) noexcept
+{    
+    if(events == SOCKET_EVENT_NONE)
+    {
+        Remove(s);
+    }
+    else
+    {
+        std::vector<SOCKET>::iterator it = _sockets.begin(); 
+        while(it != _sockets.end() && *it != s)
+        {
+            ++it;
+        }
+        if(it == _sockets.end())
+        {
+            _sockets.push_back(s);
+            std::make_heap(_sockets.begin(), _sockets.end());
+        }
+
+        if(events & SOCKET_EVENT_READ)
+        {
+            FD_SET(s, &_read_set);
+        }
+        else
+        {
+            FD_CLR(s, &_read_set);
+        }
+
+        if(events & SOCKET_EVENT_WRITE)
+        {
+            FD_SET(s, &_write_set);
+        }
+        else
+        {
+            FD_CLR(s, &_write_set);
+        }
+
+        if(events & SOCKET_EVENT_EXCEPT)
+        {
+            FD_SET(s, &_except_set);
+        }
+        else
+        {
+            FD_CLR(s, &_except_set);
+        }
+    }
+}
+
+// Remove a socket and its associated events
+void SocketSelector::Remove(SOCKET s) noexcept
 {
-    // Select events
+    for(std::vector<SOCKET>::iterator it = _sockets.begin(), 
+        end = _sockets.end(); it != end; ++it)
+    {
+        if(*it == s)
+        {
+            _sockets.erase(it);
+            break;
+        }
+    }
+    std::make_heap(_sockets.begin(), _sockets.end());
+    FD_CLR(s, &_read_set);
+    FD_CLR(s, &_write_set);
+    FD_CLR(s, &_except_set);
+}
+
+// Select sockets with active events
+// timeout seconds, -1 for block
+void SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout)
+{
+   Error e;
+   if(!Select(sockets, timeout, &e))
+   {
+       THROW_ERROR(e);
+   }
+}
+
+// Select sockets with active events
+// timeout seconds, -1 for block
+bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Error* e) noexcept
+{
     ssize_t ret = 0;
     while(true)
     {
-        FD_COPY(&mReadFdSet, &mActiveReadFdSet);
-        FD_COPY(&mWriteFdSet, &mActiveWriteFdSet);
-        FD_COPY(&mExceptFdSet, &mActiveExceptFdSet);
+        FD_COPY(&_read_set, &_active_read_set);
+        FD_COPY(&_write_set, &_active_write_set);
+        FD_COPY(&_except_set, &_active_except_set);
 
         if(timeout < 0)
         {
-            ret = ::select(mMaxSocket + 1, &mActiveReadFdSet, &mActiveWriteFdSet, &mActiveExceptFdSet, NULL); 
+            ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, NULL); 
         }
         else
         {
             struct timeval tv;
             tv.tv_sec = timeout;
             tv.tv_usec = 0;
-            ret = ::select(mMaxSocket + 1, &mActiveReadFdSet, &mActiveWriteFdSet, &mActiveExceptFdSet, &tv); 
+            ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, &tv); 
         }
 
-        if(ret == SOCKET_ERROR)
+        if(ret == 0)
         {
-            if(SocketError::Interrupted())
-            {
-                continue;
-            }
-            // Print error information, and write logger
-            // Sleep 5s to avoid looping
+            // timeout, return with error
+            SET_SOCKET_ERROR(e, "Socket select timeout.", ErrorCode::Timeout());
+            return false;
         }
-        break;
+        else if(ret < 0)
+        {
+            // only try again on system interruption, otherwise return with errors
+            if(!ErrorCode::IsInterrupted())
+            {
+                SET_SOCKET_ERROR(e, "Socket select failed.", ErrorCode::Current());
+                return false;
+            }
+        }
+        else  // succeed, breakl to process
+        {
+            break;
+        }
     }
-
-    if(ret < 0)  // error
-    {
-        std::cout << "SocketSelector::Select return error: " << SocketError::Code() << "\n";
-        return false;
-    }
-
-    if(ret == 0) // timeout
-    {
-        std::cout << "SocketSelector::Select return timeout.\n";
-        return false;
-    }
-
     // Check active sockets if not timeout
     sockets.clear();
-    for(std::vector<SOCKET>::iterator it = mSockets.begin(), 
-        end = mSockets.end(); it != end; ++it)
+    for(std::vector<SOCKET>::iterator it = _sockets.begin(), 
+        end = _sockets.end(); it != end; ++it)
     {
         SOCKET fd = *it;
-        unsigned int events = SOCKET_EVENT_NONE;
-        if(FD_ISSET(fd, &mActiveReadFdSet))
+        int events = SOCKET_EVENT_NONE;
+        if(FD_ISSET(fd, &_active_read_set))
         {
             events |= SOCKET_EVENT_READ;
         }
-        if(FD_ISSET(fd, &mActiveWriteFdSet))
+        if(FD_ISSET(fd, &_active_write_set))
         {
             events |= SOCKET_EVENT_WRITE;
         }
-        if(FD_ISSET(fd, &mActiveExceptFdSet))
+        if(FD_ISSET(fd, &_active_except_set))
         {
             events |= SOCKET_EVENT_EXCEPT;
         }
@@ -106,78 +205,6 @@ bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout)
         }
     }
     return true;
-}
-
-// Add or remove events with EventHandler 
-void SocketSelector::SetupEvents(SOCKET s, unsigned int events)
-{    
-    if(events == SOCKET_EVENT_NONE)
-    {
-        Remove(s);
-    }
-    else
-    {
-        std::vector<SOCKET>::iterator it = mSockets.begin(); 
-        while(it != mSockets.end() && *it != s)
-        {
-            ++it;
-        }
-        if(it == mSockets.end())
-        {
-            mSockets.push_back(s);
-        }
-
-        // ??? Only track the max socket, but not adjust when a 
-        // socket is removed. So...
-        if(s > mMaxSocket) 
-        {
-            mMaxSocket = s;
-        }
-
-        if(events & SOCKET_EVENT_READ)
-        {
-            FD_SET(s, &mReadFdSet);
-        }
-        else
-        {
-            FD_CLR(s, &mReadFdSet);
-        }
-
-        if(events & SOCKET_EVENT_WRITE)
-        {
-            FD_SET(s, &mWriteFdSet);
-        }
-        else
-        {
-            FD_CLR(s, &mWriteFdSet);
-        }
-
-        if(events & SOCKET_EVENT_EXCEPT)
-        {
-            FD_SET(s, &mExceptFdSet);
-        }
-        else
-        {
-            FD_CLR(s, &mExceptFdSet);
-        }
-    }
-}
-
-// Remove a socket and all interested event
-void SocketSelector::Remove(SOCKET s)
-{
-    for(std::vector<SOCKET>::iterator it = mSockets.begin(), 
-        end = mSockets.end(); it != end; ++it)
-    {
-        if(*it == s)
-        {
-            mSockets.erase(it);
-            break;
-        }
-    }
-    FD_CLR(s, &mReadFdSet);
-    FD_CLR(s, &mWriteFdSet);
-    FD_CLR(s, &mExceptFdSet);
 }
 
 NET_BASE_END

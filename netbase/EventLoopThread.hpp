@@ -15,18 +15,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_EVENT_LOOP_THREAD_H
-#define NET_BASE_EVENT_LOOP_THREAD_H
+#ifndef NET_BASE_EVENT_LOOP_THREAD_HPP
+#define NET_BASE_EVENT_LOOP_THREAD_HPP
 
-#include "Config.h"
+#include "EventLoop.hpp"
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 
 NET_BASE_BEGIN
 
-class EventSource;
-class EventLoop;
 class EventLoopThread
 {
 public:    
@@ -39,12 +37,12 @@ public:
     
 private:
     // EventLoop on thread
-    EventLoop* mLoop;
+    EventLoop* _loop;
     
     // Thread control
-    std::thread mThread;
-    std::mutex mMutex;
-    std::condition_variable mCondition;
+    std::thread _thread;
+    std::mutex _mutex;
+    std::condition_variable _condition;
 
     // Thread function
     void ThreadFunc();

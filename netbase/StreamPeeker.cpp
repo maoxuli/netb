@@ -15,27 +15,27 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "StreamPeeker.h"
+#include "StreamPeeker.hpp"
 #include <cassert>
 
 NET_BASE_BEGIN
 
 StreamPeeker::StreamPeeker()
-: mStream(NULL)
+: _stream(NULL)
 , mOffset(0)
 {
 
 }
 
 StreamPeeker::StreamPeeker(StreamBuffer* buf)
-: mStream(buf)
+: _stream(buf)
 , mOffset(0)
 {
 
 }
 
 StreamPeeker::StreamPeeker(StreamBuffer& buf)
-: mStream(&buf)
+: _stream(&buf)
 , mOffset(0)
 {
 
@@ -48,23 +48,23 @@ StreamPeeker::~StreamPeeker()
 
 StreamPeeker& StreamPeeker::Attach(StreamBuffer* buf)
 {
-    mStream = buf;
+    _stream = buf;
     mOffset = 0;
     return *this;
 }
 
 StreamPeeker& StreamPeeker::Attach(StreamBuffer& buf)
 {
-    mStream = &buf;
+    _stream = &buf;
     mOffset = 0;
     return *this;
 }
 
-bool StreamPeeker::SerializeBytes(void* p, size_t n)
+bool StreamPeeker::Bytes(void* p, size_t n)
 {
-    if(mStream == NULL) return false;
+    if(_stream == NULL) return false;
 
-    if(mStream->Peek(p, n, mOffset))
+    if(_stream->Peek(p, n, mOffset))
     {
         mOffset += n;
         return true;
@@ -72,42 +72,23 @@ bool StreamPeeker::SerializeBytes(void* p, size_t n)
     return false;
 }
 
-bool StreamPeeker::SerializeString(std::string& s, size_t n)
+bool StreamPeeker::String(std::string& s, size_t n)
 {
-    if(mStream == NULL) return false;
-    if(mStream->Addressable(mOffset) < n) return false;
+    if(_stream == NULL) return false;
+    if(_stream->Addressable(mOffset) < n) return false;
 
-    const unsigned char* p = (const unsigned char*)mStream->Address(mOffset);
+    const unsigned char* p = (const unsigned char*)_stream->Address(mOffset);
     std::string(p, p + n).swap(s);
     mOffset += n;
     return true;
 }
 
-bool StreamPeeker::SerializeString(std::string& s, const char delim)
+bool StreamPeeker::String(std::string& s, const char* delim)
 {
-    if(mStream == NULL) return false;
-    if(mStream->Addressable(mOffset) < sizeof(delim)) return false;
+    if(_stream == NULL) return false;
+    if(_stream->Addressable(mOffset) < strlen(delim)) return false;
 
-    ssize_t n = mStream->Addressable(delim, mOffset);
-    if(n < 0) return false;
-    if(n == 0) 
-    {
-        mOffset += sizeof(delim);
-        return true;
-    }
-
-    const unsigned char* p = (const unsigned char*)mStream->Address(mOffset);
-    std::string(p, p + n).swap(s);
-    mOffset += n + sizeof(delim);
-    return true;
-}
-
-bool StreamPeeker::SerializeString(std::string& s, const char* delim)
-{
-    if(mStream == NULL) return false;
-    if(mStream->Addressable(mOffset) < strlen(delim)) return false;
-
-    ssize_t n = mStream->Addressable(delim, mOffset);
+    ssize_t n = _stream->Addressable(delim, mOffset);
     if(n < 0) return false;
     if(n == 0) 
     {
@@ -115,7 +96,7 @@ bool StreamPeeker::SerializeString(std::string& s, const char* delim)
         return true;
     }
     
-    const unsigned char* p = (const unsigned char*)mStream->Address(mOffset);
+    const unsigned char* p = (const unsigned char*)_stream->Address(mOffset);
     std::string(p, p + n).swap(s);
     mOffset += n + strlen(delim);
     return true;

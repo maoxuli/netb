@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Maoxu Li. All rights reserved. maoxu@lebula.com
+ * Copyright (C) 2010, Maoxu Li. Email: maoxu@lebula.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,40 +15,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_SOCKET_ERROR_H
-#define NET_BASE_SOCKET_ERROR_H
-
-#include "Config.h"
+#include "Exception.hpp"
 
 NET_BASE_BEGIN
 
-//
-// SocketError
-//
-class SocketError
+const class ErrorClass& Exception::Class() const noexcept 
 {
-public: 
-    // Error code
-    static int Code();
+    return ErrorClass();
+}
 
-public: 
-    // Specific error status
-    static bool Interrupted();
-    static bool AcceptInterrupted();
-    static bool InProgress();
-    static bool WouldBlock();
-    static bool Timeout();
-
-    static bool NoMoreFds();
-    static bool NoBuffers();
-
-    static bool NotConnected();
-    static bool ConnectFailed();
-    static bool ConnectionRefused();
-    static bool ConnectionProgress();
-    static bool ConnectionLost();
-};
+//
+// Implement other exceptions
+//
+IMPLEMENT_EXCEPTION(SocketException, SocketError)
+IMPLEMENT_EXCEPTION(AddressException, AddressError)
+IMPLEMENT_EXCEPTION(ThreadException, ThreadError)
 
 NET_BASE_END
-
-#endif

@@ -16,83 +16,114 @@
  */
 
 #include "HttpServer.h"
-#include "EventLoop.h"
 
 NET_BASE_BEGIN
 
 using namespace std::placeholders;
 
-HttpServer::HttpServer(EventLoop* loop)
-: mLoop(loop)
-, mListener(loop, NULL, 80)
+HttpConnection::HttpConnection(EventLoop* loop, SOCKET s, const SocketAddress* connected)
+: AsyncTcpSocket(loop, s, connected)
 {
-    mListener.SetConnectedCallback(std::bind(&HttpServer::OnConnected, this, _1));
+    SetReceivedCallback(std::bind(&HttpConnection::OnReceived, this, _1, _2));
 }
 
-HttpServer::~HttpServer()
+void HttpConnection::OnReceived(AsyncTcpSocket* conn, StreamBuffer* buf)
 {
-    // close all connections
-}
-
-bool HttpServer::Start()
-{
-    // start tcp listener
-    return mListener.Listen();
-}
-
-// Tcp listener accepted a incoming connection
-void HttpServer::OnConnected(TcpConnection* conn)
-{
-    assert(conn != NULL);
-    if(mRequests.find(conn) == mRequests.end())
+    assert(conn == this);
+    assert(buf != NULL);
+    if(_request.FromBuffer(buf))
     {
-        mRequests[conn] = new HttpRequest();
-    }
-    conn->SetReceivedCallback(std::bind(&HttpServer::OnReceived, this, _1, _2));
-    conn->SetClosedCallback(std::bind(&HttpServer::OnClosed, this, _1));
-}
-
-void HttpServer::OnReceived(TcpConnection* conn, StreamBuffer* buf)
-{
-    assert(conn != NULL);
-    HttpRequest* request = mRequests[conn];
-    assert(request != NULL);
-
-    if(request->FromBuffer(buf))
-    {
-        HandleRequest(conn, request);
-        request->Reset();
+        HandleRequest(conn);
+        _request.Reset();
     }
 }
 
-// Http connection is closed
-void HttpServer::OnClosed(TcpConnection* conn)
+void HttpConnection::HandleRequest(AsyncTcpSocket* conn)
 {
-    assert(conn != NULL);
-    delete mRequests[conn];
-    mRequests.erase(conn);
+    std::cout << "Received a HTTP request: \n";
+    std::cout << _request.ToString();
+
+    HttpResponse res;
+    SendResponse(conn, res);
 }
 
-void HttpServer::SendResponse(TcpConnection* conn, HttpResponse* response)
+void HttpConnection::SendResponse(AsyncTcpSocket* conn, const HttpResponse& response)
 {
+    assert(conn != NULL);
     StreamBuffer buf;
-    response->ToBuffer(&buf);
+    response.ToBuffer(&buf);
     conn->Send(&buf);
 }
 
-void HttpServer::HandleRequest(TcpConnection* conn, HttpRequest* request)
-{
+/////////////////////////////////////////////////////////////////////////////////////////
 
+// Constructor, with local address
+HttpServer::HttpServer(EventLoop* loop, const SocketAddress& addr)
+: AsyncTcpAcceptor(loop, addr)
+{
+    SetAcceptedCallback(std::bind(&HttpServer::OnAccepted, this, _1, _2, _3));
+}
+
+// Destructor, close all connections
+HttpServer::~HttpServer()
+{
+    for(auto it = _connections.begin(); it != _connections.end(); ++it)
+    {
+        HttpConnection* conn = it->second;
+        delete conn;
+    }
+}
+
+// Tcp acceptor accepted a incoming connection
+bool HttpServer::OnAccepted(AsyncTcpAcceptor* acceptor, SOCKET s, const SocketAddress* addr)
+{
+    assert(acceptor == this);
+    assert(s != INVALID_SOCKET);
+    assert(_connections.find(s) == _connections.end());
+    HttpConnection* conn = new HttpConnection(GetLoop(), s, addr);
+    conn->SetConnectedCallback(std::bind(&HttpServer::OnConnected, this, _1, _2));
+    conn->Connected();
+    _connections[s] = conn;
+    return true;
+}
+
+// Connected status changed
+// Delete the connection if it is disconnected
+void HttpServer::OnConnected(AsyncTcpSocket* conn, bool connected)
+{
+    assert(conn != NULL);
+    if(!connected)
+    {
+        auto it = _connections.find(conn->GetSocket());
+        if(it != _connections.end())
+        {
+            assert(conn == it->second);
+            delete conn;
+            _connections.erase(it);
+        }
+    }
 }
 
 NET_BASE_END
 
-// httpserver 
+//////////////////////////////////////////////////////////////////////////////////////
+
+// HTTP server 
 int main(const int argc, char* argv[])
 {
-    netbase::EventLoop loop;
-    netbase::HttpServer server(&loop);
-    server.Start();
+    // Service port, by default 8080
+    unsigned short port = 8080;
+    if(argc == 2) // https 8090
+    {
+        int n = atoi(argv[1]);
+        if(n > 0 && n <= 65535)
+        {
+            port = (unsigned short)n;
+        }
+    }
+    netbase::EventLoop loop; // running on current thread
+    netbase::HttpServer server(&loop, netbase::SocketAddress(port));
+    server.Open();
     loop.Run();
     return 0;
 }

@@ -15,14 +15,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_EVENT_LOOP_H
-#define NET_BASE_EVENT_LOOP_H
+#ifndef NET_BASE_EVENT_LOOP_HPP
+#define NET_BASE_EVENT_LOOP_HPP
 
-#include "Config.h"
-#include "EventSelector.h"
-#include "EventHandler.h"
-#include "SocketPipe.h"
+#include "Uncopyable.hpp"
+#include "EventSelector.hpp"
+#include "EventHandler.hpp"
+#include "SocketPipe.hpp"
 #include <thread>
+#include <mutex>
+#include <functional>
 #include <cassert>
 
 NET_BASE_BEGIN
@@ -32,20 +34,26 @@ NET_BASE_BEGIN
 // The purpose of an event loop is to keep your thread busy when there is work to do
 // and put your thread to sleep when there is none.
 //
-class EventLoop
+class EventHandler;
+class EventLoop : private Uncopyable
 {
 public:    
     EventLoop();
     ~EventLoop();
     
     // Run the loop
-    // Only called in owner thread
+    // Only called in the loop thread
     void Run();
     
-    // Stop running of the loop
+    // Stop running loop
+    // Sould be thread safe
     void Stop();
     
     // Setup and remove a handler that handle some events
+    // First will update the interested socket list and associcated events
+    // Later will set active events and hanle events with this handler, 
+    // so it is a pointer or reference, not const
+    // Must be called in loop thread
     void SetupHandler(EventHandler* handler);
     void RemoveHandler(EventHandler* handler);
 
@@ -68,39 +76,42 @@ public:
     void InvokeEvery(const Functor& f, int interval);
     
     // Check in owner thread
+    // thread safe ?
     bool IsInLoopThread() const
     {
-        return mThreadID == std::this_thread::get_id();
+        return _thread_id == std::this_thread::get_id();
     }
     
     // Check and assert in owner thread
-    void AssertInLoopThread()
+    void AssertInLoopThread() const
     {
         assert(IsInLoopThread());
     }
-    
+
 private:
     // Owner thread id
-    const std::thread::id mThreadID;
+    const std::thread::id _thread_id;
     
     // Stop signal
-    bool mStop;
+    // Todo: using atomic type for thread safe
+    bool _stop;
     
-    // Generate and handle active events
-    // EventSource coupled with EventHandler to generate active events
-    EventSelector mSelector;
-    std::vector<EventHandler*> mActiveHandlers;
-    EventHandler* mCurrentHandler;
-    bool mEventHandling;
+    // EventSelector is a internal object to manage interested sockets 
+    // and associated events, as well generate the active list.
+    // Event setting and handling are always done in the loop 
+    EventSelector _selector;
+    std::vector<EventHandler*> _active_handlers;
+    EventHandler* _current_handler;
+    bool _event_handling; // only used in loop
 
-    // Queue of functions
-    // Finish all queued founctions per loop
-    // So vector is just fine
-    std::vector<Functor> mFunctionQueue;
-    std::mutex mFunctionMutex;
-    bool mFunctionInvoking;
+    // FIFO queue of functions waiting for running
+    // Always run all queued founctions per loop
+    // so vector is just fine
+    std::vector<const Functor> _queue;
+    std::mutex _queue_mutex;
+    bool _queue_invoking; // only used in loop
 
-    // Timer functions
+    // Todo: timer and timingly running functions
 
 private:
     // Wake up from sleeping
@@ -108,8 +119,8 @@ private:
     void OnWakeupRead();
 
     // Socket pipe for wakeup
-    SocketPipe mWakeupPipe;
-    EventHandler mWakeupReadHandler;
+    SocketPipe _wakeup_pipe;
+    EventHandler _wakeup_handler;
 };
 
 NET_BASE_END

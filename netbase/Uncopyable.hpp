@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Maoxu Li. All rights reserved. maoxu@lebula.com
+ * Copyright (C) 2010, Maoxu Li. Email: maoxu@lebula.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,33 +15,24 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_SOCKET_DEF_H
-#define NET_BASE_SOCKET_DEF_H
+#ifndef NET_BASE_UNCOPYALBE_HPP
+#define NET_BASE_UNCOPYALBE_HPP
 
-#include "Config.h"
-
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <net/if.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-#define SOCKET_ERROR (-1)
-#define INVALID_SOCKET (-1)
-
-// SOCKET events 
-#define SOCKET_EVENT_NONE       0
-#define SOCKET_EVENT_READ       1
-#define SOCKET_EVENT_WRITE      2
-#define SOCKET_EVENT_EXCEPT     4
+#include "Config.hpp"
 
 NET_BASE_BEGIN
 
-typedef int SOCKET;
+class Uncopyable 
+{
+protected:
+    Uncopyable() { }
+    ~Uncopyable() { }
+
+private:
+    Uncopyable(const Uncopyable&);
+    Uncopyable& operator=(const Uncopyable&);
+};
 
 NET_BASE_END
 
-#endif
+#endif 

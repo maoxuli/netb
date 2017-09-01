@@ -16,9 +16,9 @@
  */
 
 #include "HttpMessage.h"
-#include "StreamBuffer.h"
-#include "StreamReader.h"
-#include "StreamWriter.h"
+#include "StreamBuffer.hpp"
+#include "StreamReader.hpp"
+#include "StreamWriter.hpp"
 #include <sstream>
 #include <cassert>
 
@@ -27,10 +27,10 @@ NET_BASE_BEGIN
 const char* HttpMessage::CRLF = "\r\n";
 
 HttpMessage::HttpMessage(const char* version) 
-: mVersion(version)
-, mBodyLen(0)
-, mBody(NULL)
-, mState(MSG_READY)
+: _version(version)
+, _body_len(0)
+, _body(NULL)
+, _state(STATE::READY)
 {
 
 }
@@ -42,28 +42,29 @@ HttpMessage::~HttpMessage()
 
 void HttpMessage::Reset()
 {
-    for(std::vector<Header*>::iterator it = mHeaders.begin(); it != mHeaders.end(); ++it)
+    for(std::vector<Header*>::iterator it = _headers.begin(); 
+        it != _headers.end(); ++it)
     {
         Header* p = *it;
         delete p;
     }
-    mHeaders.clear();
+    _headers.clear();
 
-    if(!mBody)
+    if(!_body)
     {
-        delete[] mBody; 
-        mBody = NULL;
-        mBodyLen = 0;
+        delete[] _body; 
+        _body = NULL; 
     }
+    _body_len = 0;
 
-    mVersion = "HTTP/1.1";
-    mState = MSG_READY;
+    _version = "HTTP/1.1";
+    _state = STATE::READY;
 }
 
 void HttpMessage::SetHeader(const char* key, const char* value)
 {
-    std::vector<Header*>::iterator it(mHeaders.begin());
-    while(it != mHeaders.end())
+    std::vector<Header*>::iterator it(_headers.begin());
+    while(it != _headers.end())
     {
         Header* p = *it;
         if(key == p->key)
@@ -73,19 +74,18 @@ void HttpMessage::SetHeader(const char* key, const char* value)
         }
         ++it;
     }
-
-    mHeaders.push_back(new Header(key, value));
+    _headers.push_back(new Header(key, value));
 }
 
 void HttpMessage::RemoveHeader(const char* key) 
 {
-    std::vector<Header*>::iterator it(mHeaders.begin());
-    while(it != mHeaders.end())
+    std::vector<Header*>::iterator it(_headers.begin());
+    while(it != _headers.end())
     {
         Header* p = *it;
         if(key == p->key)
         {
-            it = mHeaders.erase(it);
+            it = _headers.erase(it);
         }
         else
         {
@@ -96,108 +96,102 @@ void HttpMessage::RemoveHeader(const char* key)
 
 const char* HttpMessage::GetHeader(const char* key) const
 {
-    std::vector<Header*>::const_iterator it(mHeaders.begin());
-    while(it != mHeaders.end())
+    std::vector<Header*>::const_iterator it(_headers.begin());
+    while(it != _headers.end())
     {
         Header* p = *it;
-        if(key == p->key)
+        if(p->key == key)
         {
             return p->value.c_str();
         }
         ++it;
     }
-
     return NULL;
 }
 
 long HttpMessage::GetHeaderAsInt(const char* key) const
 {
-    assert(false);
-    return 0;
+    std::string value = GetHeader(key);
+    std::istringstream iss(value);
+    long v = 0;
+    iss >> v;
+    return v;
 }
 
 double HttpMessage::GetHeaderAsFloat(const char* key) const
 {
-    assert(false);
-    return 0;
+    std::string value = GetHeader(key);
+    std::istringstream iss(value);
+    double v = 0;
+    iss >> v;
+    return v;
 }
 
 size_t HttpMessage::GetBodyLen() const
 {
-    return mBodyLen;
+    return _body_len;
 }
 
-bool HttpMessage::GetBody(void* buf, size_t n) const
+const void* HttpMessage::GetBody() const
 {
-    if(mBodyLen > n)
-    {
-        return false;
-    }
-
-    memcpy(buf, mBody, mBodyLen);
-    return true;
+    return _body;
 }
 
-std::string HttpMessage::Dump() const 
+// To string for debug
+std::string HttpMessage::ToString() const 
 {
     // <verb> SP <url> SP <protocol/version> CRLF
     // <headers> CRLF 
     // <buf>
     std::ostringstream oss;
-
     oss << StartLine() << "\r\n";
-
-    for(std::vector<Header*>::const_iterator it = mHeaders.begin(); it != mHeaders.end(); ++it)
+    for(std::vector<Header*>::const_iterator it = _headers.begin(); 
+        it != _headers.end(); ++it)
     {
         Header* p = *it;
         oss << p->key << ":" << p->value << "\r\n";
     }
-
-    oss << CRLF;
-
-    oss << "Body [" << mBodyLen << "]" << "\r\n";
-
+    oss << "\r\n";
+    oss << "Body [" << _body_len << "]" << "\r\n";
     return oss.str();
 }
 
 // Todo: error handling
 // How about if error occured during packaging?
-// An incomplete packet is in the buffer. 
+// An incomplete packet may be in the buffer. 
 bool HttpMessage::ToBuffer(StreamBuffer* buf) const
 {
     StreamWriter writer(buf);
-    if(!writer.SerializeString(StartLine(), CRLF)) return false;
-
-    for(std::vector<Header*>::const_iterator it = mHeaders.begin();
-        it != mHeaders.end(); ++it)
+    if(!writer.String(StartLine(), CRLF)) return false;
+    for(std::vector<Header*>::const_iterator it = _headers.begin();
+        it != _headers.end(); ++it)
     {
         Header* p = *it;
-        if(!writer.SerializeString(p->key, ':')
-           || !writer.SerializeString(p->value, CRLF))
+        if(!writer.String(p->key, ':') || !writer.String(p->value, CRLF))
         {
             return false;
         }
     }
-    writer.SerializeString(CRLF, (size_t)2);
-
-    if(mBodyLen > 0 && mBody != NULL)
+    writer.String(CRLF, 2);
+    if(_body_len > 0 && _body != NULL)
     {
-        writer.SerializeBytes(mBody, mBodyLen);
+        if(!writer.Bytes(_body, _body_len))
+        {
+            return false;
+        }
     }
-
     return true;
 }
 
-// Parse a HTTP message from a buffer
-// This function will keep state and loop to complete messages
-// Once a message is completed, return true
+// Parse a HTTP message from a stream buffer
+// This function will keep state until complete a messages
+// Return true once a message is completed
 bool HttpMessage::FromBuffer(StreamBuffer* buf)
 {
-    if(mState == MSG_READY) ReadStartLine(buf);
-    if(mState == MSG_READ_HEADER) ReadHeader(buf);
-    if(mState == MSG_READ_BODY) ReadBody(buf);
-
-    return (mState == MSG_OKAY);
+    if(_state == STATE::READY) ReadStartLine(buf);
+    if(_state == STATE::HEADER) ReadHeader(buf);
+    if(_state == STATE::BODY) ReadBody(buf);
+    return _state == STATE::OKAY;
 }
 
 // Read start line
@@ -205,13 +199,12 @@ bool HttpMessage::FromBuffer(StreamBuffer* buf)
 // Todo: detect error before reading
 void HttpMessage::ReadStartLine(StreamBuffer* buf)
 {
-    assert(mState == MSG_READY);
-
+    assert(_state == STATE::READY);
     std::string line;
-    if(StreamReader(buf).SerializeString(line, CRLF))
+    if(StreamReader(buf).String(line, CRLF))
     {
         StartLine(line);
-        mState = MSG_READ_HEADER;
+        _state = STATE::HEADER;
     }
 }
 
@@ -219,20 +212,17 @@ void HttpMessage::ReadStartLine(StreamBuffer* buf)
 // Read each complete line, until a blank line
 void HttpMessage::ReadHeader(StreamBuffer* buf)
 {
-    assert(mState == MSG_READ_HEADER);
-
-    // Read all complete lines
+    assert(_state == STATE::HEADER);
     std::string line;
-    while(StreamReader(buf).SerializeString(line, CRLF))
+    while(StreamReader(buf).String(line, CRLF))// Read all complete lines
     {       
         if(line.empty()) // Blank line, Separator line of headers and body, headers are completd
         {
-            mBodyLen = GetHeaderAsInt("Content-Length");
-            mState = mBodyLen > 0 ? MSG_READ_BODY : MSG_OKAY;
+            _body_len = GetHeaderAsInt("Content-Length");
+            _state = _body_len > 0 ? STATE::BODY : STATE::OKAY;
             break;
         }
-
-        // parse line with key and value
+        // parse line to key and value
         size_t pos = line.find(":");
         assert(pos != std::string::npos);
         std::string key = line.substr(0, pos);
@@ -244,12 +234,12 @@ void HttpMessage::ReadHeader(StreamBuffer* buf)
 // Read http message body
 void HttpMessage::ReadBody(StreamBuffer* buf)
 {
-    assert(mState == MSG_READ_BODY);
-    assert(mBodyLen > 0);
-    if(mBody == NULL) mBody = new unsigned char[mBodyLen];
-    if(StreamReader(buf).SerializeBytes(mBody, mBodyLen))
+    assert(_state == STATE::BODY);
+    assert(_body_len > 0);
+    if(_body == NULL) _body = new unsigned char[_body_len];
+    if(StreamReader(buf).Bytes(_body, _body_len))
     {
-        mState = MSG_OKAY;
+        _state = STATE::OKAY;
     }
 }
 
@@ -257,14 +247,15 @@ void HttpMessage::ReadBody(StreamBuffer* buf)
 
 HttpRequest::HttpRequest(const char* version) 
 : HttpMessage(version)
+, _method("GET")
 {
-    mMethod = "GET";
+   
 }
 
 HttpRequest::HttpRequest(const char* method, const char* url, const char* version)
 : HttpMessage(version)
-, mMethod(method)
-, mUrl(url)
+, _method(method)
+, _url(url)
 {
 
 }
@@ -277,28 +268,28 @@ HttpRequest::~HttpRequest()
 void HttpRequest::Reset() 
 {
     HttpMessage::Reset();
-    mMethod = "GET";
-    mUrl = "";
+    _method = "GET";
+    _url = "";
 }
 
 const char* HttpRequest::GetMethod() const 
 {
-    return mMethod.c_str();
+    return _method.c_str();
 }
 
 void HttpRequest::SetMethod(const char* method)
 {
-    mMethod = method;
+    _method = method;
 }
 
 const char* HttpRequest::GetUrl() const
 {
-    return mUrl.c_str();
+    return _url.c_str();
 }
 
 void HttpRequest::SetUrl(const char* url)
 {
-    mUrl = url;
+    _url = url;
 }
 
 // Parse start line
@@ -309,10 +300,9 @@ bool HttpRequest::StartLine(const std::string& line)
     {
         return false;
     }
-
     // Split sring with space
     std::istringstream iss(line);
-    iss >> mMethod >> mUrl >> mVersion;
+    iss >> _method >> _url >> _version;
     return true;
 }
 
@@ -320,7 +310,7 @@ bool HttpRequest::StartLine(const std::string& line)
 std::string HttpRequest::StartLine() const
 {
     std::ostringstream oss;
-    oss << mMethod << " " << mUrl << " " << mVersion;
+    oss << _method << " " << _url << " " << _version;
     return oss.str();
 }
 
@@ -328,8 +318,9 @@ std::string HttpRequest::StartLine() const
 
 HttpResponse::HttpResponse(const char* version) 
 : HttpMessage(version) 
+, _code(200)
 {
-    mCode = 200;
+
 }
 
 HttpResponse::~HttpResponse()
@@ -340,29 +331,29 @@ HttpResponse::~HttpResponse()
 void HttpResponse::Reset() 
 {
     HttpMessage::Reset();
-    mCode = 200;
-    mPhrase = "OK";
+    _code = 200;
+    _phrase = "OK";
 }
 
 void HttpResponse::SetStatus(int code, const char* phrase)
 {
-    mCode = code;
-    mPhrase = phrase;
+    _code = code;
+    _phrase = phrase;
 }
 
 int HttpResponse::GetCode() const
 {
-    return mCode;
+    return _code;
 }
 
 const char* HttpResponse::GetPhrase() const
 {
-    return (mPhrase.empty() ? sDefaultPhrases[mCode] : mPhrase.c_str());
+    return (_phrase.empty() ? s_default_phrases[_code] : _phrase.c_str());
 }
 
 
 // HTTP response status code and default phrase
-std::map<int, const char*> HttpResponse::sDefaultPhrases = 
+std::map<int, const char*> HttpResponse::s_default_phrases = 
 {
     { 100, "Continue" },
 
@@ -422,9 +413,8 @@ bool HttpResponse::StartLine(const std::string& line)
     {
         return false;
     }
-
     std::istringstream iss(line);
-    iss >> mVersion >> mCode >> mPhrase;
+    iss >> _version >> _code >> _phrase;
     return true;
 }
 
@@ -432,7 +422,8 @@ std::string HttpResponse::StartLine() const
 {
     // <protocol>/<version> code phrase CRLF
     std::ostringstream oss;
-    oss << mVersion << " " << mCode << " " << (mPhrase.empty() ? sDefaultPhrases[mCode] : mPhrase);
+    oss << _version << " " << _code << " " 
+        << (_phrase.empty() ? s_default_phrases[_code] : _phrase);
     return oss.str();
 }
 

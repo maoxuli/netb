@@ -15,46 +15,46 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "EventLoopThread.h"
-#include "EventLoop.h"
+#include "EventLoopThread.hpp"
 
 NET_BASE_BEGIN
 
 EventLoopThread::EventLoopThread()
-: mLoop(NULL)
+: _loop(NULL)
 {
     
 }
 
+// Todo: thread safe
 EventLoopThread::~EventLoopThread()
 {
-    if(mLoop != NULL)
+    if(_loop != NULL)
     {
-        mLoop->Stop();
-        mThread.join();
+        _loop->Stop();
+        _thread.join();
     }
 }
 
 EventLoop* EventLoopThread::Start()
 {
-    mThread = std::thread(&EventLoopThread::ThreadFunc, this);
+    _thread = std::thread(&EventLoopThread::ThreadFunc, this);
     {
-        std::unique_lock<std::mutex> lock(mMutex);
-        while(mLoop == NULL)
+        std::unique_lock<std::mutex> lock(_mutex);
+        while(_loop == NULL)
         {
-            mCondition.wait(lock);
+            _condition.wait(lock);
         }
     }
-    return mLoop;
+    return _loop;
 }
 
 void EventLoopThread::ThreadFunc()
 {
     EventLoop loop;
     {
-        std::unique_lock<std::mutex> lock(mMutex);
-        mLoop = &loop;
-        mCondition.notify_one();
+        std::unique_lock<std::mutex> lock(_mutex);
+        _loop = &loop;
+        _condition.notify_one();
     }
     loop.Run();
 }

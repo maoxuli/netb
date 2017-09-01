@@ -15,82 +15,132 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "EventHandler.h"
-#include "EventLoop.h"
+#include "EventHandler.hpp"
+#include "EventLoop.hpp"
 
 NET_BASE_BEGIN
 
+// bound to a socket
 EventHandler::EventHandler(EventLoop* loop, SOCKET s)
-: mLoop(loop)
-, mSocket(s)
-, mEvents(SOCKET_EVENT_NONE)
-, mActiveEvents(SOCKET_EVENT_NONE)
+: _loop(loop)
+, _socket(s)
+, _events(SOCKET_EVENT_NONE)
+, _active_events(SOCKET_EVENT_NONE) 
+, _detached(true)
 {
-    
+    assert(_loop != NULL);
 }
 
 EventHandler::~EventHandler()
 {
+    Detach();
+}
 
+// Isolate from event loop
+// Block until done
+void EventHandler::Detach()
+{
+    if(_detached) return;
+    assert(_loop != NULL);
+    if(_loop->IsInLoopThread())
+    {
+        DetachInLoop();
+    }
+    else
+    {
+        _loop->Invoke(std::bind(&EventHandler::DetachInLoop, this));
+        {
+            std::unique_lock<std::mutex> lock(_detach_mutex);
+            while(!_detached)
+            {
+                _detach_cond.wait(lock);
+            }  
+        }      
+    }
+}
+
+// Isolate from event loop
+void EventHandler::DetachInLoop()
+{
+    assert(_loop != NULL);
+    _loop->AssertInLoopThread();
+    _loop->RemoveHandler(this);
+    std::unique_lock<std::mutex> lock(_detach_mutex);
+    _detached = true;
+    _detach_cond.notify_one();
 }
 
 // Set intresting events
 void EventHandler::EnableReading()
 {
-    mEvents |= SOCKET_EVENT_READ;
+    std::unique_lock<std::mutex> lock(_events_mutex);
+    _events |= SOCKET_EVENT_READ;
     Update();
 }
 
 void EventHandler::DisableReading()
 {
-    mEvents &= ~SOCKET_EVENT_READ;
+    std::unique_lock<std::mutex> lock(_events_mutex);
+    _events &= ~SOCKET_EVENT_READ;
     Update();
 }
 
 void EventHandler::EnableWriting()
 {
-    mEvents |= SOCKET_EVENT_WRITE;
+    std::unique_lock<std::mutex> lock(_events_mutex);
+    _events |= SOCKET_EVENT_WRITE;
     Update();
 }
 
 void EventHandler::DisableWriting()
 {
-    mEvents &= ~SOCKET_EVENT_WRITE;
+    std::unique_lock<std::mutex> lock(_events_mutex);
+    _events &= ~SOCKET_EVENT_WRITE;
     Update();
 }
 
-void EventHandler::Detach()
-{
-    mLoop->Invoke(std::bind(&EventHandler::DetachInLoop, this));
-}
-
+// Notify event loop to update
 void EventHandler::Update()
 {
-    mLoop->Invoke(std::bind(&EventHandler::UpdateInLoop, this));
+    assert(_loop != NULL);
+    if(_loop->IsInLoopThread())
+    {
+        UpdateInLoop();
+    }
+    else
+    {
+        _loop->Invoke(std::bind(&EventHandler::UpdateInLoop, this));
+    }
 }
 
+// Notify event loop to update interested events
 void EventHandler::UpdateInLoop()
 {
-    mLoop->SetupHandler(this);
+    assert(_loop != NULL);
+    assert(_loop->IsInLoopThread());
+    _loop->SetupHandler(this);
+    _detached = false;
 }
 
-void EventHandler::DetachInLoop()
+// EventLoop/EventHandler get interested events
+int EventHandler::GetEvents() const
 {
-    mLoop->RemoveHandler(this);
+    std::unique_lock<std::mutex> lock(_events_mutex);
+    return _events;
 }
 
 // Handle current active events
-// Call by EventLoop
+// Call back by event loop
 void EventHandler::HandleEvents()
 {
-    if(mActiveEvents & SOCKET_EVENT_READ)
+    if(_active_events & SOCKET_EVENT_READ)
     {
-        if(mReadCallback) mReadCallback(mSocket);
+        if(_read_callback) _read_callback(_socket);
     }
     
-    if(mActiveEvents & SOCKET_EVENT_WRITE)
+    if(_active_events & SOCKET_EVENT_WRITE)
     {
-        if(mWriteCallback) mWriteCallback(mSocket);
+        if(_write_callback) _write_callback(_socket);
     }
 }
 

@@ -15,39 +15,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_SOCKET_PIPE_H
-#define NET_BASE_SOCKET_PIPE_H
-
-#include "Config.h"
-#include "Socket.h"
+#include "SocketConfig.hpp"
 
 NET_BASE_BEGIN
 
-//
-// A pipe simulated with TCP connection
-// 
-class SocketPipe 
-{
-public: 
-    SocketPipe();
-    virtual ~SocketPipe();
-
-    // Access internal socket pair
-    // Not yield ownership, so external can not close the socket
-    SOCKET ReadSocket() const { return mReader; }
-    SOCKET WriteSocket() const { return mWriter; }
-
-    // Blocked reading and writing
-    ssize_t Read(void* p, size_t n);
-    ssize_t Write(const void* p, size_t n);
-   
-protected:
-    Socket mReader;
-    Socket mWriter;
-
-    bool MakePair(Socket& reader, Socket& writer);
-};
 
 NET_BASE_END
-
-#endif

@@ -15,55 +15,73 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SocketPipe.h"
+#include "SocketPipe.hpp"
 
 NET_BASE_BEGIN
 
 SocketPipe::SocketPipe()
-: mReader(PF_INET, SOCK_STREAM, IPPROTO_TCP)
-, mWriter(PF_INET, SOCK_STREAM, IPPROTO_TCP)
 {
-    MakePair(mReader, mWriter);
+    try
+    {
+        _reader.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+        _writer.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+        MakePair(_reader, _writer);
+    }
+    catch(...)
+    {
+        throw;
+    }
 }
 
-SocketPipe::~SocketPipe()
+SocketPipe::SocketPipe(Error* e) noexcept
+{
+    try
+    {
+        _reader.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+        _writer.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+        MakePair(_reader, _writer);
+    }
+    catch(const Exception& ex)
+    {
+        SET_ERROR_CLASS(e, ex.Class());
+        SET_ERROR_INFO(e, ex.Info());
+        SET_ERROR_CODE(e, ex.Code());
+    }
+}
+
+SocketPipe::~SocketPipe() noexcept
 {
 
 }
 
-bool SocketPipe::MakePair(Socket& reader, Socket& writer)
+// throw on errors
+void SocketPipe::MakePair(Socket& reader, Socket& writer)
 {
-    // Reader socket listen on any port of local loopback address 
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(struct sockaddr_in));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    try
+    {
+        // Reader socket listen on any port of local loopback address 
+        SocketAddress addr("loopback", 0);
+        reader.Bind(addr).Listen(1);
+        addr = reader.Address(); // actual address
 
-    reader.Bind((sockaddr*)&addr, sizeof(struct sockaddr_in));
-    reader.Listen(1);
-
-    // Get actual listening address
-    memset(&addr, 0, sizeof(struct sockaddr_in));
-    socklen_t addrlen = sizeof(struct sockaddr_in);
-    reader.Address((sockaddr*)&addr, &addrlen); 
-
-    // Establish connection from writer socket to reader socket
-    writer.Connect((sockaddr*)&addr, addrlen);
-    SOCKET s = reader.Accept();
-
-    // Close reader socket and keep connection socket
-    reader.Attach(s);
-    return true;
+        // Establish connection from writer socket to reader socket
+        writer.Connect(addr);
+        reader.Attach(reader.Accept());
+    }
+    catch(...)
+    {
+        throw;
+    }
 }
 
-ssize_t SocketPipe::Read(void* p, size_t n)
+ssize_t SocketPipe::Read(void* p, size_t n, int flags) noexcept
 {
-    return mReader.Receive(p, n);
+    return _reader.Receive(p, n, flags);
 }
 
-ssize_t SocketPipe::Write(const void* p, size_t n)
+ssize_t SocketPipe::Write(const void* p, size_t n, int flags) noexcept
 {
-    return mWriter.Send(p, n);
+    return _writer.Send(p, n, flags);
 }
 
 NET_BASE_END

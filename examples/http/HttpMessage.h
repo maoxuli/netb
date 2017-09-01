@@ -18,7 +18,7 @@
 #ifndef NET_BASE_HTTP_MESSAGE_H
 #define NET_BASE_HTTP_MESSAGE_H
 
-#include "Config.h"
+#include "StreamBuffer.hpp"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -30,29 +30,28 @@ NET_BASE_BEGIN
 // HTTP message 
 // Todo: copy constructor with deep copy
 // 
-class StreamBuffer;
 class HttpMessage
 {
 public:
 	HttpMessage(const char* version = "HTTP/1.1");	
 	virtual ~HttpMessage();
 	
-	enum Type 
+	enum class TYPE 
 	{
-		UNKNOWN_MESSAGE, 
-		REQUEST_MESSAGE, 
-		RESPONSE_MESSAGE
+		UNKNOWN, 
+		REQUEST, 
+		RESPONSE
 	};
 
-	virtual Type GetType() const { return UNKNOWN_MESSAGE; }
-	const char* GetVersion() const { return mVersion.c_str(); }
+	virtual TYPE GetType() const { return TYPE::UNKNOWN; }
+	const char* GetVersion() const { return _version.c_str(); }
 
 	const char* GetHeader(const char* key) const;
 	long GetHeaderAsInt(const char* key) const;
 	double GetHeaderAsFloat(const char* key) const;
 
 	size_t GetBodyLen() const;
-	bool GetBody(void* buf, size_t n) const;
+	const void* GetBody() const;
 	
 	void SetHeader(const char* key, const char* value);
 	void SetHeader(const char* key, long value);
@@ -63,11 +62,11 @@ public:
 	bool FromBuffer(StreamBuffer* buf);
 	bool ToBuffer(StreamBuffer* buf) const;
 
-	virtual std::string Dump() const;
+	virtual std::string ToString() const;
 
 protected:
 	static const char* CRLF; // "\r\n"
-	std::string mVersion; // "HTTP/1.0", "HTTP/1.1", "HTTP/2.0"
+	std::string _version; // "HTTP/1.0", "HTTP/1.1", "HTTP/2.0"
 	
 	struct Header
 	{
@@ -75,21 +74,21 @@ protected:
 		std::string key;
 		std::string value;
 	};
-	std::vector<Header*> mHeaders; // keep order with vector
+	std::vector<Header*> _headers; // keep order with vector
 
-	size_t mBodyLen;
-	unsigned char* mBody;
+	size_t _body_len;
+	unsigned char* _body;
 
 protected:
 	// State to parse HTTP message
-    enum State
+    enum class STATE
     {
-        MSG_READY,        // Ready to receive a new packet
-        MSG_READ_HEADER,  // Reading header lines
-        MSG_READ_BODY,    // Reading body
-        MSG_OKAY          // Complete a message packet
+        READY,   // Ready to parse start line
+        HEADER,  // Reading header lines
+        BODY,    // Reading body
+        OKAY     // Complete a message packet
     };
-    State mState;
+    STATE _state;
 
 	void ReadStartLine(StreamBuffer* buf);
 	void ReadHeader(StreamBuffer* buf);
@@ -108,7 +107,7 @@ public:
     HttpRequest(const char* method, const char* url, const char* version = "HTTP/1.1");
 	virtual ~HttpRequest();
 
-	virtual Type GetType() const { return REQUEST_MESSAGE; }
+	virtual TYPE GetType() const { return TYPE::REQUEST; }
 	virtual void Reset();
 
 	const char* GetMethod() const;
@@ -118,8 +117,8 @@ public:
 	void SetUrl(const char* url);
 
 private:
-	std::string	mMethod;
-	std::string mUrl;
+	std::string	_method;
+	std::string _url;
 
 	virtual bool StartLine(const std::string& line);
 	virtual std::string StartLine() const;
@@ -131,7 +130,7 @@ public:
 	HttpResponse(const char* version = "HTTP/1.1");
 	virtual ~HttpResponse();
 
-	virtual Type GetType() const { return RESPONSE_MESSAGE; }
+	virtual TYPE GetType() const { return TYPE::RESPONSE; }
 	virtual void Reset();
 
 	void SetStatus(int code, const char* phrase = "");
@@ -139,9 +138,9 @@ public:
 	const char* GetPhrase() const;
 	
 private:
-	int mCode;
-	std::string mPhrase;
-	static std::map<int, const char*> sDefaultPhrases;
+	int _code;
+	std::string _phrase;
+	static std::map<int, const char*> s_default_phrases;
 
 	virtual bool StartLine(const std::string& line);
 	virtual std::string StartLine() const;

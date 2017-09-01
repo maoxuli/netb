@@ -1,5 +1,5 @@
 # NetBase
 
-examples/http/
+/examples/http/
 
-HttpMessage, HttpServer, and HttpClient.
+This is a mini framework for HTTP server and client.   

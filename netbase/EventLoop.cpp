@@ -15,23 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "EventLoop.h"
-#include <functional>
+#include "EventLoop.hpp"
 
 NET_BASE_BEGIN
 
 EventLoop::EventLoop()
-: mThreadID(std::this_thread::get_id())
-, mStop(false)
-, mSelector()
-, mCurrentHandler(NULL)
-, mEventHandling(false)
-, mFunctionInvoking(false)
-, mWakeupPipe()
-, mWakeupReadHandler(this, mWakeupPipe.ReadSocket())
+: _thread_id(std::this_thread::get_id())
+, _stop(false)
+, _current_handler(NULL)
+, _event_handling(false)
+, _queue_invoking(false)
+, _wakeup_handler(this, _wakeup_pipe.ReadSocket())
 {
     // Handle reading event of wake up
-    mWakeupReadHandler.SetReadCallback(std::bind(&EventLoop::OnWakeupRead, this));
+    _wakeup_handler.SetReadCallback(std::bind(&EventLoop::OnWakeupRead, this));
 }
 
 EventLoop::~EventLoop()
@@ -40,70 +37,75 @@ EventLoop::~EventLoop()
 }
 
 // Run the loop
+// Usually it is always called in the owener thread, either current 
+// thread or newly created thread
 void EventLoop::Run()
 {
     AssertInLoopThread();
-    mStop = false;
-    mWakeupReadHandler.EnableReading();
+    _stop = false;
+    _wakeup_handler.EnableReading();
     
-    while(!mStop)
+    while(!_stop)
     {
         // Seleting on events
-        mActiveHandlers.clear();
-        mSelector.WaitEvents(mActiveHandlers, -1); // Block to wait for active events
+        _active_handlers.clear();
+        _selector.WaitForEvents(_active_handlers, -1); // Block to wait for active events
         // Events handling
-        mEventHandling = true;
-        for(std::vector<EventHandler*>::iterator it = mActiveHandlers.begin();
-             it != mActiveHandlers.end(); ++it)
+        _event_handling = true;
+        for(std::vector<EventHandler*>::const_iterator it = _active_handlers.begin();
+             it != _active_handlers.end(); ++it)
         {
-            mCurrentHandler = *it;
-            mCurrentHandler->HandleEvents();
+            _current_handler = *it;
+            _current_handler->HandleEvents();
         }
-        mCurrentHandler = NULL;
-        mEventHandling = false;
+        _current_handler = NULL;
+        _event_handling = false;
         // Invoking Queued functions
-        std::vector<Functor> functions;
-        mFunctionInvoking = true;
+        std::vector<const Functor> functions;
+        _queue_invoking = true;
         {
-            std::unique_lock<std::mutex> lock(mFunctionMutex);
-            functions.swap(mFunctionQueue);
+            std::unique_lock<std::mutex> lock(_queue_mutex);
+            functions.swap(_queue);
         }
         for(size_t i = 0; i < functions.size(); ++i)
         {
             functions[i]();
         }
-        mFunctionInvoking = false;
+        _queue_invoking = false;
     }
 }
 
 // Stop running loop
+// Todo: using atomic type for thread safe
 void EventLoop::Stop()
 {
-    mStop = true;
+    _stop = true;
     if(!IsInLoopThread())
     {
         Wakeup();
     }
 }
 
-// Setup a event handler to selector, update all tied events
+// Setup and remove a handler that handle some events
+// Actually update the socket list and associcated events
 void EventLoop::SetupHandler(EventHandler* handler)
 {
     AssertInLoopThread();
-    mSelector.SetupHandler(handler);
+    _selector.SetupHandler(handler);
 }
 
-// Remove a event handler from selector, remove all events
+// Setup and remove a handler that handle some events
+// Actually update the socket list and associcated events
 void EventLoop::RemoveHandler(EventHandler* handler)
 {
     AssertInLoopThread();
-    if(mEventHandling)
+    if(_event_handling)
     {
-        assert(mCurrentHandler == handler // self
-               || std::find(mActiveHandlers.begin(), mActiveHandlers.end(),
-                handler) == mActiveHandlers.end()); // Not active handler
+        assert(_current_handler == handler // self
+               || std::find(_active_handlers.begin(), _active_handlers.end(),
+                handler) == _active_handlers.end()); // Not active handler
     }
-    mSelector.RemoveHandler(handler);
+    _selector.RemoveHandler(handler);
 }
 
 // Set a function that will be invoked in the loop
@@ -126,11 +128,10 @@ void EventLoop::Invoke(const Functor& f)
 void EventLoop::InvokeLater(const Functor& f)
 {
     {
-        std::unique_lock<std::mutex> lock(mFunctionMutex);
-        mFunctionQueue.push_back(f);
+        std::unique_lock<std::mutex> lock(_queue_mutex);
+        _queue.push_back(f);
     }
-
-    if(!IsInLoopThread() || mFunctionInvoking)
+    if(!IsInLoopThread() || _queue_invoking)
     {
         Wakeup();
     }
@@ -139,20 +140,22 @@ void EventLoop::InvokeLater(const Functor& f)
 void EventLoop::Wakeup()
 {
     unsigned char c = 0;
-    if(mWakeupPipe.Write(&c, 1) < 0)
+    if(_wakeup_pipe.Write(&c, 1) < 0)
     {
         // If wakeup pipe dead, the loop should stop working
         assert(false);
+        throw Exception("Pipe in event loop stop working.");
     }
 }
 
 void EventLoop::OnWakeupRead()
 {
     unsigned char c = 0;
-    if(mWakeupPipe.Read(&c, 1) < 0)
+    if(_wakeup_pipe.Read(&c, 1) < 0)
     {
         // If wakeup pipe dead, the loop should stop working
         assert(false);
+        throw Exception("Pipe in event loop stop working.");
     }
 }
 

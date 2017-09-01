@@ -45,7 +45,7 @@ class EchoClientSU : public EchoClient
 public: 
     EchoClientSU() 
     : mSocket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)
-    , mConnected(false)
+    , _connected(false)
     {
         assert(mSocket.Valid());
         mSocket.Block(true);
@@ -54,13 +54,13 @@ public:
     bool Connect(const char* host, unsigned short port = 9007) // By default on 9007
     {
         netbase::SocketAddress addr(host, port);
-        mConnected = mSocket.Connect(addr.SockAddr(), addr.Length());
-        return mConnected;
+        _connected = mSocket.Connect(addr.SockAddr(), addr.Length());
+        return _connected;
     }
 
     void Run()
     {
-        if(!mConnected) return;
+        if(!_connected) return;
 
         std::cout << "Please input a message, exit to quit.\n";
         std::string msg;
@@ -88,7 +88,7 @@ public:
 
 private: 
     netbase::Socket mSocket;
-    bool mConnected;
+    bool _connected;
 };
 
 // RFC 862/TCP
@@ -98,7 +98,7 @@ class EchoClientST : public EchoClient
 public: 
     EchoClientST() 
     : mSocket(PF_INET, SOCK_STREAM, IPPROTO_TCP)
-    , mConnected(false)
+    , _connected(false)
     {
         assert(mSocket.Valid());
         mSocket.Block(true);
@@ -107,13 +107,13 @@ public:
     bool Connect(const char* host, unsigned short port = 9007) // By default, echo service on port 9007
     {
         netbase::SocketAddress addr(host, port);
-        mConnected = mSocket.Connect(addr.SockAddr(), addr.Length());
-        return mConnected;
+        _connected = mSocket.Connect(addr.SockAddr(), addr.Length());
+        return _connected;
     }
 
     void Run()
     {
-        if(!mConnected) return;
+        if(!_connected) return;
 
         std::cout << "Please input a message, exit to quit.\n";
         std::string msg;
@@ -141,7 +141,7 @@ public:
 
 private: 
     netbase::Socket mSocket;
-    bool mConnected;
+    bool _connected;
 };
 
 // RFC 862/TCP
@@ -152,9 +152,9 @@ class EchoClientAT : public EchoClient
 {
 public: 
     EchoClientAT() 
-    : mLoopThread()
-    , mLoop(mLoopThread.Start())
-    , mConnector(mLoop)
+    : _loopThread()
+    , _loop(_loopThread.Start())
+    , mConnector(_loop)
     , mConnection(NULL)
     {
         mConnector.SetConnectedCallback(std::bind(&EchoClientAT::OnConnected, this, _1));
@@ -219,8 +219,8 @@ private:
     }
 
 private: 
-    netbase::EventLoopThread mLoopThread;
-    netbase::EventLoop* mLoop;
+    netbase::EventLoopThread _loopThread;
+    netbase::EventLoop* _loop;
     netbase::TcpConnector mConnector;
     netbase::TcpConnection* mConnection;
 };

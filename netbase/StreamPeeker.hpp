@@ -15,11 +15,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_STREAM_PEEKER_H
-#define NET_BASE_STREAM_PEEKER_H
+#ifndef NET_BASE_STREAM_PEEKER_HPP
+#define NET_BASE_STREAM_PEEKER_HPP
 
-#include "Uncopyable.h"
-#include "StreamBuffer.h"
+#include "Uncopyable.hpp"
+#include "StreamBuffer.hpp"
 #include <cstdint>
 #include <string>
 
@@ -31,14 +31,14 @@ NET_BASE_BEGIN
 // and update data. The interface of StreamBuffer works on 'byte' level, which 
 // means the functions always take a byte sequece (one or more bytes) as input 
 // or output parameters. This is inconvenient in some cases, for example, we 
-// may need to write or read 'integer number', 'float number', or 'string'
-// to/from the buffer. In all cases, we have to translate the known 'data type' 
-// to a kind of 'byte sequence' to adapt to StreamBuffer interface. 
+// may need to write or read 'integer number', 'float number', or 'string text'
+// to/from the buffer. In these cases, we have to translate the known 'data type' 
+// to a kind of 'byte sequence' to adapt to StreamBuffer's interface. 
 // 
-// StreamWriter, StreamReader, and StreamPeeker are designed as tool objects to 
+// StreamWriter, StreamReader, and StreamPeeker are designed as tool classes to 
 // facilitate reading and writing known 'data type' from and to a StreamBuffer 
 // object, which is also known as serialization in network protocol programming. 
-// These tool objects work on a existing StreamBuffer object, holding a pointer 
+// These tool classes work on a existing StreamBuffer object, holding a pointer 
 // to the external object, hence need the external object keep valid during all 
 // operations. 
 //
@@ -70,11 +70,11 @@ NET_BASE_BEGIN
 //     template<type T> 
 //     void Serialize(const T& serializer)
 //     {
-//         serializer.SerializeInteger(a);
-//         serializer.SerializeFloat(b);
-//         serializer.SerializeBool(c);
-//         serializer.SerializeString(d);
-//         serializer.SerializeBytes(data, data_len);
+//         serializer.Integer(a);
+//         serializer.Float(b);
+//         serializer.Bool(c);
+//         serializer.String(d);
+//         serializer.Bytes(data, data_len);
 //      }
 // };
 //
@@ -101,39 +101,36 @@ public:
     StreamPeeker& Attach(StreamBuffer& buf);
 
     // Peek n bits from the low end or current byte
-    bool SerializeBits(void* p, size_t n);
+    bool Bits(void* p, size_t n);
 
     // n bytes
-    bool SerializeBytes(void* p, size_t n);
+    bool Bytes(void* p, size_t n);
 
     // Bytes for integer, determined by integer type
     // Todo: endianess concerns for multi-bytes types 
-    bool SerializeInteger(int8_t& v);
-    bool SerializeInteger(uint8_t& v);
-    bool SerializeInteger(int16_t& v);
-    bool SerializeInteger(uint16_t& v);
-    bool SerializeInteger(int32_t& v);
-    bool SerializeInteger(uint32_t& v);
-    bool SerializeInteger(int64_t& v);
-    bool SerializeInteger(uint64_t& v);
+    bool Integer(int8_t& v);
+    bool Integer(uint8_t& v);
+    bool Integer(int16_t& v);
+    bool Integer(uint16_t& v);
+    bool Integer(int32_t& v);
+    bool Integer(uint32_t& v);
+    bool Integer(int64_t& v);
+    bool Integer(uint64_t& v);
 
     // Bytes for bool, float, and double
     // Todo: presentation formats for these types
-    bool SerializeBool(bool& b);
-    bool SerializeFloat(float& v);
-    bool SerializeDouble(double& v);
+    bool Bool(bool& b);
+    bool Float(float& v);
+    bool Double(double& v);
 
     // Read a string that has n bytes length
-    bool SerializeString(std::string& s, size_t n);
-
-    // Read a string, with bytes before a delimit character
-    bool SerializeString(std::string& s, const char delim);
+    bool String(std::string& s, size_t n);
 
     // Read a string, with bytes before a delimit string
-    bool SerializeString(std::string& s, const char* delim);
+    bool String(std::string& s, const char* delim);
 
 protected:
-    StreamBuffer* mStream;
+    StreamBuffer* _stream;
     size_t mOffset;
 };
 

@@ -15,91 +15,142 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "AsyncTcpAcceptor.h"
+#include "AsyncTcpAcceptor.hpp"
 
 NET_BASE_BEGIN
 
 using namespace std::placeholders;
 
-// Create an unbound TCP socket as TCP server
-// The domain of the socket is not determined before calling of Open()
-AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop)
-: TcpAcceptor()
-, mLoop(loop)
-, mHandler(NULL)
+// Constructor, with local address info
+AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop) noexcept
+: TcpAcceptor() // noexcept
+, _loop(loop)
+, _handler(NULL)
 {
-    assert(mLoop != NULL);
+    assert(_loop != NULL);
 }
 
-// Create an unbound TCP socket as TCP server
-// The domain of the socket is given
-AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop, int domain)
-: TcpAcceptor(domain)
-, mLoop(loop)
-, mHandler(new EventHandler(mLoop, GetSocket()))
+// Constructor, with local address info
+AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop, sa_family_t family) noexcept
+: TcpAcceptor(family) // rethrow by default
+, _loop(loop)
+, _handler(NULL)
 {
-    assert(mLoop != NULL);
-    assert(mHandler != NULL);
-    mHandler.SetReadCallback(std::bind(&AsyncTcpSocket::OnRead, this, _1));
+    assert(_loop != NULL);
 }
 
-// Create an TCP socket bound to given local address
-// The domain of the socket is determined by address family
-// See socket options of SO_REUSEADDR and SO_REUSEPORT for reuseaddr and reuseport
-AsyncTcpAcceptor(EventLoop* loop, const SocketAddress& addr, bool reuseaddr, bool reuseport)
-: TcpAcceptor(addr, reuseaddr, reuseport)
-, mLoop(loop)
-, mHandler(new EventHandler(mLoop, GetSocket()))
+// Constructor, with local address info
+AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop, const SocketAddress& addr) noexcept
+: TcpAcceptor(addr) // rethrow by default
+, _loop(loop)
+, _handler(NULL)
 {
-    assert(mLoop != NULL);
-    assert(mHandler != NULL);
-    mHandler->SetReadCallback(std::bind(&AsyncTcpSocket::OnRead, this, _1));
+    assert(_loop != NULL);
 }
 
-// Destructor, deriviation is allowed for extension
-AsyncTcpAcceptor::~AsyncTcpAcceptor()
+// Destructor
+AsyncTcpAcceptor::~AsyncTcpAcceptor() noexcept
 {
-    if(mHandler != NULL)
+    if(_handler != NULL)
     {
-        delete mHandler;
+        _handler->Detach(); // isolate from loop, block until done
+        delete _handler;
+        _handler = NULL;
     }
 }
 
-bool AsyncTcpAcceptor::EnableReading()
+// Enalbe aysnc after creating socket
+bool AsyncTcpAcceptor::EnableReading(Error* e) noexcept
 {
-    assert(!TcpAcceptor::Invalid());
-    if(mHandler == NULL)
+    assert(_loop != NULL);
+    assert(GetSocket() != INVALID_SOCKET);
+    // Init read event handler
+    if(_handler == NULL)
+    try
     {
-        mHandler = new EventHandler(mLoop, GetSocket());
-        mHandler->SetReadCallback(std::bind(&AsyncTcpSocket::OnRead, this, _1));
+        _handler = new EventHandler(_loop, GetSocket());
+        _handler->SetReadCallback(std::bind(&AsyncTcpAcceptor::OnRead, this, _1));
     }
-    assert(mHandler != NULL);
-    mHandler->EnableReading();
+    catch(std::bad_alloc&)
+    {
+        SET_ERROR(e, "New EventHandler failed.", 0);
+        _handler = NULL;
+        return false;
+    }
+    assert(_handler != NULL);
+    // Set socket to non-block
+    if(!Block(false, e))
+    {
+        return false;
+    }
+    // Register interested event 
+    _handler->EnableReading();
+    return true;
 }
 
-// Open on address passed in on initialization
-// If offset is none zero, try contiguous ports limited by the offset until success
-bool AsyncTcpAcceptor::Open(int backlog)
+// Open for accepting connections
+void AsyncTcpAcceptor::Open()
 {
-    return (TcpAcceptor::Open(backlog) && EnableReading())
+    Error e;
+    if(!Open(&e))
+    {
+        THROW_ERROR(e);
+    }
 }
 
-// Set backlog option
-bool AsyncTcpAcceptor::Open(const SocketAddress& addr, int backlog)
+// Open for accepting connection
+bool AsyncTcpAcceptor::Open(Error* e) noexcept
 {
-    return (TcpAcceptor::Open(addr, backlog) && EnableReading())
+    if(!TcpAcceptor::Open(e))
+    {
+        return false;
+    }
+    return EnableReading(e);
+}
+
+// Open on given address, start to accept connection
+void AsyncTcpAcceptor::Open(const SocketAddress& addr)
+{
+    Error e;
+    if(!Open(addr, &e))
+    {
+        THROW_ERROR(e);
+    }
+}
+
+// Open on given address, start to accept connection
+bool AsyncTcpAcceptor::Open(const SocketAddress& addr, Error* e) noexcept
+{
+    if(!TcpAcceptor::Open(addr, e))
+    {
+        return false;
+    } 
+    return EnableReading(e);
+}
+
+bool AsyncTcpAcceptor::Close(Error* e) noexcept
+{
+    if(_handler)
+    {
+        _handler->Detach();
+    }
+    return TcpAcceptor::Close(e);
 }
 
 // EventHandler::ReadCallbck
 // Called when TCP socket is ready to accept a incomming connection
-void AsyncTcpAcceptor::OnRead(SOCKET s)
+void AsyncTcpAcceptor::OnRead(SOCKET s) noexcept
 {
-    assert(s == mSocket.GetSocket());
-    SOCKET sock = TcpAcceptor::Accept(false);
-    assert(mAcceptCallback);
-    if(sock != INVALID_SOCKET && mAcceptedCallback)
+    assert(_accepted_callback);
+    assert(s == GetSocket());
+    SocketAddress in_addr;
+    SOCKET in_s = TcpAcceptor::AcceptFrom(&in_addr);
+    if(in_s != INVALID_SOCKET)
     { 
-        mAcceptedCallback(this, sock);
+        if(!_accepted_callback || !_accepted_callback(this, in_s, &in_addr))
+        {
+            CloseSocket(in_s);
+        }
     }
 }
 

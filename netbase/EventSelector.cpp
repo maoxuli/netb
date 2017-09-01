@@ -15,81 +15,74 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "EventSelector.h"
-#include "EventHandler.h"
-#include <cassert>
+#include "EventSelector.hpp"
+#include "EventHandler.hpp"
 
 NET_BASE_BEGIN
 
-EventSelector::EventSelector()
+void EventSelector::WaitForEvents(std::vector<EventHandler*>& handlers, int timeout)
 {
-
+    Error e;
+    if(!WaitForEvents(handlers, timeout, &e))
+    {
+        THROW_ERROR(e);
+    }
 }
 
-EventSelector::~EventSelector()
+bool EventSelector::WaitForEvents(std::vector<EventHandler*>& handlers, int timeout, Error* e) noexcept
 {
-    
-}
-
-// @param timout 0 for immediate return, -1 for wait unlimited
-void EventSelector::WaitEvents(std::vector<EventHandler*>& handlers, int timeout)
-{
-    // Select events
     std::vector<struct SocketSelector::SocketEvents> sockets;
-    mSelector.Select(sockets, timeout);
+    if(!_selector.Select(sockets, timeout, e))
+    {
+        return false;
+    }
     handlers.clear();
-    for(std::vector<struct SocketSelector::SocketEvents>::iterator it = sockets.begin(), 
+    for(std::vector<struct SocketSelector::SocketEvents>::const_iterator it = sockets.begin(), 
         end = sockets.end(); it != end; ++it)
     {
-        EventHandler* handler = mHandlers[it->fd];
+        EventHandler* handler = _handlers[it->fd];
         assert(handler != NULL);
         handler->SetActiveEvents(it->events);
         handlers.push_back(handler);
     }
+    return true;
 }
 
 // Update the interested I/O events of a EventHandler.
 // This calling indicates that the handler is active and 
 // can be access for further information
-void EventSelector::SetupHandler(EventHandler* handler)
+void EventSelector::SetupHandler(EventHandler* handler) noexcept
 {
     SOCKET fd = handler->GetSocket();
     unsigned int events = handler->GetEvents();
 
     if(events == SOCKET_EVENT_NONE)
     {
-        mHandlers.erase(fd);
-        mSelector.Remove(fd);
+        _handlers.erase(fd);
+        _selector.Remove(fd);
     }
     else
     {
-        //if(mHandlers.find(fd) == mHandlers.end())
-        //{
-        //    mHandlers[fd] = handler;
-        //} 
-        // Update the handler anyway
-        // adapt to the cases of SOCKET ownership switch
-        // the prior handler may not be disabled in time
-        mHandlers[fd] = handler;
-        mSelector.SetupEvents(fd, events);
+        // Always cover prior settings for safe
+        _handlers[fd] = handler;
+        _selector.SetupEvents(fd, events);
     }
 }
 
 // Remove a EventHandler, this calling indicate that a handler
 // may be dead and further information may not accessed
-void EventSelector::RemoveHandler(EventHandler* handler)
+void EventSelector::RemoveHandler(EventHandler* handler) noexcept
 {
-    // locate the handler and associated socket
-    std::map<SOCKET, EventHandler*>::iterator it = mHandlers.begin();
-    while(it != mHandlers.end() && it->second != handler)
+    std::map<SOCKET, EventHandler*>::iterator it = _handlers.begin();
+    while(it != _handlers.end() && it->second != handler)
     {
         ++it;
     }
-    if(it != mHandlers.end()) // exist
+    if(it != _handlers.end()) // found
     {
         SOCKET fd = it->first;
-        mHandlers.erase(it);
-        mSelector.Remove(fd);
+        _handlers.erase(it);
+        _selector.Remove(fd);
     }
 }
 

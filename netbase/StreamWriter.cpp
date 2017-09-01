@@ -15,25 +15,25 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "StreamWriter.h"
+#include "StreamWriter.hpp"
 #include <cassert>
 
 NET_BASE_BEGIN
 
 StreamWriter::StreamWriter()
-: mStream(NULL)
+: _stream(NULL)
 {
 
 }
 
 StreamWriter::StreamWriter(StreamBuffer* buf)
-: mStream(buf)
+: _stream(buf)
 {
 
 }
 
 StreamWriter::StreamWriter(StreamBuffer& buf)
-: mStream(&buf)
+: _stream(&buf)
 {
 
 }
@@ -45,40 +45,33 @@ StreamWriter::~StreamWriter()
 
 StreamWriter& StreamWriter::Attach(StreamBuffer* buf)
 {
-    mStream = buf;
+    _stream = buf;
     return *this;
 }
 
 StreamWriter& StreamWriter::Attach(StreamBuffer& buf)
 {
-    mStream = &buf;
+    _stream = &buf;
     return *this;
 }
 
-bool StreamWriter::SerializeBytes(const void* p, size_t n)
+bool StreamWriter::Bytes(const void* p, size_t n)
 {
-    if(mStream == NULL) return false;
-    return mStream->Write(p, n);
+    if(_stream == NULL) return false;
+    return _stream->Write(p, n);
 }
 
-bool StreamWriter::SerializeString(const std::string& s, size_t n)
+bool StreamWriter::String(const std::string& s, size_t n)
 {
-    if(mStream == NULL) return false;
-    return mStream->Write(s.data(), n);
+    if(_stream == NULL) return false;
+    return _stream->Write(s.data(), n);
 }
 
-bool StreamWriter::SerializeString(const std::string& s, const char delim)
+bool StreamWriter::String(const std::string& s, const char* delim)
 {
-    if(mStream == NULL) return false;
-    return mStream->Write(s.data(), s.length()) && 
-           mStream->Write(&delim, sizeof(char));
-}
-
-bool StreamWriter::SerializeString(const std::string& s, const char* delim)
-{
-    if(mStream == NULL) return false;
-    return mStream->Write(s.data(), s.length()) && 
-           mStream->Write(delim, strlen(delim));
+    if(_stream == NULL) return false;
+    return _stream->Write(s.data(), s.length()) && 
+           _stream->Write(delim, strlen(delim));
 }
 
 NET_BASE_END

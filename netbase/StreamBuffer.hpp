@@ -15,21 +15,27 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_STREAM_BUFFER_H
-#define NET_BASE_STREAM_BUFFER_H
+#ifndef NET_BASE_STREAM_BUFFER_HPP
+#define NET_BASE_STREAM_BUFFER_HPP
 
-// Buffer size, can be re-defined in Config.hpp
-#define DEFAULT_BUFFER_SIZE     4096 // 4K bytes, enough for two MTU
-#define MAX_BUFFER_SIZE        (1024 * 1024) // 1M bytes
-
-#include "Config.h"
+#include "Config.hpp"
 #include <cstddef>
 #include <vector>
+
+// Default buffer size, can be defined in Config.hpp
+#if !defined(DEFAULT_BUFFER_SIZE)
+#define DEFAULT_BUFFER_SIZE     4096 // 4K bytes, enough for two MTU
+#endif
+
+// Max buffer size, can be defined in Config.hpp
+#if !defined(MAX_BUFFER_SIZE)
+#define MAX_BUFFER_SIZE        (1024 * 1024) // 1M bytes
+#endif
 
 NET_BASE_BEGIN
 
 //
-// A StreamBuffer is a buffer that supports streaming-like read and write, 
+// StreamBuffer is a byte buffer that supports streaming-like read and write, 
 // as well as randomly peek and update. 
 //
 class StreamBuffer
@@ -55,90 +61,90 @@ public:
     // Swap, without data copy
     StreamBuffer& Swap(StreamBuffer& b)
     {
-        mBytes.swap(b.mBytes);
-        std::swap(mLimit, b.mLimit);
-        std::swap(mReadIndex, b.mReadIndex);
-        std::swap(mWriteIndex, b.mWriteIndex);
+        _bytes.swap(b._bytes);
+        std::swap(_limit, b._limit);
+        std::swap(_read_index, b._read_index);
+        std::swap(_write_index, b._write_index);
         return *this;
     }
 
     StreamBuffer& Swap(StreamBuffer* b)
     {
-        mBytes.swap(b->mBytes);
-        std::swap(mLimit, b->mLimit);
-        std::swap(mReadIndex, b->mReadIndex);
-        std::swap(mWriteIndex, b->mWriteIndex);
+        _bytes.swap(b->_bytes);
+        std::swap(_limit, b->_limit);
+        std::swap(_read_index, b->_read_index);
+        std::swap(_write_index, b->_write_index);
         return *this;
     }
 
     // Readable() + Writable()
     size_t Size() const 
     {
-        return mBytes.size() - mReadIndex;
+        return _bytes.size() - _read_index;
     }
 
     // Readable() == 0 ?
     bool Empty() const 
     {
-        return mWriteIndex == mReadIndex;
+        return _write_index == _read_index;
     }
 
     // Set Empty() == true
     void Clear()
     {
-        mReadIndex = 0;
-        mWriteIndex = 0; 
+        _read_index = 0;
+        _write_index = 0; 
     }
 
     // Available space to write
     size_t Writable() const
     {
-        return mBytes.size() - mWriteIndex;
+        return _bytes.size() - _write_index;
     }
 
     // Try to ensure Writable() >= n
     bool Writable(size_t n)
     {
-        if(n == 0 || mBytes.size() - mWriteIndex >= n)
+        if(n == 0 || _bytes.size() - _write_index >= n)
         {
             return true;
         }
-        if(mLimit > 0) 
+        if(_limit > 0) 
         {
-            if(mWriteIndex - mReadIndex + n > mLimit) // the buffer is overflow
+            if(_write_index - _read_index + n > _limit) // the buffer is overflow
             {
                 return false;
             } 
 
-            if(mWriteIndex + n > mLimit) // Occupancy is beyond limit, compact
+            if(_write_index + n > _limit) // Occupancy is beyond limit, compact
             {
                 Compact();
             }
         } 
-        mBytes.resize(mWriteIndex + n);
-        return mBytes.size() - mWriteIndex >= n;
+        _bytes.resize(_write_index + n);
+        return _bytes.size() - _write_index >= n;
     }
 
     // Pointer to write position 
     // For external use, such as directly copy data into the buffer 
     const void* Write() const
     {
-        return Begin() + mWriteIndex;
+        return Begin() + _write_index;
     }
 
     void* Write()
     {
-        return Begin() + mWriteIndex;
+        return Begin() + _write_index;
     }
 
     // Virtually write, move write position forward
     bool Write(size_t n)
     {
-        if(mBytes.size() - mWriteIndex < n)
+        if(_bytes.size() - _write_index < n)
         {
             return false;
         }
-        mWriteIndex += n;
+        _write_index += n;
         return true;
     }
 
@@ -150,13 +156,13 @@ public:
     // Available data to read
     size_t Readable() const
     {
-        return mWriteIndex - mReadIndex;
+        return _write_index - _read_index;
     }
 
     // Check if Readable() >= n
     bool Readable(size_t n) const
     {
-        return mWriteIndex - mReadIndex >= n;
+        return _write_index - _read_index >= n;
     }
 
     // Available data to read before next delimit char or string
@@ -167,26 +173,26 @@ public:
     // For external use, such as directly copy data from the buffer
     const void* Read() const
     {
-        return Begin() + mReadIndex;
+        return Begin() + _read_index;
     }
 
     void* Read() 
     {
-        return Begin() + mReadIndex;
+        return Begin() + _read_index;
     }
 
     // Virtually read, move read position forward
     bool Read(size_t n)
     {
-        if(mWriteIndex - mReadIndex < n)
+        if(_write_index - _read_index < n)
         {
             return false;
         }
-        mReadIndex += n;
-        if(mReadIndex == mWriteIndex)
+        _read_index += n;
+        if(_read_index == _write_index)
         {
-            mReadIndex = 0;
-            mWriteIndex = 0;
+            _read_index = 0;
+            _write_index = 0;
         }
         return true;
     }
@@ -197,7 +203,7 @@ public:
     // Addressable data from position that offset to the reading position
     ssize_t Addressable(size_t offset = 0) const
     {
-        return mWriteIndex - mReadIndex - offset;
+        return _write_index - _read_index - offset;
     }
 
     // Addressable data from position that offset to the reading position 
@@ -209,12 +215,12 @@ public:
     // For external use, such as peek or update data in buffer 
     const void* Address(size_t offset = 0) const
     {
-        return mWriteIndex - mReadIndex < offset ? NULL : Begin() + mReadIndex + offset;
+        return _write_index - _read_index < offset ? NULL : Begin() + _read_index + offset;
     }
 
     void* Address(size_t offset = 0) 
     {
-        return mWriteIndex - mReadIndex < offset ? NULL : Begin() + mReadIndex + offset;
+        return _write_index - _read_index < offset ? NULL : Begin() + _read_index + offset;
     }
 
     // Peek data at position that offset to the reading position
@@ -225,7 +231,7 @@ public:
     // Update data in buffer but not affect reading and writing position
     bool Update(void* p, size_t n, size_t offset = 0);
 
-protected:
+private:
     
     //
     //        |                        -size()-                          |
@@ -237,31 +243,32 @@ protected:
     //                 |                   -Size()-                      |
     // Buffer |--------|xxxxxxxxxxxxxxxxxxxxxxxxx|***********************|.............|
     //        |        |       -Readable()-      |       -Writable()-    |
-    //      Begin() mReadIndex              mWriteIndex                  
+    //      Begin() _read_index              _write_index                  
     //
     //
     
-    std::vector<unsigned char> mBytes;
-    size_t mLimit; // Limit of the max footprint of the buffer
-    size_t mReadIndex; // Index of first readable byte
-    size_t mWriteIndex; // Index of first writable byte
+    std::vector<unsigned char> _bytes;
+    size_t _limit; // Limit of the max footprint of the buffer
+    size_t _read_index; // Index of first readable byte
+    size_t _write_index; // Index of first writable byte
 
     const unsigned char* Begin() const
     {
-        return &mBytes[0];
+        return &_bytes[0];
     }
 
     unsigned char* Begin()
     {
-        return &mBytes[0];
+        return &_bytes[0];
     }
 
     // Move data to the beginning
     void Compact()
     {
-        std::rotate(mBytes.begin(), mBytes.begin() + mReadIndex, mBytes.begin() + mWriteIndex - mReadIndex);
-        mWriteIndex -= mReadIndex;
-        mReadIndex = 0;
+        std::rotate(_bytes.begin(), _bytes.begin() + _read_index, 
+                    _bytes.begin() + _write_index - _read_index);
+        _write_index -= _read_index;
+        _read_index = 0;
     }
 };
 

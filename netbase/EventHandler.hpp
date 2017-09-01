@@ -15,42 +15,42 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_EVENT_HANDLER_H
-#define NET_BASE_EVENT_HANDLER_H
+#ifndef NET_BASE_EVENT_HANDLER_HPP
+#define NET_BASE_EVENT_HANDLER_HPP
 
-#include "Config.h"
-#include "SocketDef.h"
+#include "SocketConfig.hpp"
 #include <functional>
 
 NET_BASE_BEGIN
 
 //
-// EventHandler is interface object with EventLoop
-// So thread safe is a concern 
+// Event handler is a bridge between a socket and a event loop.
+// It register interested socket and associated events to event loop, 
+// and call back to handle read or write on the socket when event 
+// loop detect active events.
 //
 class EventLoop;
 class EventHandler
 {
 public:
+    // An event handler is bound to a socket
     EventHandler(EventLoop* loop, SOCKET s);
     ~EventHandler();
 
-    // Callbakcs for events
+    // Callback for events
     typedef std::function<void(SOCKET)> EventCallback;
 
-    // Defined by owner of SOCKET
     void SetReadCallback(const EventCallback& cb)
     {
-        mReadCallback = cb; 
+        _read_callback = cb; 
     }
     
     void SetWriteCallback(const EventCallback& cb)
     { 
-        mWriteCallback = cb; 
+        _write_callback = cb; 
     }
     
-    // Set interested events
-    // Call by owner of SOCKET
+    // Register interested events 
     void EnableReading();
     void DisableReading();
     
@@ -58,47 +58,46 @@ public:
     void DisableWriting();
     
     // Isolate this handler from event loop
+    // Block until done
+    // This make sure cut the callback from event loop before deleting
     void Detach();
-
-private:
-    // Update events
-    void Update();
-    void UpdateInLoop();
-    void DetachInLoop();
-
-private:
-    // SOCKET of this EventHandler
-    SOCKET GetSocket() const { return mSocket; }
-
-    // Interested events to handle
-    unsigned int GetEvents() const { return mEvents; }
-    
-    // Set currently active events
-    // Call by event selector
-    void SetActiveEvents(unsigned int events) { mActiveEvents |= events; };
-
-    // Handle current events
-    // Call by run loop
-    void HandleEvents();
-
-    friend class EventSelector;
-    friend class EventLoop;
 
 private:
     // EventLoop
     // Works as a event dispatcher
-    EventLoop* mLoop;
+    EventLoop* _loop;
     
     // SOCKET
-    SOCKET mSocket;
+    SOCKET _socket;
+
+    SOCKET GetSocket() const { return _socket; }
     
-    // Interesting events, and current active events
-    unsigned int mEvents;
-    unsigned int mActiveEvents;
+    // Events interested
+    int _events;
+    mutable std::mutex _events_mutex;
+
+    void Update();
+    void UpdateInLoop();
+    int GetEvents() const;
+
+    // Active events to handle
+    int _active_events;
+    void SetActiveEvents(int events) { _active_events |= events; };
+    void HandleEvents();
+
+    bool _detached;
+    std::mutex _detach_mutex;
+    std::condition_variable _detach_cond;
     
+    void DetachInLoop();
+
+    // Open access to EventHandler and EventLoop 
+    friend class EventSelector;
+    friend class EventLoop;
+
     // Callback of events
-    EventCallback mReadCallback;
-    EventCallback mWriteCallback;
+    EventCallback _read_callback;
+    EventCallback _write_callback;
 };
 
 NET_BASE_END

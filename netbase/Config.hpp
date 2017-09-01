@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_CONFIG_H
-#define NET_BASE_CONFIG_H
+#ifndef NET_BASE_CONFIG_HPP
+#define NET_BASE_CONFIG_HPP
 
 //
 // Namespace may be changed to adapt to project
@@ -35,5 +35,7 @@
 // Header files that used everywhere
 // 
 #include <iostream>
+#include <sstream>
+#include <cassert>
 
 #endif

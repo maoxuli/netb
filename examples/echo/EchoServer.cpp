@@ -31,33 +31,35 @@
 
 // RFC 862
 // Echo server
-class EchoServer
+class EchoServer 
 {
 public:
     virtual ~EchoServer() { }
-    virtual bool Open() = 0;
-    virtual void Run() = 0;
-};
+    virtual bool Open(unsigned short port) = 0;
+    virtual bool Open(unsigned short port, Error* e) = 0; 
+}
 
 // RFC 862/UDP
-// Based on simple socket API
-class EchoServerSU : public EchoServer
+// Using simple socket API
+class EchoServerSU
 {
 public: 
     EchoServerSU(unsigned short port = 9007)  // By default, echo service on port 9007
-    : mSocket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)
-    , mAddress(NULL, port)
+    : mPort(port)
     {
-        assert(mSocket.Valid());
-        mSocket.Block(true);
+
     }
 
-    bool Open()
+    // return false if failed to open, and return details in e
+    bool Open(Error* e = NULL)
     {
-        if(mSocket.Bind(mAddress.SockAddr(), mAddress.Length()))
+        if(!mSocket.Create(PF_INET, SOCK_DGRAM, IPPROTO_UDP, e);
+        {
+            return false;
+        }
+        if(!mSocket.Bind(SocketAddress(mPort)), e)
         { 
-            std::cout << "EchoSever opened on " << mAddress.ToString() << ".\n";
-            return true;
+            return false;
         }
         return false;
     }
@@ -76,7 +78,7 @@ public:
 
 private: 
     netbase::Socket mSocket;
-    netbase::SocketAddress mAddress;
+    unsigned short mPort;
 };
 
 // RFC 862/TCP
@@ -86,7 +88,7 @@ class EchoServerST : public EchoServer
 public: 
     EchoServerST(unsigned short port = 9007)  // By default, echo service on port 9007
     : mSocket(PF_INET, SOCK_STREAM, IPPROTO_TCP)
-    , mAddress(NULL, port)
+    , _address(NULL, port)
     {
         assert(mSocket.Valid());
         mSocket.Block(true);
@@ -94,9 +96,9 @@ public:
 
     bool Open()
     {
-        if(mSocket.Bind(mAddress.SockAddr(), mAddress.Length()) && mSocket.Listen())
+        if(mSocket.Bind(_address.SockAddr(), _address.Length()) && mSocket.Listen())
         {
-            std::cout << "EchoSever opened on " << mAddress.ToString() << ".\n";
+            std::cout << "EchoSever opened on " << _address.ToString() << ".\n";
             return true;
         }
         return false;
@@ -120,7 +122,7 @@ public:
 
 private: 
     netbase::Socket mSocket;
-    netbase::SocketAddress mAddress;
+    netbase::SocketAddress _address;
 };
 
 // RFC 862/TCP
@@ -131,8 +133,8 @@ class EchoServerAT : public EchoServer
 {
 public: 
     EchoServerAT(unsigned short port = 9007)  // By default, echo service on port 9007
-    : mLoop()
-    , mListener(&mLoop, NULL, port)
+    : _loop()
+    , mListener(&_loop, NULL, port)
     {
         mListener.SetConnectedCallback(std::bind(&EchoServerAT::OnConnected, this, _1));
     }
@@ -149,7 +151,7 @@ public:
 
     void Run()
     {
-        mLoop.Run();
+        _loop.Run();
     }
 
 private: 
@@ -166,15 +168,16 @@ private:
     }
 
 private: 
-    EventLoop mLoop;
+    EventLoop _loop;
     TcpListener mListener;
 };
 
+// Open echo server on given port, by default 9007
 int main(const int argc, char* argv[])
 {
-    // By default echo server on port 9007
+    // Service port, by default 9007
     unsigned short port = 9007;
-    if(argc == 2) // echoserver 9007
+    if(argc == 2) // echoserver 9017
     {
         int n = atoi(argv[1]);
         if(n > 0 && n <= 65535)
@@ -182,12 +185,22 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
-    EchoServer* server = new EchoServerAT(port); 
-    if(!server->Open())
+
+    // Default server
+    EchoServer server(port);
+    Error e;
+    if(!server.Open(&e))
     {
-        std::cout << "EchoServer failed to open on port " << port << ".\n";
-        return false;
+        std::cout << "Echo server open failed on " << port << ".\n";
+        std::cout << e.Class().Name() << ":" << e.Code() << ":" << e.Infor() << "\n";
+        return -1;
     }
-    server->Run();
-    return true;
+    if(!server.Run(e))
+    {
+        std::cout << Echo server 
+    }
+
+    // 
+
+    return 0;
 }

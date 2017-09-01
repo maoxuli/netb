@@ -15,218 +15,241 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "AsyncTcpSocket.h"
+#include "AsyncTcpSocket.hpp"
 #include <cassert>
 
 NET_BASE_BEGIN
 
-// Create an unbound, unconnected TCP socket
-// The domain of the socket is not determined before calling of Connect()
-AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop)
+using namespace std::placeholders;
+
+// With no address info
+AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop) noexcept
 : TcpSocket()
-, mLoop(loop)
-, mHandler(NULL)
+, _loop(loop)
+, _handler(NULL)
 {
-    assert(mLoop != NULL);
+    assert(_loop != NULL);
 }
 
-// Create an unbound, unconnected TCP socket
-// The domain of the socket is given
-AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, int domain)
-: TcpSocket(domain)
-, mLoop(loop)
-, mHandler(new EventHandler(mLoop, GetSocket()))
+// With any address of given family
+AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, sa_family_t family) noexcept
+: TcpSocket(family)
+, _loop(loop)
+, _handler(NULL)
 {
-    assert(mLoop != NULL);
-    assert(mHandler != NULL);
-    mHandler->SetReadCallback(std::bind(&AysncTcpSocket::OnRead, this, _1));
-    mHandler->SetWriteCallback(std::bind(&AysncTcpSocket::OnWrite, this, _1));
+    assert(_loop != NULL);
 }
 
 
-// Create a TCP socket bound to given local address
-// The domain of the socket is determined by address family
-// See socket options of SO_REUSEADDR and SO_REUSEPORT for reuseaddr and reuseport
-AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, const SocketAddress& addr, bool reuseaddr, bool reuseport)
-: TcpSocket(addr, reuseaddr, reuseport)
-, mLoop(loop)
-, mHandler(new EventHandler(mLoop, GetSocket()))
+// With given address
+AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, const SocketAddress& addr) noexcept
+: TcpSocket(addr)
+, _loop(loop)
+, _handler(NULL)
 {
-    assert(mLoop != NULL);
-    assert(mHandler != NULL);
-    mHandler->SetReadCallback(std::bind(&AysncTcpSocket::OnRead, this, _1));
-    mHandler->SetWriteCallback(std::bind(&AysncTcpSocket::OnWrite, this, _1));
+    assert(_loop != NULL);
 }
 
-// Create a TCP socket with externally established connection
-AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, SOCKET s, const SocketAddress* conencted, const SocketAddress* local)
-: TcpSocket(s, connected, local)
-, mLoop(loop)
-, mHandler(new EventHandler(mLoop, GetSocket()))
+// With externally established connection
+AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, SOCKET s, const SocketAddress* connected) noexcept
+: TcpSocket(s, connected)
+, _loop(loop)
+, _handler(NULL)
 {
-    assert(mLoop != NULL);
-    assert(mHandler != NULL);
-    mHandler->SetReadCallback(std::bind(&AysncTcpSocket::OnRead, this, _1));
-    mHandler->SetWriteCallback(std::bind(&AysncTcpSocket::OnWrite, this, _1));
+    assert(_loop != NULL);
 }
 
 // Destructor, deriviation is allowed for extension
-AsyncTcpSocket::~AsyncTcpSocket()
+AsyncTcpSocket::~AsyncTcpSocket() noexcept
 {
-    if(mHandler != NULL)
+    if(_handler != NULL)
     {
-        delete mHandler;
+        delete _handler;
     }
 }
 
-bool AsyncTcpSocket::EnableReading()
+bool AsyncTcpSocket::EnableReading(Error* e) noexcept
 {
-    assert(!TcpSocket::Invalid());
-    if(mHanlder == NULL)
+    assert(_loop != NULL);
+    assert(GetSocket() != INVALID_SOCKET);
+    // Init read event handler
+    if(_handler == NULL)
+    try
     {
-        mHandler = new EventHandler(mLoop, GetSocket());
-        assert(mHandler != NULL);
-        mHandler->SetReadCallback(std::bind(&AysncTcpSocket::OnRead, this, _1));
-        mHandler->SetWriteCallback(std::bind(&AysncTcpSocket::OnWrite, this, _1));
+        _handler = new EventHandler(_loop, GetSocket());
+        _handler->SetReadCallback(std::bind(&AsyncTcpSocket::OnRead, this, _1));
+        _handler->SetWriteCallback(std::bind(&AsyncTcpSocket::OnWrite, this, _1));
     }
-    mHanlder.EnableReading();
+    catch(std::bad_alloc&)
+    {
+        SET_ERROR(e, "New EventHandler failed.", 0);
+        _handler = NULL;
+        return false;
+    }
+    assert(_handler != NULL);
+    // Set socket to non-block
+    if(!TcpSocket::Block(0, e))
+    {
+        return false;
+    }
+    // Register interested event 
+    _handler->EnableReading();
     return true;
 }
 
-bool AsyncTcpSocket::EnableWriting()
+bool AsyncTcpSocket::EnableWriting(Error* e) noexcept
 {
-    assert(!TcpSocket::Invalid());
-    if(mHanlder == NULL)
+    assert(_loop != NULL);
+    assert(GetSocket() != INVALID_SOCKET);
+    // Init read event handler
+    if(_handler == NULL)
+    try
     {
-        mHandler = new EventHandler(mLoop, GetSocket());
-        assert(mHandler != NULL);
-        mHandler->SetReadCallback(std::bind(&AysncTcpSocket::OnRead, this, _1));
-        mHandler->SetWriteCallback(std::bind(&AysncTcpSocket::OnWrite, this, _1));
+        _handler = new EventHandler(_loop, GetSocket());
+        _handler->SetReadCallback(std::bind(&AsyncTcpSocket::OnRead, this, _1));
+        _handler->SetWriteCallback(std::bind(&AsyncTcpSocket::OnWrite, this, _1));
     }
-    mHanlder.EnableWriting();
+    catch(std::bad_alloc&)
+    {
+        SET_ERROR(e, "New EventHandler failed.", 0);
+        _handler = NULL;
+        return false;
+    }
+    assert(_handler != NULL);
+    // Set socket to non-block
+    if(!TcpSocket::Block(0, e))
+    {
+        return false;
+    }
+    // Register interested event 
+    _handler->EnableWriting();
     return true;
 }
 
-bool AsyncTcpSocket::Connected() 
+void AsyncTcpSocket::Connected() 
 {
-    return (TcpSocket::Connected() && EnableReading());
+    Error e;
+    if(!EnableReading(&e))
+    {
+        THROW_ERROR(e);
+    }
 }
 
-bool AsyncTcpSocket::Connect(const SocketAddress& addr)
+bool AsyncTcpSocket::Connected(Error* e) noexcept 
 {
-    return (TcpSocket::Connect(addr) && EnableReading());
+    return TcpSocket::Connected(e) && EnableReading(e);
 }
 
-bool AsyncTcpSocket::Disconnect()
+void AsyncTcpSocket::Connect(const SocketAddress& addr)
+{
+    Error e;
+    if(!Connect(addr, &e))
+    {
+        THROW_ERROR(e);
+    }
+}
+
+bool AsyncTcpSocket::Connect(const SocketAddress& addr, Error* e) noexcept
+{
+    return (TcpSocket::Connect(addr, e) && EnableReading(e));
+}
+
+bool AsyncTcpSocket::Close(Error* e) noexcept
 {
     if(IsConnected())
     {
-        TcpSocket::Disconnect();
-        mHandler->Detach();
+        TcpSocket::Close();
+        assert(_handler != NULL);
+        _handler->Detach();
     }
     return true;
 }
 
-// Send data over the connection,
-// Directly sent or buffered
-ssize_t AsyncTcpSocket::Send(const void* p, size_t n, int flags)
+// Async mode I/O
+// Send will buffer the data in sending buffer if it can not be send out immediately. 
+// The return value is number of bytes that was sent or buffered. 
+// The actual number of bytes that was sent out is notified with SentCallback.
+// return a number less than the data size, indicate the sending buffer is full.
+// return value is less than 0, indicate errors occurred. 
+ssize_t AsyncTcpSocket::Send(const void* p, size_t n, int flags) noexcept
 {
-    if(mLoop->IsInLoopThread())
+    if(_loop->IsInLoopThread())
     {
-        DoSend(p, n);
+        ssize_t sent = 0;
+        if(_out_buffer.Empty())
+        {
+            sent = TcpSocket::Send(p, n, flags);
+        }
+        if(sent < n) // async send
+        {
+            size_t offset = sent > 0 ? sent : 0;
+            if(_out_buffer.Write((unsigned char*)p + offset, n - offset))
+            {
+                sent  = n;
+            }
+            EnableWriting();
+        }
+        return sent;
     }
-    else
+    std::unique_lock<std::mutex> lock(_out_buffer_mutex);
+    if(!_out_buffer.Write((unsigned char*)p, n))
     {
-        mLoop->Invoke(std::bind(&TcpConnection::SendInLoop, this, std::make_shared<StreamBuffer>(p, n)));
+        return 0;
     }
-    return true;
+    EnableWriting();
+    return n;
 }
 
 // Send data
 // The actual data sending must be done on the thread loop 
 // to ensure the order of data sending
-ssize_t AsyncTcpSocket::Send(StreamBuffer* buf, int flags)
+ssize_t AsyncTcpSocket::Send(StreamBuffer* buf, int flags) noexcept
 {
-    if(mLoop->IsInLoopThread())
+    ssize_t ret = Send(buf->Read(), buf->Readable(), flags);
+    if(ret > 0)
     {
-        DoSend(buf->Read(), buf->Readable());
-        buf->Clear(); // ??? Is it necessary to clear buffer?
+        buf->Read(ret);
     }
-    else
-    {
-        mLoop->Invoke(std::bind(&TcpConnection::SendInLoop, this, std::make_shared<StreamBuffer>(buf)));
-        buf->Clear(); // ??? 
-    }
-    return true;
-}
-
-// Thread loop will invoke this function
-void TcpConnection::SendInLoop(StreamBufferPtr buf)
-{
-    DoSend(buf->Read(), buf->Readable());
-}
-
-// This function must be called in the thread
-void TcpConnection::DoSend(const void* p, size_t n)
-{    
-    // Try send directly if out buffer is empty
-    ssize_t sent = 0;
-    if(mOutBuffer.Empty())
-    {
-        sent = mSocket.Send(p, n);
-    }
-    
-    if(sent < 0) // error
-    {
-        std::cout << "TcpConnection::DoSend return error: " << sent << "\n";
-        sent = 0;
-    }
-    
-    if(sent < n) // async send
-    {
-        mOutBuffer.Write((unsigned char*)p + sent, n - sent);
-        EnableWriting();
-    }
+    return ret;
 }
 
 // Ready to read
 // Read data into in buffer
-void TcpConnection::OnRead()
+void AsyncTcpSocket::OnRead(SOCKET s) noexcept
 {
     ssize_t n = 0;
-    if(mInBuffer.Writable(2048))
+    if(_in_buffer.Writable(2048))
     {
-        n = mSocket.Receive(mInBuffer.Write(), mInBuffer.Writable());
+        n = TcpSocket::Receive(_in_buffer.Write(), _in_buffer.Writable());
     }
-
     if(n > 0)
     {
-        mInBuffer.Write(n);
-        if(mReceivedCallback)
+        _in_buffer.Write(n);
+        if(_received_callback)
         {
-            mReceivedCallback(this, &mInBuffer);
+            _received_callback(this, &_in_buffer);
         }
     }
     else // Error
     {
-        std::cout << "TcpConnection::OnRead return " << n << ", code: " << SocketError::Code() << ". Disonnect!\n";
-        Close(false);
+        std::cout << "AsyncTcpSocket::OnRead return " << n << ", code: " << ErrorCode::Current() << ". Close!\n";
+        TcpSocket::Close();
     }
 }
 
 // Ready to write
 // Try to send data in out buffer
-void AsyncTcpSocket::OnWrite()
+void AsyncTcpSocket::OnWrite(SOCKET s) noexcept
 {
-    if(mOutBuffer.Readable() > 0)
+    if(_out_buffer.Readable() > 0)
     {
-        ssize_t sent = mSocket.Send(mOutBuffer.Read(), mOutBuffer.Readable());
-        mOutBuffer.Read(sent);
+        ssize_t sent = TcpSocket::Send(_out_buffer.Read(), _out_buffer.Readable());
+        if(sent > 0) _out_buffer.Read(sent);
     }
-
-    if(mOutBuffer.Readable() == 0)
+    if(_out_buffer.Readable() == 0)
     {
-        mHandler.DisableWriting();
+        assert(_handler != NULL);
+        _handler->DisableWriting();
     }
 }
 

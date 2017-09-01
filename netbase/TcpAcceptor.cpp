@@ -15,130 +15,228 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "TcpAcceptor.h"
+#include "TcpAcceptor.hpp"
+#include "SocketSelector.hpp"
+#include <cassert>
 
 NET_BASE_BEGIN
-(
 
-// Create an unbound TCP socket working as TCP server
-TcpAcceptor::TcpAcceptor()
-: mSocket()
-, mAddress()
-, mOpened(false)
+// No given address
+TcpAcceptor::TcpAcceptor() noexcept
+: _timeout(-1) // by dedault in block mode
+, _backlog(SOMAXCONN)
+, _opened(false)
 {
 
 }
 
-// Create an unbound TCP socket working as TCP server
-// The socket is only for given family
-TcpAcceptor::TcpAcceptor(int domain)
-: mSocket(domain, SOCK_STREAM, IPPROTO_TCP)
-, mAddress(NULL, 0, (sa_family_t)family)
-, mOpened(false)
+// Any address of given family
+TcpAcceptor::TcpAcceptor(sa_family_t family) noexcept
+: _timeout(-1) // by dedault in block mode
+, _backlog(SOMAXCONN)
+, _opened(false)
+{
+    _address.Reset(family); // noexcept
+}
+
+// given address
+TcpAcceptor::TcpAcceptor(const SocketAddress& addr) noexcept
+: _address(addr) // noexcept
+, _timeout(-1) // by dedault in block mode
+, _backlog(SOMAXCONN)
+, _opened(false)
 {
 
 }
 
-// Create a TCP socket that bound to give local address
-// The family of the socket is determined by address
-// See SO_REUSEADDR and SO_REUSEPORT for reuseaddr and reuseport
-TcpAcceptor::TcpAcceptor(const SocketAddress& addr, bool reuseaddr, bool reuseport)
-: mSocket(addr.Family(), SOCK_STREAM, IPPROTO_TCP)
-, mAddress(addr)
-, mOpened(false)
-{
-    mSocket.ReuseAddress(reuseaddr);
-    mSocket.ReusePort(reuseport);
-}
-
-TcpAcceptor::~TcpAcceptor()
+TcpAcceptor::~TcpAcceptor() noexcept
 {
 
 }
 
-// Open on address pased in on initialization
-bool TcpAcceptor::Open(int backlog)
+// Open on saved address
+void TcpAcceptor::Open()
 {
-    if(!mAddress.Empty())
+    Error e;
+    if(!Open(&e))
     {
-        mAddress.Reset(AF_INET);
+        THROW_ERROR(e);
     }
-    if(mSocket.Invalid())
-    {
-        mSocket.Create(mAddress,Family(), SOCK_STREAM, IPPROTO_TCP);
-    }
-    assert(!mSocket.Invalid());
-    assert(mSocket.Family() == mAddress.Familiy());
+}
 
-    return Open(mAddress, backlog);
+// Open on saved address
+bool TcpAcceptor::Open(Error* e) noexcept
+{
+    if(_opened) 
+    {
+        SET_SOCKET_ERROR(e, "TcpAcceptor has been opened.", 0);
+        return false;
+    }
+    SocketAddress addr(_address); 
+    // If no address is given, use default family and any local address (0:0)
+    if(addr.Empty())
+    {
+        addr.Reset(AF_INET); // noexcept
+    }
+    return Open(addr, e);
 }
 
 // Open on given address
-bool TcpAcceptor::Open(const SocketAddress& addr, int backlog)
+void TcpAcceptor::Open(const SocketAddress& addr)
 {
-    if(mSocket.Invalid())
+    Error e;
+    if(!Open(addr, &e))
     {
-        mSocket.Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP);
+        THROW_ERROR(e);
     }
-    assert(!mSocket.Invalid());
-    assert(mSocket.Family() == addr.Family());
-
-    if(mSocket.Bind(addr.SockAddr(), addr.Length()) && mSocket.Listen(backlog))
-    {
-        SocketAddress addr;
-        socklen_t addrlen = addr.Length()
-        if(mSocket.Address((sockaddr*)&addr, &addrlen))
-        {
-            mAddress = addr;
-        }
-        mOpened = true;
-        return true;
-    }
-    return false;
 }
 
-// Open on given address and use given options
-bool TcpAcceptor::Open(const SocketAddress& addr, bool reuseaddr, bool reuseport, int backlog)
+// Open on given address
+bool TcpAcceptor::Open(const SocketAddress& addr, Error* e) noexcept
 {
-    if(mSocket.Invalid())
+    if(_opened)
     {
-        mSocket.Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP);
+        SET_SOCKET_ERROR(e, "TcpAcceptor has been opened already.", 0);
+        return false;
     }
-    assert(!mSocket.Invalid());
-    assert(mSocket.Family() == addr.Family());
-    mSocket.ReuseAddress(reuseaddr);
-    mSocket.ReusePort(reuseport);
+    assert(!Socket::Valid());
+    // if socket is not yet init, create it now
+    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP, e))
+    {
+        return false;
+    }
+    // bind to address
+    if(!Socket::Bind(addr, e) || !Socket::Listen(_backlog, e))
+    {
+        return false;
+    }
+    // Save bound address
+    _address = addr;
+    return true;
+}
 
-    return Open(addr, backlog);
+// Close socket, stop to accept incomming connection
+bool TcpAcceptor::Close(Error* e) noexcept
+{
+    _opened = false;
+    return Socket::Close(e); 
 }
 
 // Accept a connection
 SOCKET TcpAcceptor::Accept()
 {
-    return mSocket.Accept();
+    Error e;
+    SOCKET s;
+    if((s = Accept(&e)) == INVALID_SOCKET)
+    {
+        THROW_ERROR(e);
+    }
+    return s;
+}
+
+SOCKET TcpAcceptor::Accept(Error* e) noexcept
+{
+    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
+    {
+        return INVALID_SOCKET;
+    }
+    return Socket::Accept(e);
+}
+
+SOCKET TcpAcceptor::AcceptFrom(SocketAddress* addr)
+{
+    Error e;
+    SOCKET s;
+    if((s = AcceptFrom(addr, &e)) == INVALID_SOCKET)
+    {
+        THROW_ERROR(e);
+    }
+    return s;
 }
 
 // Accept a connection
-SOCKET TcpAcceptor::Accept(SocketAddress* addr)
+SOCKET TcpAcceptor::AcceptFrom(SocketAddress* addr, Error* e) noexcept
 {
     if(addr == NULL)
     {
-        return mSocket.Accept();
+        return Accept(e);
     }
-    socklen_t addrlen = addr->Length();
-    return mSocket.Accept((sockaddr*)addr, &addrlen);
+    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
+    {
+        return INVALID_SOCKET;
+    }
+    return Socket::AcceptFrom(addr, e);
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
-bool TcpAcceptor::Block() const 
+// Backlog for listen
+void TcpAcceptor::Backlog(int size)
 {
-    return Socket::Block(); 
+    Error e;
+    if(!Backlog(size, &e))
+    {
+        THROW_ERROR(e);
+    }
 }
 
-bool TcpAcceptor::Block(bool block)
+// Backlog for listen
+bool TcpAcceptor::Backlog(int size, Error* e) noexcept
 {
-    return Socket::Block(block);
+    if(size < 1)
+    {
+        SET_ERROR(e, "Invalid backlog for TCP socket.", 0);
+        return false;
+    } 
+    _backlog = size;
+    return true;
+}
+
+// I/O block
+void TcpAcceptor::Block(int timeout) 
+{
+    Error e;
+    if(!Block(timeout, &e))
+    {
+        THROW_ERROR(e);
+    }
+}
+
+// -1: block, 0: non-block, >0: block with timeout
+bool TcpAcceptor::Block(int timeout, Error* e) noexcept
+{
+    _timeout = timeout;
+    return Socket::Block(timeout < 0 ? true : false, e);
+}
+
+// Option
+void TcpAcceptor::ReuseAddress(bool reuse) // default is false
+{
+    Error e;
+    if(!ReuseAddress(reuse, &e))
+    {
+        THROW_ERROR(e);
+    }
+}
+
+bool TcpAcceptor::ReuseAddress(bool reuse, Error* e) noexcept
+{
+    return Socket::ReuseAddress(reuse, e);
+}
+
+// Option
+void TcpAcceptor::ReusePort(bool reuse)  // default is false
+{
+    Error e;
+    if(!ReusePort(reuse, &e))
+    {
+        THROW_ERROR(e);
+    }
+}
+
+bool TcpAcceptor::ReusePort(bool reuse, Error* e) noexcept
+{
+    return Socket::ReusePort(reuse, e);
 }
 
 NET_BASE_END

@@ -15,25 +15,25 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "StreamReader.h"
+#include "StreamReader.hpp"
 #include <cassert>
 
 NET_BASE_BEGIN
 
 StreamReader::StreamReader()
-: mStream(NULL)
+: _stream(NULL)
 {
 
 }
 
 StreamReader::StreamReader(StreamBuffer* buf)
-: mStream(buf)
+: _stream(buf)
 {
 
 }
 
 StreamReader::StreamReader(StreamBuffer& buf)
-: mStream(&buf)
+: _stream(&buf)
 {
 
 }
@@ -45,62 +45,47 @@ StreamReader::~StreamReader()
 
 StreamReader& StreamReader::Attach(StreamBuffer* buf)
 {
-    mStream = buf;
+    _stream = buf;
     return *this;
 }
 
 StreamReader& StreamReader::Attach(StreamBuffer& buf)
 {
-    mStream = &buf;
+    _stream = &buf;
     return *this;
 }
 
-bool StreamReader::SerializeBytes(void* p, size_t n)
+bool StreamReader::Bytes(void* p, size_t n)
 {
-    if(mStream == NULL) return false;
-    if(mStream->Readable() < n) return false;
+    if(_stream == NULL) return false;
+    if(_stream->Readable() < n) return false;
 
-    return mStream->Read(p, n);
+    return _stream->Read(p, n);
 }
 
-bool StreamReader::SerializeString(std::string& s, size_t n)
+bool StreamReader::String(std::string& s, size_t n)
 {
-    if(mStream == NULL) return false;
-    if(mStream->Readable() < n) return false;
+    if(_stream == NULL) return false;
+    if(_stream->Readable() < n) return false;
 
-    const unsigned char* p = (const unsigned char*)mStream->Read();
+    const unsigned char* p = (const unsigned char*)_stream->Read();
     std::string(p, p + n).swap(s);
-    mStream->Read(n);
+    _stream->Read(n);
     return true;
 }
 
-bool StreamReader::SerializeString(std::string& s, const char delim)
+bool StreamReader::String(std::string& s, const char* delim)
 {
-    if(mStream == NULL) return false;
-    if(mStream->Readable() < sizeof(delim)) return false;
+    if(_stream == NULL) return false;
+    if(_stream->Readable() < strlen(delim)) return false;
 
-    ssize_t n = mStream->Readable(delim);
-    if(n < 0) return false;
-    if(n == 0) return true;
-
-    const unsigned char* p = (const unsigned char*)mStream->Read();
-    std::string(p, p + n).swap(s);
-    mStream->Read(n + sizeof(delim));
-    return true;
-}
-
-bool StreamReader::SerializeString(std::string& s, const char* delim)
-{
-    if(mStream == NULL) return false;
-    if(mStream->Readable() < strlen(delim)) return false;
-
-    ssize_t n = mStream->Readable(delim);
+    ssize_t n = _stream->Readable(delim);
     if(n < 0) return false;
     if(n == 0) return true;
     
-    const unsigned char* p = (const unsigned char*)mStream->Read();
+    const unsigned char* p = (const unsigned char*)_stream->Read();
     std::string(p, p + n).swap(s);
-    mStream->Read(n + strlen(delim));
+    _stream->Read(n + strlen(delim));
     return true;
 }
 

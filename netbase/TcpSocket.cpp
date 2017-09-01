@@ -15,338 +15,292 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "TcpSocket.h"
-#include "EventLoop.h"
-#include "EventHandler.h"
+#include "TcpSocket.hpp"
+#include "SocketSelector.hpp"
 #include <cassert>
 
 NET_BASE_BEGIN
 
-// Open a socket internally
-TcpSocket::TcpSocket(int domain)
-: mSocket(domain, SOCK_STREAM, IPPROTO_TCP)
+// Constructor, with no address info
+TcpSocket::TcpSocket() noexcept
+: _timeout(-1)
+, _connected(false)
 {
 
 }
 
-// Base class close the SOCKET
-TcpSocket::~TcpSocket()
+// Constructor, with any address of given family 
+TcpSocket::TcpSocket(sa_family_t family) noexcept
+: _timeout(-1)
+, _connected(false)
+{
+    _address.Reset(family);
+}
+
+// Constructor, with given address
+TcpSocket::TcpSocket(const SocketAddress& addr) noexcept
+: _address(addr)
+, _timeout(-1)
+, _connected(false)
+{
+
+}
+ 
+// Constructor, with externally established connection
+TcpSocket::TcpSocket(SOCKET s, const SocketAddress* connected) noexcept
+: Socket(s) 
+, _connected_address(connected)
+, _timeout(-1)
+, _connected(false)
 {
 
 }
 
-bool TcpSocket::Bind(const char* host, unsigned short port)
+// Destructor
+TcpSocket::~TcpSocket() noexcept
 {
-    SocketAddress addr(host, port, mSocket.Family());
-    return mSocket.Bind(addr.SockAddr(), addr.Length());
+
 }
 
-bool TcpSocket::Bind(const SocketAddress& addr)
+// Connect to given address
+// throw exception on errors
+void TcpSocket::Connect(const SocketAddress& addr)
 {
-    return mSocket.Bind(addr.SockAddr(), addr.Length());
-}
-
-bool TcpSocket::Listen(int backlog)
-{
-    return mSocket.Listen(backlog);
-}
-
-SOCKET TcpSocket::Accept()
-{
-    return mSocket.Accept();
-}
-
-SOCKET TcpSocket::Accept(SocketAddress* addr)
-{
-    assert(addr != NULL);
-    socklen_t addrlen = addr->Length();
-    return mSocket.Accept(addr->SockAddr(), &addrlen);
-}
-
-bool TcpSocket::Connect(const char* host, unsigned short port)
-{
-    SocketAddress addr(host, port, mSocket.Family());
-    return mSocket.Connect(addr.SockAddr(), addr.Length());
-}
-
-bool TcpSocket::Connect(const SocketAddress& addr)
-{
-    return mSocket.Connect(addr.SockAddr(), addr.Length());
-}
-
-bool TcpSocket::LocalAddress(SocketAddress* addr) const
-{
-    assert(addr != NULL);
-    socklen_t addrlen = addr->Length();
-    return mSocket.LocalAddress(addr->SockAddr(), &addrlen);
-}
-
-bool TcpSocket::RemoteAddress(SocketAddress* addr) const 
-{
-    assert(addr != NULL);
-    socklen_t addrlen = addr->Length();
-    return mSocket.RemoteAddress(addr->SockAddr(), &addrlen);
-}
-
-ssize_t TcpSocket::Send(const void* p, size_t n)
-{
-    return mSocket.Send(p, n);
-}
-
-ssize_t TcpSocket::Send(StreamBuffer* buf)
-{
-    assert(buf != NULL);
-    ssize_t ret = mSocket.Send(buf->Read(), buf->Readable());
-    if(ret > 0)
+    Error e;
+    if(!Connect(addr, &e))
     {
-        buf->Read(ret);
+        THROW_ERROR(e);
     }
-    return ret;
 }
 
-ssize_t TcpSocket::Receive(void* p, size_t n)
+// Connect to given address
+// return false on errors
+bool TcpSocket::Connect(const SocketAddress& addr, Error* e) noexcept
 {
-    return mSocket.Receive(p, n);
-}
-
-ssize_t TcpSocket::Receive(StreamBuffer* buf)
-{
-    assert(buf != NULL);
-    ssize_t ret = 0;
-    if(buf->Writable(2048))
+    if(_connected)
     {
-        ssize_t ret = mSocket.Receive(buf->Write(), buf->Writable());
-        if(ret > 0)
+        if(_connected_address == addr || ConnectedAddress() == addr) 
         {
-            buf->Write(ret);
+            return true;
         }
+        Close(); // Prepare for connect to new address
     }
-    return ret;
+    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP, e))
+    {
+        return false;
+    }
+    if(!Socket::Connect(addr, e))
+    {
+        return false;
+    }
+    assert(false); //Todo: analyze status
+    if(_timeout > 0 && !Socket::WaitForReady(_timeout, e))
+    {
+        // Analyze status
+        return false;
+    }
+    _connected_address = addr;
+    _connected = true;
+    return true;
+}
+
+void TcpSocket::Connected()
+{
+    _connected = true;
+}
+
+bool TcpSocket::Connected(Error* e) noexcept
+{
+    _connected = true;
+    return true;
+}
+
+// Local address
+SocketAddress TcpSocket::Address(Error* e) const noexcept
+{
+    if(IsConnected())
+    {
+        return Socket::Address();
+    }
+    return _address;
+}
+
+// Connected address
+SocketAddress TcpSocket::ConnectedAddress(Error* e) const noexcept
+{
+    if(IsConnected())
+    {
+        return Socket::ConnectedAddress(e);
+    }
+    return _connected_address;
+}
+
+// Close the socket
+bool TcpSocket::Close(Error* e) noexcept
+{
+    _connected = false;
+    _connected_address.Reset();
+    return Socket::Close(e); 
+}
+
+// Send data over connection
+ssize_t TcpSocket::Send(const void* p, size_t n, int flags) noexcept
+{
+    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, NULL))
+    {
+        return -1;
+    }
+    return Socket::Send(p, n, flags);
+}
+
+ssize_t TcpSocket::Send(StreamBuffer* buf, int flags) noexcept
+{
+    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, NULL))
+    {
+        return -1;
+    }
+    return Socket::Send(buf, flags);
+}
+
+ssize_t TcpSocket::Receive(void* p, size_t n, int flags) noexcept
+{
+    if(_timeout > 0 && !Socket::WaitForRead(_timeout, NULL))
+    {
+        return -1;
+    }
+    return Socket::Receive(p, n, flags);
+}
+
+ssize_t TcpSocket::Receive(StreamBuffer* buf, int flags) noexcept
+{
+    if(_timeout > 0 && !Socket::WaitForRead(_timeout, NULL))
+    {
+        return -1;
+    }
+    return Socket::Receive(buf, flags);
 }
 
 //////////////////////////////////////////////////////////////////////////////////
 
-bool TcpSocket::Block() const 
+// I/O block
+// -1: block, 0: non-block, >0: block with timeout
+void TcpSocket::Block(int timeout) 
 {
-    return mSocket.Block();
-}
-
-bool TcpSocket::Block(bool block)
-{
-    return mSocket.Block(block);
-}
-
-bool TcpSocket::ReuseAddress() const 
-{
-    return mSocket.ReuseAddress();
-}
-
-bool TcpSocket::ReuseAddress(bool reuse)
-{
-    return mSocket.ReuseAddress(reuse);
-}
-
-bool TcpSocket::NoDelay() const 
-{
-    return mSocket.NoDelay();
-}
-
-bool TcpSocket::NoDelay(bool no)
-{
-    return mSocket.NoDelay(no);
-}
-
-bool TcpSocket::KeepAlive() const 
-{
-    return mSocket.KeepAlive();
-}
-
-bool TcpSocket::KeepAlive(bool keep)
-{
-    return mSocket.KeepAlive(keep);
-}
-
-bool TcpSocket::SendBuffer(size_t size)
-{
-    return mSocket.SendBuffer(size);
-}
-
-size_t TcpSocket::SendBuffer() const
-{
-    return mSocket.SendBuffer();
-}
-
-bool TcpSocket::ReceiveBuffer(size_t size)
-{
-    return mSocket.ReceiveBuffer(size);
-}
-
-size_t TcpSocket::ReceiveBuffer() const
-{
-    return mSocket.ReceiveBuffer();
-}
-
-NET_BASE_END
-NET_BASE_BEGIN
-
-// Create an unbound, unconnected TCP socket
-// The domain of the socket is not determined before calling Connect()
-TcpSocket::TcpSocket()
-: Socket()
-, mAddress()
-, mConnectedAddress()
-, mConnected(false)
-{
-
-}
-
-// Create a unbound, unconnected TCP socket
-// The domain of the socket is given
-TcpSocket::TcpSocket(int domain)
-: Socket(domain)
-, mAddress((sa_family_t)domain)
-, mConnectedAddress()
-, mConnected(false)
-{
-
-}
-
-// Create a TCP socket bound to given local address
-// The domain of the socket is determined by the address family
-// See socket options of SO_REUSEADDR and SO_REUSEPORT for reuseaddr and reuseport
-TcpSocket::TcpSocket(const SocketAddress& addr, bool reuseaddr, bool reuseport)
-: Socket(addr.Family())
-, mAddress(addr)
-, mConnectedAddress()
-, mConnected(false)
-{
-
-}
-
-// Create a TCP socket with externally established connection
-TcpSocket::TcpSocket(SOCKET s, const SocketAddress* conencted, const SocketAddress* local)
-: Socket(s)
-, mAddress()
-, mConnectedAddress()
-, mConnected(false)
-{
-    if(local != NULL) mAddress = *local;
-    if(connected != NULL) mConnectedAddress = *connected;
-}
-
-// Destructor, deriviation is allowed for extension
-TcpSocket::~TcpSocket()
-{
-
-}
-
-// Called only once when the connection is established
-// by TcpListener or TcpConnector
-bool TcpScoket::Connected()
-{
-    if(mAddress.Empty())
+    Error e;
+    if(!Block(timeout, &e))
     {
-        socklen_t addrlen = mAddress.Length();
-        Socket::Address((sockaddr*)&mAddress, &addrlen);
+        THROW_ERROR(e);
     }
-    if(mConnectedAddress.Empty())
+}
+
+// IO mode
+// -1: block, 0: non-block, >0: block with timeout
+bool TcpSocket::Block(int timeout, Error* e) noexcept
+{
+    _timeout = timeout;
+    return Socket::Block(timeout < 0 ? true : false, e);
+}
+
+// Option of reuse address
+void TcpSocket::ReuseAddress(bool reuse)  
+{
+    Error e;
+    if(!ReuseAddress(reuse, &e))
     {
-        socklen_t addrlen = mConnectedAddress.Length();
-        Socket::ConnectedAddress((sockaddr*)&mRemoteAddress, &addrlen);
+        THROW_ERROR(e);
     }
-    mConnected = true;
 }
 
-bool TcpSocket::Connect(const SocketAddress& addr)
+// Option of reuse address 
+bool TcpSocket::ReuseAddress(bool reuse, Error* e) noexcept
 {
-    mConnected = false;
-    return false;
+    return Socket::ReuseAddress(reuse, e);
 }
 
-void TcpSocket::Disconnect()
+// Option of reuse port
+void TcpSocket::ReusePort(bool reuse)  // default is false
 {
-    mConnected = false;
+    Error e;
+    if(!ReusePort(reuse, &e))
+    {
+        THROW_ERROR(e);
+    }
 }
 
-ssize_t TcpSocket::Send(const void* p, size_t n, int flags)
+// Option of reuse port
+bool TcpSocket::ReusePort(bool reuse, Error* e) noexcept
 {
-    return Socket::Send(p, n, flags);
+    return Socket::ReusePort(reuse, e);
 }
 
-ssize_t TcpSocket::Send(StreamBuffer* buf, int flags)
+// Option of no delay
+void TcpSocket::NoDelay(bool no)  
 {
-    return Socket::Send(buf, flags);
+    Error e;
+    if(!NoDelay(no, &e))
+    {
+        THROW_ERROR(e);
+    }
 }
 
-ssize_t TcpSocket::Receive(void* p, size_t n, int flags)
-{
-    return Socket::Receive(p, n, flags);
-}
-
-ssize_t TcpSocket::Receive(StreamBuffer* buf, int flags)
-{
-    return Socket::Receive(buf, flags);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-
-bool TcpSocket::Block() const 
-{
-    return Socket::Block();
-}
-
-bool TcpSocket::Block(bool block)
-{
-    return Socket::Block(block);
-}
-
-bool TcpSocket::NoDelay(bool no)
+// option of no delay
+bool TcpSocket::NoDelay(bool no, Error* e) noexcept
 {
     int flag = no ? 1 : 0;
-    return Socket::SetOption(IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int));
+    return Socket::SetOption(IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int), e);
 }
 
-size_t Socket::KeepAlive(size_t keep)
+// Option of keep alive
+void TcpSocket::KeepAlive(int time) 
 {
-    int flag = keep > 0 ? 1 : 0;
-    Socket::SetOption(SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(int));
-    if(keep > 0)
+    Error e;
+    if(!KeepAlive(time, &e))
     {
-        Socket::SetOption(IPPROTO_TCP, TCP_KEEPALIVE, &keep, sizeof(int));
+        THROW_ERROR(e);
+    }
+}
+
+// Option of keep alvie
+bool TcpSocket::KeepAlive(int time, Error* e) noexcept
+{
+    int flag = time > 0 ? 1 : 0;
+    if(!Socket::SetOption(SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(int), e))
+    {
+        return false;
+    }
+    if(time > 0 && !Socket::SetOption(IPPROTO_TCP, TCP_KEEPALIVE, &time, sizeof(int), e))
+    {
+        return false;
     }
     return true;
 }
 
-bool Socket::SendBuffer(size_t size)
+void TcpSocket::SendBuffer(int size)
 {
-    return Socket::SetOption(SOL_SOCKET, SO_SNDBUF, &size, sizeof(int)));
-}
-
-size_t Socket::SendBuffer() const
-{
-    int size;
-    socklen_t len = sizeof(int);
-    if(Socket::GetOption(SOL_SOCKET, SO_SNDBUF, &size, &len))
+    Error e;
+    if(!SendBuffer(size, &e))
     {
-        return size;
-    }
-    return 0;
+        THROW_ERROR(e);
+    }  
 }
 
-bool Socket::ReceiveBuffer(size_t size)
+bool TcpSocket::SendBuffer(int size, Error* e) noexcept
 {
-    return Socket::SetOption(SOL_SOCKET, SO_RCVBUF, &size, sizeof(int));
+    return Socket::SetOption(SOL_SOCKET, SO_SNDBUF, &size, sizeof(int), e);
 }
 
-size_t Socket::ReceiveBuffer() const
+void TcpSocket::ReceiveBuffer(int size)
 {
-    int size;
-    socklen_t len = sizeof(int);
-    if(Socket::GetOption(SOL_SOCKET, SO_RCVBUF, &size, &len))
+    Error e;
+    if(!ReceiveBuffer(size, &e))
     {
-        return size;
+        THROW_ERROR(e);
     }
-    return 0;
+}
+
+bool TcpSocket::ReceiveBuffer(int size, Error* e) noexcept
+{
+    return Socket::SetOption(SOL_SOCKET, SO_RCVBUF, &size, sizeof(int), e);
 }
 
 NET_BASE_END

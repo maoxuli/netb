@@ -15,88 +15,60 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "HttpClient.h"
-#include "EventLoop.h"
+#include "TcpSocket.hpp"
 
-NET_BASE_BEGIN
-
-using namespace std::placeholders;
-
-HttpClient::HttpClient(EventLoop* loop)
-: mLoop(loop)
-, mConnector(loop)
-, mConnection(NULL)
-{
-    mConnector.SetConnectedCallback(std::bind(&HttpClient::OnConnected, this, _1));
-}
-
-HttpClient::~HttpClient()
-{
-
-}
-
-bool HttpClient::Connect(const char* host, unsigned short port)
-{
-    assert(mConnection == NULL);
-    return mConnector.Connect(host, port);
-}
-
-// Tcp connector established a outgoing connection
-void HttpClient::OnConnected(TcpConnection* conn)
-{
-    assert(conn != NULL);
-    assert(mConnection == NULL);
-    mConnection = conn;
-    mConnection->SetReceivedCallback(std::bind(&HttpClient::OnReceived, this, _1, _2));
-    mConnection->SetClosedCallback(std::bind(&HttpClient::OnClosed, this, _1));
-}  
-
-void HttpClient::OnReceived(TcpConnection* conn, StreamBuffer* buf)
-{
-    assert(conn == mConnection);
-    if(mResponse.FromBuffer(buf))
-    {
-        HandleResponse(&mResponse);
-        mResponse.Reset();
-    }
-}
-// Tcp connection is closed
-void HttpClient::OnClosed(TcpConnection* conn)
-{
-    assert(conn == mConnection);
-    mConnection = NULL;
-}
-
-void HttpClient::SendRequest(HttpRequest* request)
-{
-    assert(mConnection != NULL);
-    StreamBuffer buf;
-    request->ToBuffer(&buf);
-    mConnection->Send(&buf);
-    std::cout << request->Dump() << "\n";
-}
-
-void HttpClient::HandleResponse(HttpResponse* response)
-{
-    std::cout << response->Dump() << "\n";
-}
-
-NET_BASE_END
-
-// httpclient 23.45.126.9
+// HTTP client
 int main(const int argc, char* argv[])
 {
+    const char* host = NULL;
+    unsigned short port = 8080; // By default 8080
     assert(argc >= 2);
-    netbase::EventLoop loop;
-    netbase::HttpClient client(&loop);
-    if(!client.Connect(argv[1], 80))
+    if(argc == 2) // httpc 8090
     {
-        std::cout << "Connect failed.\n";
+        int n = atoi(argv[1]);
+        if(n > 0 && n <= 65535)
+        {
+            port  = (unsigned short)n;
+        }
     }
-    
-    netbase::HttpRequest request("GET", argv[1]);
-    client.SendRequest(&request);
-    loop.Run();
+    else if(argc == 3) // httpc 192.168.1.5 8090
+    {
+        host = argv[1];
+        int n = atoi(argv[2]);
+        if(n > 0 && n <= 65535)
+        {
+            port  = (unsigned short)n;
+        }
+    }
 
+    netbase::TcpSocket client;
+    client.Block(10000); // block with 10s timeout
+    if(!client.Connect(SocketAddress(host, port)))
+    {
+        std::cout << "HTTP client failed to connect: " << host << ":" << port << "\n";
+        return -1;
+    }
+
+    // Send out a request
+    netbase::HttpRequest request;
+    StreamBuffer buf;
+    request.ToBuffer(&buf);
+    if(client.Send(&buf) <= 0)
+    {
+        std::cout << "Send request failed.\n";
+        return -1;
+    }
+    std::cout << "Request: " << request.ToString();
+
+    // Receive response
+    buf.Clear();
+    if(client.Receive(&buf) <= 0) // receive with timeout
+    {
+        std::cout << "Receive response failed.\n";
+        return -1;
+    }
+    netbase::HttpResponse reponse;
+    response.FromBuffer(&buf);
+    std::cout << "Response: " << response.ToString();
     return 0;
 }

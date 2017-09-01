@@ -19,46 +19,50 @@
 #define NET_BASE_HTTP_SERVER_H
 
 #include "HttpMessage.h"
-#include "TcpAcceptor.h"
-#include "TcpSocket.h"
-#include <vector>
+#include "AsyncTcpAcceptor.hpp"
+#include "AsyncTcpSocket.hpp"
+#include <map>
 
 NET_BASE_BEGIN
 
-class EventLoop;
-class HttpServer
+// HTTP connection receive request and return response
+class HttpConnection : public AsyncTcpSocket 
 {
 public:
-    HttpServer(EventLoop* loop);
-    virtual ~HttpServer();
+    HttpConnection(EventLoop* loop, SOCKET s, const SocketAddress* connected);
 
-    bool Start();
-
-protected:
-    // TcpConnection::ConnectedCallback
-    void OnConnected(TcpConnection* conn);
+private:
+    // Request message from this connection
+    HttpRequest _request;
 
     // TcpConnection::ReceivedCallback
-    void OnReceived(TcpConnection* conn, StreamBuffer* buf);
+    void OnReceived(AsyncTcpSocket* conn, StreamBuffer* buf);
 
-    // TcpConnection::ClosedCallback
-    void OnClosed(TcpConnection* conn);
-    
-protected:
-  // IO event loop
-  EventLoop* mLoop;
+    // Handle incoming request message
+    void HandleRequest(AsyncTcpSocket* conn);
 
-  // TcpListener
-  TcpListener mListener;
+    // Send response message
+    void SendResponse(AsyncTcpSocket* conn, const HttpResponse& response);
+};
 
-  // List of http connections
-  std::map<TcpConnection*, HttpRequest*> mRequests;
+// HTTP server is a TCP acceptor
+// It manages the incomming connections
+class HttpServer : public AsyncTcpAcceptor
+{
+public:
+    // Constructor, with local address
+    HttpServer(EventLoop* loop, const SocketAddress& addr);
 
-  // Handle incoming request message
-  virtual void HandleRequest(TcpConnection* conn, HttpRequest* request);
+    // Destructor, close all connections
+    virtual ~HttpServer();
 
-  // Send response message
-  void SendResponse(TcpConnection* conn, HttpResponse* response);
+private:
+    // Connections
+    std::map<SOCKET, HttpConnection*> _connections;
+
+    // TcpAcceptor::AcceptedCallback
+    bool OnAccepted(AsyncTcpAcceptor* acceptor, SOCKET s, const SocketAddress* addr);
+    void OnConnected(AsyncTcpSocket* conn, bool connected);
 };
 
 NET_BASE_END
