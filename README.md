@@ -1,6 +1,6 @@
 # NetB
 
-C++ Socket API, Base and Blocks for Network Programming  
+Base and Blocks for Network Programming
 
 ## Versatile and Flexible  
 
