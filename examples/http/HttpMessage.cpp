@@ -22,7 +22,7 @@
 #include <sstream>
 #include <cassert>
 
-NET_BASE_BEGIN
+NETB_BEGIN
 
 const char* HttpMessage::CRLF = "\r\n";
 
@@ -427,4 +427,4 @@ std::string HttpResponse::StartLine() const
     return oss.str();
 }
 
-NET_BASE_END
+NETB_END

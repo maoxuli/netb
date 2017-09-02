@@ -25,7 +25,7 @@
 #include <string>
 #include <map>
 
-NET_BASE_BEGIN
+NETB_BEGIN
 
 // RFC 862
 // Echo server
@@ -113,7 +113,7 @@ private:
     }
 };
 
-NET_BASE_END
+NETB_END
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -132,10 +132,10 @@ int main(const int argc, char* argv[])
     }
 
     // Thread loop
-    netbase::EventLoop loop;
-    netbase::Error e;
-    netbase::UdpEchoServer udps(&loop, port);
-    netbase::TcpEchoServer tcps(&loop, port);
+    netb::EventLoop loop;
+    netb::Error e;
+    netb::UdpEchoServer udps(&loop, port);
+    netb::TcpEchoServer tcps(&loop, port);
     if(!udps.Open(&e))
     {
         std::cout << "UDP server open failed. " << e.Info() << "\n";

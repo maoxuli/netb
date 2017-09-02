@@ -23,7 +23,7 @@
 #include <string>
 #include <cstdlib>
 
-NET_BASE_BEGIN
+NETB_BEGIN
 
 // RFC 862/UDP
 // Echo client
@@ -53,7 +53,7 @@ public:
 };
 
 
-NET_BASE_END
+NETB_END
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -78,8 +78,8 @@ int main(const int argc, char* argv[])
             port  = n;
         }
     }
-    netbase::EchoClient client;
-    if(!client.Connect(netbase::SocketAddress(host, port), NULL))
+    netb::EchoClient client;
+    if(!client.Connect(netb::SocketAddress(host, port), NULL))
     {
         std::cout << "Echo client failed to connect: " << host << ":" << port << ".\n";
         return -1;

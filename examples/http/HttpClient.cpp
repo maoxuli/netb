@@ -42,17 +42,17 @@ int main(const int argc, char* argv[])
         }
     }
 
-    netbase::TcpSocket client;
+    netb::TcpSocket client;
     client.Block(10000); // block with 10s timeout
-    if(!client.Connect(netbase::SocketAddress(host, port), NULL))
+    if(!client.Connect(netb::SocketAddress(host, port), NULL))
     {
         std::cout << "HTTP client failed to connect: " << host << ":" << port << "\n";
         return -1;
     }
 
     // Send out a request
-    netbase::HttpRequest request;
-    netbase::StreamBuffer buf;
+    netb::HttpRequest request;
+    netb::StreamBuffer buf;
     request.ToBuffer(&buf);
     if(client.Send(&buf) <= 0)
     {
@@ -68,7 +68,7 @@ int main(const int argc, char* argv[])
         std::cout << "Receive response failed.\n";
         return -1;
     }
-    netbase::HttpResponse response;
+    netb::HttpResponse response;
     response.FromBuffer(&buf);
     std::cout << "Response: " << response.ToString();
     return 0;

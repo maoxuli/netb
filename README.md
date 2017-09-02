@@ -1,115 +1,26 @@
-# NetBase
+# NetB
 
-A lightweight C++ socket API.
+C++ Socket API, Base and Blocks for Network Programming  
 
-## Lightweight, Versatile, and Flexible 
+## Versatile and Flexible  
 
-1. Exception, error object, or just return value
+1. W/ or W/O Exceptions  
 
-NetBase supports errer handling with exception as standard suggested. For example, TcpAcceptor::Open() ma throw various exceptions and we may handle them as below:
+Exceptions provide a modern way for error handling, while many programmers do not like exceptions, especially those in C++. It is a hard choice for C++ library to support exceptions or not. Sometimes it is required by the project to use exceptions even you hate it, and sometimes vice versa. Some C++ codes switch the interface between w/ or w/o exceptions by compiling macros to workaround this issue. NetB tried a new way of error handling that mixed up exceptions and errors in return values.   
 
-```C++
-try
-{
-    TcpAcceptor acceptor(8080);
-    acceptor.Open();
-}
-catch(const AddressException& ex)
-{
-    std::cout << ex.Class().Name() << ":" << ex.Info() << ":" << ex.Code() << "\n";
-}
-catch(const SocketException& ex)
-{
-    std::cout << ex.Class().Name() << ":" << ex.Info() << ":" << ex.Code() << "\n";
-}
-catch(const Exception& ex)
-{
-    std::cout << ex.Class().Name() << ":" << ex.Info() << ":" << ex.Code() << "\n";
-}
-```
+2. Multiple I/O Modes  
 
-But sometimes, we may want to avoid exception handling in the program. NetBase supports an out parameter in most API to return the error status. 
+Except for the original block or non-block modes for socket API, NetB also supported a block mode with timeout. It is a balanced mode between block or non-block mode, while satisfy most use cases. NetB supported complete asynchronous I/O mode with internal support of multithreading and I/O bufferring.  
 
-```C++
-TcpAcceptor acceptor(8080);
-Error e;
-if(!acceptor.Open(&e))
-{
-    std::cout << e.Class().Name() << ":" << e.Info() << ":" e.Code() << "\n";
-}
-```
+3. Base and Blocks for Network Programming  
 
-Actually, at any point of the program, it is easy for caller to switch between exception and error return. For example, check errors with return object and throw an exception: 
-
-```C++
-TcpAcceptor acceptor(8080);
-Error e;
-if(!acceptor.Open(&e))
-{
-    e.Class().Throw();
-}
-```
-
-And catch an exception then return an error object: 
-
-```C++
-try
-{
-    TcpAcceptor acceptor(8080);
-    acceptor.Open();
-}
-catch(const Exception& ex)
-{
-    e.Set(ex.Class(), ex.Info(), ex.Code());
-}
-```
-
-2. Block or non-block, sync or async
-
-TCP server may work in synchronous mode in current thread:  
-
-```C++
-TcpAcceptor acceptor(8080);
-if(acceptor.Open())
-{
-    while(true)
-    {
-        OnAccept(acceptor.Accept());
-    }
-}
-```
-
-While, the established connections my work in async mode in a separate thread:  
-
-```C++
-EventLoopThread thread;
-EventLoop* loop = thread.Start();
-std::vector<AsyncTcpSocket*> sockets;
-void OnAccept(SOCKET s)
-{
-    AsyncTcpSocket* sock = new AsyncTcpSocket(loop, s);
-    sock->SetClosedCallback(OnClosed)
-    sock->SetReceivedCallback(OnReveived);
-    sock->Connected();
-    sockets.push_back(sock);
-}
-
-void OnClosed(AsyncTcpSocket*)
-{
-    // erase from list and delete the object
-}
-
-void OnReceived(AsyncTcpSocket*, StreamBuffer*)
-{
-    // Handle received data
-}
-```
+Most wrappers of socket API provided a set of tightly coupled classes, which made the API more like a framework. NetB was designed in an incremental style and tried to reduce the coupling among classes. That means, you may use only the classes you want, and it usually works well by herself. You don't need to change your codes too much to adapt to the introducing of NetB.   
 
 ## Build the library
 
-Currently NetBase is in the process of developing and only supports Linux.
+Currently NetB is in the process of development and only supports Linux OS.
 
-1. Building on Linux
+1. Building on Linux  
 
 make  
 make all  
@@ -117,4 +28,4 @@ make examples
 make clean  
 make cleanall  
 
-2. Building on Windows  
+2. Building on Windows   

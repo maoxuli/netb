@@ -5,7 +5,7 @@
             "name": "C++ Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/bin/echoclienta3",
+            "program": "${workspaceRoot}/bin/echos",
             "args": ["9080"],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
@@ -39,7 +39,7 @@
             "name": "C++ Attach",
             "type": "cppdbg",
             "request": "attach",
-            "program": "${workspaceRoot}/bin/echoclienta3",
+            "program": "${workspaceRoot}/bin/echos",
             "processId": "${command:pickProcess}",
             "linux": {
                 "MIMode": "gdb",

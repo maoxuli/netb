@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_HTTP_MESSAGE_H
-#define NET_BASE_HTTP_MESSAGE_H
+#ifndef NETB_HTTP_MESSAGE_H
+#define NETB_HTTP_MESSAGE_H
 
 #include "StreamBuffer.hpp"
 #include <cstdint>
@@ -24,7 +24,7 @@
 #include <vector>
 #include <map>
 
-NET_BASE_BEGIN
+NETB_BEGIN
 
 // 
 // HTTP message 
@@ -146,6 +146,6 @@ private:
 	virtual std::string StartLine() const;
 };
 
-NET_BASE_END
+NETB_END
 
 #endif 

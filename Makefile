@@ -5,8 +5,8 @@
 OBJDIR := build
 LIBDIR := lib
 BINDIR := bin
-INCDIR := netbase
-SRCDIR := netbase
+INCDIR := netb
+SRCDIR := netb
 OUT := libnetb.a
 
 CXX := g++

@@ -15,15 +15,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NET_BASE_HTTP_SERVER_H
-#define NET_BASE_HTTP_SERVER_H
+#ifndef NETB_HTTP_SERVER_H
+#define NETB_HTTP_SERVER_H
 
 #include "HttpMessage.h"
 #include "AsyncTcpAcceptor.hpp"
 #include "AsyncTcpSocket.hpp"
 #include <map>
 
-NET_BASE_BEGIN
+NETB_BEGIN
 
 // HTTP connection receive request and return response
 class HttpConnection : public AsyncTcpSocket 
@@ -65,6 +65,6 @@ private:
     void OnConnected(AsyncTcpSocket* conn, bool connected);
 };
 
-NET_BASE_END
+NETB_END
 
 #endif

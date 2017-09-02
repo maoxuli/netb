@@ -17,7 +17,7 @@
 
 #include "HttpServer.h"
 
-NET_BASE_BEGIN
+NETB_BEGIN
 
 using namespace std::placeholders;
 
@@ -104,7 +104,7 @@ void HttpServer::OnConnected(AsyncTcpSocket* conn, bool connected)
     }
 }
 
-NET_BASE_END
+NETB_END
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -121,8 +121,8 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
-    netbase::EventLoop loop; // running on current thread
-    netbase::HttpServer server(&loop, netbase::SocketAddress(port));
+    netb::EventLoop loop; // running on current thread
+    netb::HttpServer server(&loop, netb::SocketAddress(port));
     server.Open();
     loop.Run();
     return 0;
