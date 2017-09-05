@@ -51,9 +51,8 @@ enum {
 };
 
 // Socket initializer for Winsock
-class SocketInitializer
+struct SocketInitializer
 {
-public:
 	SocketInitializer() 
     {
  	#if defined(WIN32)

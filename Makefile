@@ -22,9 +22,6 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/Error.hpp \
 	   $(INCDIR)/Exception.hpp \
 	   $(INCDIR)/StreamBuffer.hpp \
-	   $(INCDIR)/StreamWriter.hpp \
-	   $(INCDIR)/StreamReader.hpp \
-	   $(INCDIR)/StreamPeeker.hpp \
 	   $(INCDIR)/SocketConfig.hpp \
 	   $(INCDIR)/SocketAddress.hpp \
 	   $(INCDIR)/SocketSelector.hpp \
@@ -39,15 +36,16 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/EventLoopThread.hpp \
 	   $(INCDIR)/AsyncTcpAcceptor.hpp \
 	   $(INCDIR)/AsyncTcpSocket.hpp \
-	   $(INCDIR)/AsyncUdpSocket.hpp
+	   $(INCDIR)/AsyncUdpSocket.hpp \
+	   $(INCDIR)/StreamWriter.hpp \
+	   $(INCDIR)/StreamReader.hpp \
+	   $(INCDIR)/StreamPeeker.hpp \
+	   $(INCDIR)/HttpMessage.hpp 
 	  
 OBJ	:= $(OBJDIR)/ErrorCode.o \
 	   $(OBJDIR)/Error.o \
 	   $(OBJDIR)/Exception.o \
 	   $(OBJDIR)/StreamBuffer.o \
-	   $(OBJDIR)/StreamWriter.o \
-	   $(OBJDIR)/StreamReader.o \
-	   $(OBJDIR)/StreamPeeker.o \
 	   $(OBJDIR)/SocketConfig.o \
 	   $(OBJDIR)/SocketAddress.o \
 	   $(OBJDIR)/SocketSelector.o \
@@ -62,7 +60,11 @@ OBJ	:= $(OBJDIR)/ErrorCode.o \
 	   $(OBJDIR)/EventLoopThread.o \
 	   $(OBJDIR)/AsyncTcpAcceptor.o \
 	   $(OBJDIR)/AsyncTcpSocket.o \
-	   $(OBJDIR)/AsyncUdpSocket.o
+	   $(OBJDIR)/AsyncUdpSocket.o \
+	   $(OBJDIR)/StreamWriter.o \
+	   $(OBJDIR)/StreamReader.o \
+	   $(OBJDIR)/StreamPeeker.o \
+	   $(OBJDIR)/HttpMessage.o
 
 all: $(LIBDIR)/$(OUT)
 

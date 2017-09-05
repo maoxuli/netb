@@ -29,6 +29,5 @@ const class ErrorClass& Exception::Class() const noexcept
 //
 IMPLEMENT_EXCEPTION(SocketException, SocketError)
 IMPLEMENT_EXCEPTION(AddressException, AddressError)
-IMPLEMENT_EXCEPTION(ThreadException, ThreadError)
 
 NETB_END

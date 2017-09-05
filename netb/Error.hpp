@@ -73,14 +73,14 @@ private:
 
 // Usually error is returned as an out parameter (pointer) of functions. 
 // Using this macro to set error object for flexibility
-#define SET_ERROR_CLASS(e, cls) if(e) e->SetClass(cls);
-#define SET_ERROR_INFO(e, info) if(e) e->SetInfo(info);
-#define SET_ERROR_CODE(e, code) if(e) e->SetCode(code);
+#define SET_ERROR_CLASS(e, cls) do{ if(e) e->SetClass(cls); } while(0) // no trailing ;
+#define SET_ERROR_INFO(e, info) do{ if(e) e->SetInfo(info); } while(0) // no trailing ;
+#define SET_ERROR_CODE(e, code) do{ if(e) e->SetCode(code); } while(0) // no trailing ;
 
-#define SET_ERROR(e, info, code) if(e) e->Set(ErrorClass(), info, code);
+#define SET_ERROR(e, info, code) do{ if(e) e->Set(ErrorClass(), info, code); } while(0) // no trailing ;
 
 // Throw exception based on an error
-#define THROW_ERROR(e) e.Class().Throw(e);
+#define THROW_ERROR(e) do{ e.Class().Throw(e); } while(0)
 
 // 
 // Macros to declare and implement new error class
@@ -114,12 +114,10 @@ private:
 //
 DECLARE_ERROR_CLASS(SocketError, ErrorClass)
 DECLARE_ERROR_CLASS(AddressError, ErrorClass)
-DECLARE_ERROR_CLASS(ThreadError, ErrorClass)
 
 // Macros to set errors
-#define SET_SOCKET_ERROR(e, info, code) if(e) e->Set(SocketError(), info, code);
-#define SET_ADDRESS_ERROR(e, info, code) if(e) e->Set(AddressError(), info, code);
-#define SET_THREAD_ERROR(e, info, code) if(e) e->Set(ThreadError(), info, code);
+#define SET_SOCKET_ERROR(e, info, code) do{ if(e) e->Set(SocketError(), info, code); } while(0) // no trailing ;
+#define SET_ADDRESS_ERROR(e, info, code) do{ if(e) e->Set(AddressError(), info, code); } while(0) // no trailing ;
 
 NETB_END
 

@@ -40,50 +40,33 @@ NETB_BEGIN
 class SocketAddress : public sockaddr_storage
 {
 public: 
-	// Empty, for any protocols
+	// Empty, to be initialized later
 	// no throw
 	SocketAddress() noexcept;
 
-	// Given port, 0 for any port
-	// Given family, by default AF_INET
-	// By default, local wildcard host (INADDR_ANY, or all 0)
-	// throw UnsupportedFamilyException, only when unsupported family is given
-	SocketAddress(unsigned short port, sa_family_t family = AF_INET);
-
-	// Given port, 0 for any port
-	// Given family
-	// By default, local wildcard host (INADDR_ANY, or all 0)
-	// return error in Error, only when unsupported family is given
-	// no throw
+	// Given port and protocol family
+	// Usually used for service address
+	// Host is not given, set to local wildcard host (INADDR_ANY) by default
+	// If given port is 0, indicate any port
+	// If given family is not supported, throw UnsupportedFamilyException
+	SocketAddress(unsigned short port, sa_family_t family = AF_INET); // throw on errors
 	SocketAddress(unsigned short port, sa_family_t family, Error* e) noexcept;
 
-	// Given host, may be:
-	// "any": INADDR_ANY
-	// "wildcard": INADDR_ANY
-	// "none": INADDR_NONE
+	// Given host, port, and protocol family
+	// Usually used for client to set service address
+	// If host is not given (be empty), set to localhost (INADDR_LOOPBACK) by default
+	// Geven host:
+	// "" or "localhost": INADDR_LOOPBACK
 	// "loopback": INADDR_LOOPBACK
-	// "localhost" or "": INADDR_LOOPBACK
-	// "broadcast": INADDR_NONE
+	// "wildcard" or "any": INADDR_ANY
+	// "broadcast" or "none": INADDR_NONE
 	// "x.x.x.x" or "x:x:x:...": IPv4 or IPv6 address
-	// Given port, 0 for any port
-	// Given family, by default AF_INET
-	// throw UnsupportedFamilyException, when unsupported family is given
-	// throw InvalidAddressException, when host is not a valid address in the family
-	// throw FamilyMismatchException, when host is in wrong format for the family
+	// Given port: 0 for any port
+	// Given family: by default AF_INET
+	// If given family is not supported, throw UnsupportedFamilyException
+	// If given host is not a valid format, throw InvalidAddressException
+	// If given host is not in the family, throw FamilyMismatchException
 	SocketAddress(const std::string& host, unsigned short port, sa_family_t family = AF_INET);
-	
-	// Given host, may be:
-	// "any" or "": INADDR_ANY
-	// "wildcard": INADDR_ANY
-	// "none": INADDR_NONE
-	// "loopback": INADDR_LOOPBACK
-	// "localhost": INADDR_LOOPBACK
-	// "broadcast": INADDR_NONE
-	// "x.x.x.x" or "x:x:x:...": IPv4 or IPv6 address
-	// Given port, 0 for any port
-	// Given family, by default AF_INET
-	// return errors in SocketError, on all errors
-	// no throw
 	SocketAddress(const std::string& host, unsigned short port, sa_family_t family, Error* e) noexcept;
 
 	// Copy constructor
@@ -103,10 +86,14 @@ public:
 	}
 
 public:
+	// Family of the address
+	sa_family_t Family() const noexcept { return this->ss_family; }
+
 	// ss_len in sockaddr_storage is ignore in this implementation for compatibility
 	// The length of the address is determined by address family
-	sa_family_t Family() const { return this->ss_family; }
+	// If current family is not supported, throw UnsupportedFamilyException
 	socklen_t Length() const;
+	socklen_t Length(Error* e) const noexcept;
 
 	// SocketAddress is sockaddr_storage so below casting is allowed: 
 	// SocketAddress addr;
@@ -119,13 +106,12 @@ public:
 		return reinterpret_cast<struct sockaddr*>(this);
 	}
 
-	const struct sockaddr* Addr() const
+	const struct sockaddr* Addr() const noexcept
 	{
 		return reinterpret_cast<const struct sockaddr*>(this);
 	}
 
 	// Reset the object with given family, by default AF_UNSPEC, i.e., empty
-	// Support user defined family
 	// no throw
 	SocketAddress& Reset(sa_family_t family = AF_UNSPEC) noexcept
 	{ 
@@ -134,42 +120,50 @@ public:
 		return *this;
 	}
 
-	bool Empty() const { return ss_family == AF_UNSPEC; }
+	// return true if the address is empty now
+	bool Empty() const noexcept { return ss_family == AF_UNSPEC; }
 
 	// Set host
-	// throw UnsupportedFamilyException if unsupported family is set currently (including AF_UNSPEC)
-	// throw InvalidAddressException if host string is wrong
-	// throw FamilyMismatchException if host string is in wrong format
+	// If given host is not a valid format, throw InvalidAddressException
+	// If given host is not in the family, throw FamilyMismatchException
+	// If given host is in family unsupported, throw UnsupportedFamilyException
 	SocketAddress& Host(const std::string& host);
 	bool Host(const std::string& host, Error* e) noexcept;
 
 	// Set port, 0 for any port
-	// throw UnsupportedFamilyException if unsupported family is set currently (including AF_UNSPEC)
+	// If current address family is not supported, throw UnsupportedFamilyException
 	SocketAddress& Port(unsigned short port);
 	bool Port(unsigned short port, Error* e) noexcept;
 
-	// Get host and port
+	// Get host of current address
+	// If address family is not supported, throw UnsupportedFamilyException
 	std::string Host() const;
+	std::string Host(Error* e) const noexcept;
+
+	// Get port of current address
+	// If address family is not supported, throw UnsupportedFamilyException
 	unsigned short Port() const;
+	unsigned short Port(Error* e) const noexcept;
 
 	// Check special address
-	bool Wildcard() const; // INADDR_ANY:0
-	bool Any() const; // INADDR_ANY:0
-	bool AnyPort() const; // 0
-	bool AnyHost() const; // INADDR_ANY
-	bool Localhost() const; // "localhost"
-	bool Loopback() const; // INADDR_LOOPBACK
-	bool Broadcast() const; // INADDR_NONE
-	bool Multicast() const; // 224.0.0.0 to 239.255.255.255
+	// If address family is not supported, throw UnsupportedFamilyException
+	bool Wildcard(Error* e = NULL) const noexcept; // INADDR_ANY:0
+	bool Any(Error* e = NULL) const noexcept; // INADDR_ANY:0
+	bool AnyPort(Error* e = NULL) const noexcept; // 0
+	bool AnyHost(Error* e = NULL) const noexcept; // INADDR_ANY
+	bool Localhost(Error* e = NULL) const noexcept; // "localhost"
+	bool Loopback(Error* e = NULL) const noexcept; // INADDR_LOOPBACK
+	bool Broadcast(Error* e = NULL) const noexcept; // INADDR_NONE
+	bool Multicast(Error* e = NULL) const noexcept; // 224.0.0.0 to 239.255.255.255
 
 	// Output the address to string
-	std::string ToString() const;
+	std::string ToString(Error* e = NULL) const noexcept;
 
 public: 
 	// Copy counstructor, from data structures used in socket address
 	// Throw UnsupportedFamilyException if the family is not supported
-	SocketAddress(const struct sockaddr& sa) { *this = sa; }
-	explicit SocketAddress(const struct sockaddr* sa) { *this = *sa; }
+	SocketAddress(const struct sockaddr& sa) noexcept { *this = sa; }
+	explicit SocketAddress(const struct sockaddr* sa) noexcept { *this = *sa; }
 
 	SocketAddress(const struct sockaddr_in& sa) noexcept { *this = sa; }
 	explicit SocketAddress(const struct sockaddr_in* sa) noexcept { *this = *sa; }
@@ -186,18 +180,7 @@ public:
 	{
 		if(reinterpret_cast<const struct sockaddr*>(this) != &sa) 
 		{
-			memset(this, 0, sizeof(struct sockaddr_storage));
-			switch(sa.sa_family) 
-			{
-				case AF_INET:
-					memcpy(this, &sa, sizeof(struct sockaddr_in));
-					break;
-				case AF_INET6:
-					memcpy(this, &sa, sizeof(struct sockaddr_in6));
-					break;
-				default:
-					throw AddressException("Unsupported family.", ErrorCode::UnsupportedFamily());
-			}
+			memcpy(this, &sa, sizeof(struct sockaddr_storage));
 		}
 		return *this;
 	}

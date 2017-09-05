@@ -122,8 +122,22 @@ SocketAddress::~SocketAddress() noexcept
 
 }
 
-
+// ss_len in sockaddr_storage is ignore in this implementation for compatibility
+// The length of the address is determined by address family
+// If current family is not supported, throw UnsupportedFamilyException
 socklen_t SocketAddress::Length() const
+{
+    Error e;
+    socklen_t len = Length(&e);
+    if(len == 0)
+    {
+        THROW_ERROR(e);
+    }
+    return len;
+}
+
+// If current family is not supported, return 0 and information with Error object
+socklen_t SocketAddress::Length(Error* e) const noexcept
 {
     if(this->ss_family == AF_INET)
     {
@@ -133,13 +147,15 @@ socklen_t SocketAddress::Length() const
     {
         return sizeof(struct sockaddr_in6);
     }
+    if(this->ss_family != AF_UNSPEC)
+    {
+        SET_ERROR(e, "Unsupported address family.", ErrorCode::UnsupportedFamily());
+        return 0;
+    }
     return sizeof(struct sockaddr_storage);
 }
 
 // Set host
-// throw UnsupportedFamilyException if unsupported family is set currently (including AF_UNSPEC)
-// throw InvalidAddressException if host string is wrong
-// throw FamilyMismatchException if host string is in wrong format
 SocketAddress& SocketAddress::Host(const std::string& host)
 {
     Error e;
@@ -150,7 +166,10 @@ SocketAddress& SocketAddress::Host(const std::string& host)
     return *this;
 }
 
-// no throw
+// Set host
+// If given host is not a valid format, throw InvalidAddressException
+// If given host is not in the family, throw FamilyMismatchException
+// If given host is in family unsupported, throw UnsupportedFamilyException
 bool SocketAddress::Host(const std::string& host, Error* e) noexcept
 {
     int ret = 1; // for inet_pton
@@ -220,8 +239,7 @@ bool SocketAddress::Host(const std::string& host, Error* e) noexcept
     return true;
 }
 
-// Set port, 0 for any port
-// throw UnsupportedFamilyException if unsupported family is set currently (including AF_UNSPEC)
+// Set port
 SocketAddress& SocketAddress::Port(unsigned short port)
 {
     Error e;
@@ -232,7 +250,8 @@ SocketAddress& SocketAddress::Port(unsigned short port)
     return *this;
 }
 
-// no throw
+// Set port, 0 for any port
+// If current address family is not supported, throw UnsupportedFamilyException
 bool SocketAddress::Port(unsigned short port, Error* e) noexcept
 {
     if(this->ss_family == AF_INET)
@@ -254,7 +273,19 @@ bool SocketAddress::Port(unsigned short port, Error* e) noexcept
 }
 
 // Get host
-std::string SocketAddress::Host() const
+std::string SocketAddress::Host() const 
+{
+    Error e;
+    std::string host = Host(&e);
+    if(host.empty() && e)
+    {
+        THROW_ERROR(e);
+    }
+    return host;
+}
+// Get host of current address
+// If address family is not supported, throw UnsupportedFamilyException
+std::string SocketAddress::Host(Error* e) const noexcept
 {
     if(this->ss_family == AF_INET)
     {
@@ -265,6 +296,8 @@ std::string SocketAddress::Host() const
         {
             return host;
         }
+        assert(false);
+        SET_ADDRESS_ERROR(e, "inet_ntop failed.", 0);
     }
     else if(this->ss_family == AF_INET6)
     {
@@ -274,65 +307,106 @@ std::string SocketAddress::Host() const
         {
             return host;
         }
+        assert(false);
+        SET_ADDRESS_ERROR(e, "inet_ntop failed.", 0);
+    }
+    else if(this->ss_family == AF_UNSPEC)
+    {
+        SET_ADDRESS_ERROR(e, "Address is empty.", 0);
+    }
+    else
+    {
+        SET_ADDRESS_ERROR(e, "Unsupported address family", ErrorCode::UnsupportedFamily());
     }
     return "";
 }
 
 // Get port
-unsigned short SocketAddress::Port() const
+unsigned short SocketAddress::Port() const 
+{
+    Error e;
+    unsigned short port = Port(&e);
+    if(port == 0 && e)
+    {
+        THROW_ERROR(e);
+    }
+    return port;
+}
+// Get port
+// If address family is not supported, throw UnsupportedFamilyException
+unsigned short SocketAddress::Port(Error* e) const noexcept
 {
     if(this->ss_family == AF_INET)
     {
         return ntohs(reinterpret_cast<const struct sockaddr_in*>(this)->sin_port);
     }
-    if(this->ss_family == AF_INET6)
+    else if(this->ss_family == AF_INET6)
     {
         return ntohs(reinterpret_cast<const struct sockaddr_in6*>(this)->sin6_port);
+    }
+    else if(this->ss_family == AF_UNSPEC)
+    {
+        SET_ADDRESS_ERROR(e, "Address is empty.", 0);
+    }
+    else
+    {
+        SET_ADDRESS_ERROR(e, "Unsupported address family", ErrorCode::UnsupportedFamily());
     }
     return 0;
 }
 
-bool SocketAddress::Wildcard() const  // INADDR_ANY
+// Check special address
+// If address family is not supported, throw UnsupportedFamilyException
+bool SocketAddress::Wildcard(Error* e) const noexcept  // INADDR_ANY
 {
     assert(false);
 }
 
-bool SocketAddress::Any() const  // INADDR_ANY:0
+bool SocketAddress::Any(Error* e) const noexcept  // INADDR_ANY:0
 {
     assert(false);
 }
 
-bool SocketAddress::AnyPort() const  // 0
+bool SocketAddress::AnyPort(Error* e) const noexcept  // 0
 {
     assert(false);
 }
 
-bool SocketAddress::AnyHost() const  // INADDR_ANY
+bool SocketAddress::AnyHost(Error* e) const noexcept  // INADDR_ANY
 {
     assert(false);
 }
 
-bool SocketAddress::Localhost() const  // "localhost"
+bool SocketAddress::Localhost(Error* e) const noexcept  // "localhost"
 {
     assert(false);
 }
 
-bool SocketAddress::Loopback() const  // INADDR_LOOPBACK
+bool SocketAddress::Loopback(Error* e) const noexcept  // INADDR_LOOPBACK
 {
     assert(false);
 }
 
-bool SocketAddress::Broadcast() const  // INADDR_NONE
+bool SocketAddress::Broadcast(Error* e) const noexcept  // INADDR_NONE
+{
+    assert(false);
+}
+
+bool SocketAddress::Multicast(Error* e) const noexcept // 
 {
     assert(false);
 }
 
 // String for the address
-std::string SocketAddress::ToString() const
+std::string SocketAddress::ToString(Error* e) const noexcept
 {    
     char namebuf[1024];
     namebuf[0] = '\0';
-    getnameinfo(Addr(), Length(), namebuf, sizeof(namebuf), 0, 0, NI_NUMERICHOST);
+    if(getnameinfo(Addr(), Length(), namebuf, sizeof(namebuf), 0, 0, NI_NUMERICHOST) != 0)
+    {
+        SET_ADDRESS_ERROR(e, "getnameinfo failed.", ErrorCode::Current());
+        return "";
+    }
     std::ostringstream oss;
     oss << namebuf << ":" << Port();
     return oss.str();

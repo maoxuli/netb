@@ -115,6 +115,5 @@ const class ErrorClass& ErrorClass() noexcept
 //
 IMPLEMENT_ERROR_CLASS(SocketError, "SocketError", SocketException)
 IMPLEMENT_ERROR_CLASS(AddressError, "AddressError", AddressException)
-IMPLEMENT_ERROR_CLASS(ThreadError, "ThreadError", ThreadException)
 
 NETB_END

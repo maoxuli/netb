@@ -15,7 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "HttpMessage.h"
+#include "HttpMessage.hpp"
 #include "StreamBuffer.hpp"
 #include "StreamReader.hpp"
 #include "StreamWriter.hpp"
@@ -59,6 +59,16 @@ void HttpMessage::Reset()
 
     _version = "HTTP/1.1";
     _state = STATE::READY;
+}
+
+const char* HttpMessage::GetVersion() const 
+{
+    return _version.c_str();
+}
+
+void HttpMessage::SetVersion(const char* version)
+{
+    _version = version;
 }
 
 void HttpMessage::SetHeader(const char* key, const char* value)

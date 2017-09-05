@@ -61,7 +61,6 @@ private:
 //
 DECLARE_EXCEPTION(SocketException, Exception)
 DECLARE_EXCEPTION(AddressException, Exception)
-DECLARE_EXCEPTION(ThreadException, Exception)
 
 NETB_END
 

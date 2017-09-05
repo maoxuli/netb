@@ -19,5 +19,6 @@
 
 NETB_BEGIN
 
+const SocketInitializer s_socket_initializer;
 
 NETB_END
