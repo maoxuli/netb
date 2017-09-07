@@ -26,154 +26,172 @@
 NETB_BEGIN
 
 //
-// Wrapper function for close socket
-// the socket is closed anyway, even with errors
-// return false on errors occurred
+// Wrapper function for closing socket
+// return false on errors
+// but the socket is closed anyway, even on errors
 //
 bool CloseSocket(SOCKET s, Error* e = NULL) noexcept; 
 
 //
-// Socket is a general wrapper class of socket API related to a socket descriptor. 
-// It holds a socket descriptor and implements functions for all possible operations 
-// working on a socket descriptor. Socket object can be initialized with any kind 
-// of socket descriptor (i.e. different domain, type, and protocol), thus supports 
-// all possible operations and options for all kinds of socket descriptors. By this 
-// mean, Socket is a complete wrapper class of socket API that can complete socket 
-// programming by itself without derivation. 
+// Socket is a wrapper class for socket API related to a socket. It holds 
+// a socket descriptor and provides all possible functions working on the 
+// socket. A Socket object can be initialized to any kind of socket (with 
+// different domain, type, and protocol), so it must implement all possible 
+// functions for all kinds of sockets. Thereby, Socket class has all
+// necessary functions to open socket, set socket options, constrol socket 
+// working status, and perform I/O on a socket. By this mean, Socket is a 
+// complete socket wrapper class, which can support any socket programming 
+// without derivation. 
 // 
-// Socket is a lower level (ant very thin) wrapper of socket API with the major 
-// purpose of cross-platform programming. It provides an easy-to-use interface for 
-// socket programming with the coordination of classes Socket, SocketSelector, 
-// SocketAddress, and StreamBuffer. It also supports a mixed style error handling 
-// with classes of Error and Exception. 
-//
-// Socket maintains strict ownership semantics. If a Socket object has a valid, 
-// opened socket descriptor, then it owns the socket and will close it when the 
-// object is destroyed. By this mean Socket is a non-copyable object, it can not 
-// be passed to functions by value. 
+// Socket is a lower level (ant very thin) wrapper of socket API with the 
+// major purpose of cross-platform programming. It provides an interface 
+// that is very similar to the original socket API. But working together 
+// with classes of SocketAddress, SockeSelector, StreamBuffer, as well as 
+// Error and Exception, socket programming is more easy and more safe. 
+// 
+// In general, Socket maintains a ownership semantic. If a Socket object 
+// has a valid, opened socket descriptor, then it owns the socket and is 
+// responsible to close it when the object is destroyed. Socket is defined 
+// as a non-copyable object to avoid trouble of implicit ownership movement.
 // 
 class Socket : private Uncopyable
 {
 public: 
-    // No socket is opened
-    // Need to call Create() or Attach()
+    // Construct an object with no bound socket 
+    // Call Create() or Attach() later if necessary
     Socket() noexcept;
 
-    // Open socket for given domain, type, and protocol
+    // Construct an object with an open socket
     // No socket is opened if errors ocurred
     Socket(int domain, int type, int protocol); // throw on errors
     Socket(int domian, int type, int protocol, Error* e) noexcept; 
 
-    // Attch an externally opened socket
+    // Constuct an object and attch an externally opened socket
     explicit Socket(SOCKET s) noexcept;
 
-    // Close opened socket, failure is ignored
+    // Destructor, close opened socket
+    // failure on closing is ignored
     virtual ~Socket() noexcept;
 
-    // Open socket for given domain, type, and protocol
-    // Close currently opened socket firstly, failure is ignored
+    // Open socket
+    // Close current socket firstly
     // No socket is opened if errors occurred
     Socket& Create(int domain, int type, int protocol); // throw on error
     bool Create(int domain, int type, int protocol, Error* e) noexcept;
 
     // Attach an externally opened socket
-    // Close currently opened socket firstly, failure is ignored
+    // Close current socket firstly
     Socket& Attach(SOCKET s) noexcept;
 
     // Separate the socket form the object
-    // The opened socket is taken over by caller
+    // The ownership of the socket is taken over by caller
     SOCKET Detach() noexcept;
 
-    // Close opened socket, see close()/closesocket() of socket API
+    // Close current socket
     // Return false if error occurred
-    // Note: the socket has been always closed, even error occurred
-    // no retry is necessary  
+    // but the socke is closed anyway, even on errors
+    // see close()/closesocket() of socket API for details
     bool Close(Error* e = NULL) noexcept;
 
-    // Shutdwon the socket, see shutdown() of socket API
+    // Shutdwon the socket
     // return false if error occured
+    // see shutdown() of socket API fo details
     enum { SHUT_READ = SHUT_RD, SHUT_WRITE = SHUT_WR, SHUT_BOTH = SHUT_RDWR };
     bool Shutdown(int how = SHUT_BOTH, Error* e = NULL) noexcept; 
 
     // Validate the socket
-    bool Valid() const { return _fd != INVALID_SOCKET; }
+    bool Valid() const noexcept { return _fd != INVALID_SOCKET; }
 
     // Get descriptor of the socket
+    // the ownership of the socket is not affected
     operator SOCKET() const noexcept { return _fd; }
     SOCKET Descriptor() const noexcept { return _fd; }
 
-    // Get features of the socket
+    // Get some features of the socket
     sa_family_t Family(Error* e = NULL) const noexcept; // AF_XXX
     int Domain(Error* e = NULL) const noexcept; // PF_XXX
     int Type(Error* e = NULL) const noexcept; // SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, ...
     int Protocol(Error* e = NULL) const noexcept; // IPPROTO_TCP, IPPROTO_UDP, ...
 
 public: 
-    // Explicitly bind to a local address
+    // Explicitly bind the socket to a local address
     Socket& Bind(const SocketAddress& addr); // throw on error
     bool Bind(const SocketAddress& addr, Error* e) noexcept;
 
-    // Get local binded address
+    // Get local bound address
+    // return empty address on errors
     SocketAddress Address(Error* e = NULL) const noexcept;
 
-    // TCP socket listen to start waiting for incomming connections
+    // Listen to start waiting for incomming connections (for TCP socket only)
     enum { DEFAULT_BACKLOG = SOMAXCONN };
     Socket& Listen(int backlog = DEFAULT_BACKLOG); // Throw on errors
     bool Listen(int backlog, Error* e) noexcept;
 
-    // TCP socket accepts an incomming connection
+    // Accept an incomming connection (for TCP socket only)
+    // return INVALID_SOCKET on errors
     SOCKET Accept(); // throw on error
     SOCKET Accept(Error* e) noexcept;
 
-    // Accept with remote address
+    // Accept an incomming connection with remote address (for TCP socket only)
     // Equal to Accept() if addr is given by NULL
+    // return INVALID_SOCKET on errors
     SOCKET AcceptFrom(SocketAddress* addr); // throw on error
     SOCKET AcceptFrom(SocketAddress* addr, Error* e) noexcept;
 
-    // TCP socket connects to remote address to establish outgoing connection
-    // UDP socket connects to bind a remote address only, empty address to remove 
+    // Connect to remote address to establish outgoing connection (for TCP socket)
+    // or bind a remote address for I/O (for UDP socket), remove binding with empty address
     Socket& Connect(const SocketAddress& addr); // throw on error
     bool Connect(const SocketAddress& addr, Error* e) noexcept;
 
-    // connected status
-    bool IsConnected() const;
+    // Check connected status
+    bool IsConnected(Error* e = NULL) const;
 
     // Get connected address
-    SocketAddress ConnectedAddress(Error* e) const noexcept;
+    // return empty address on errors
+    SocketAddress ConnectedAddress(Error* e = NULL) const noexcept;
 
-    // Select events of the sockets
-    // -1: block, 0: non-block, >0: block with timeout
+    // Timeout control for read and write
+    // Return true if I/O is ready, return false if timeout or errors occurred
+    // timeout in milliseconds, -1: block, 0: non-block, >0: block with timeout
     bool WaitForRead(int timeout = -1, Error* e = NULL) noexcept;
     bool WaitForWrite(int timeout = -1, Error* e = NULL) noexcept;
 
-    // -1: errors, 0: timeout, >0: events
+    // Timeout control for I/O events
+    // Return -1 for errors, 0 for timeout, and >0 for I/O events
+    // timeout in milliseconds, -1: errors, 0: timeout, >0: events
     int WaitForReady(int timeout = -1, Error* e = NULL) noexcept; 
 
     // Send and receive data through connected socket
-    ssize_t Send(const void* p, size_t n, int flags = 0) noexcept;
-    ssize_t Send(StreamBuffer* buf, int flags = 0) noexcept;
+    ssize_t Send(const void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
+    ssize_t Send(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
 
-    ssize_t Receive(void* p, size_t n, int flags = 0) noexcept;
-    ssize_t Receive(StreamBuffer* buf, int flags = 0) noexcept;
+    ssize_t Receive(void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
+    ssize_t Receive(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
 
     // Send and receive data through non-connected socket
-    // If the socket is connected and addr is given by NULL, equivalent to Send and Receive
-    // If the socket is connected and valid addr is given, addr must be equal to connected address
-    ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int flags = 0) noexcept;
-    ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags = 0) noexcept;
+    // If the socket is connected and no addr is given, equivalent to Send() and Receive()
+    // If the socket is connected and addr is given, addr must be equal to connected address
+    ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
+    ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
 
-    ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0) noexcept;
-    ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0) noexcept;
+    ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
+    ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
+
+    // Send and recieve data hold in struct msghdr
+    // see sendmsg() and recvmsg() of socket API for details
+    ssize_t SendMessage(const struct msghdr* msg, int flags = 0, Error* e = NULL) noexcept;
+    ssize_t ReceiveMessage(struct msghdr* msg, int flags = 0, Error* e = NULL) noexcept;
 
 public: 
     // Control flag of IO mode: block or non-block
     Socket& Block(bool block); // default is block
     bool Block(bool block, Error* e) noexcept;
 
-    // Socket option of reuse address and reuse port
+    // Socket option of reuse address
     Socket& ReuseAddress(bool reuse); // default is false
     bool ReuseAddress(bool reuse, Error* e) noexcept;
 
+    // Socket option of reuse port
     Socket& ReusePort(bool reuse); // default is false
     bool ReusePort(bool reuse, Error* e) noexcept;
 
@@ -186,7 +204,13 @@ private:
     SOCKET _fd; 
 
     // Initialize socket
+    // return false on errors
     bool InitSocket(int domain, int type, int protocol, Error* e) noexcept;
+
+    // Error info
+    std::string ErrorInfo(const std::string& info) const noexcept;
+    std::string ErrorInfo(const std::string& info, SOCKET s) const noexcept;
+    std::string ErrorInfo(const std::string& info, SOCKET s, const SocketAddress& addr) const noexcept;
 };
 
 NETB_END
