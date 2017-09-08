@@ -35,8 +35,8 @@ public:
     explicit TcpSocket(const SocketAddress& addr) noexcept; // initial address
 
     // Constructor, with externally established connection
-    // address is const pointer rather reference, so could be NULL
-    TcpSocket(SOCKET s, const SocketAddress* connected) noexcept;
+    // connected addr is pointer, so could be NULL
+    TcpSocket(SOCKET s, const SocketAddress* addr) noexcept;
 
     // Destructor
     virtual ~TcpSocket() noexcept;
@@ -44,34 +44,36 @@ public:
     // Internal SOCKET descriptor is exposed for external use, e.g. for select
     SOCKET GetSocket() const noexcept { return Socket::Descriptor(); }
 
-    // Connect to remote address
-    virtual void Connect(const SocketAddress& addr); // throw on errors
-    virtual bool Connect(const SocketAddress& addr, Error* e) noexcept;
-
-    // Set connected status
+    // If the connection is established externally
+    // Must set connected status after initiating
     virtual void Connected(); // throw on errors
     virtual bool Connected(Error* e) noexcept; 
+
+    // Actively connect to remote address
+    virtual void Connect(const SocketAddress& addr); // throw on errors
+    virtual bool Connect(const SocketAddress& addr, Error* e) noexcept;
 
     // Connected status
     bool IsConnected() const noexcept { return _connected; }
 
     // Local address
-    // actual bound address after connected
+    // Given initial address or actual bound address
     SocketAddress Address(Error* e = NULL) const noexcept;
 
     // Connected address
     SocketAddress ConnectedAddress(Error* e = NULL) const noexcept;
 
     // close the socket
+    // Return false on errors, but socket is closed anyway
     bool Close(Error* e = NULL) noexcept;
 
     // Send data over the connection
-    virtual ssize_t Send(const void* p, size_t n, int flags = 0) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, int flags = 0) noexcept;
+    virtual ssize_t Send(const void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
+    virtual ssize_t Send(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
 
     // Receive data from the connection
-    virtual ssize_t Receive(void* p, size_t n, int flags = 0) noexcept;
-    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0) noexcept;
+    virtual ssize_t Receive(void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
+    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
 
 public:
     // IO mode

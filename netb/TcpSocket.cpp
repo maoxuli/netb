@@ -144,40 +144,40 @@ bool TcpSocket::Close(Error* e) noexcept
 }
 
 // Send data over connection
-ssize_t TcpSocket::Send(const void* p, size_t n, int flags) noexcept
+ssize_t TcpSocket::Send(const void* p, size_t n, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, e))
     {
         return -1;
     }
-    return Socket::Send(p, n, flags);
+    return Socket::Send(p, n, flags, e);
 }
 
-ssize_t TcpSocket::Send(StreamBuffer* buf, int flags) noexcept
+ssize_t TcpSocket::Send(StreamBuffer* buf, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, e))
     {
         return -1;
     }
-    return Socket::Send(buf, flags);
+    return Socket::Send(buf, flags, e);
 }
 
-ssize_t TcpSocket::Receive(void* p, size_t n, int flags) noexcept
+ssize_t TcpSocket::Receive(void* p, size_t n, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
     {
         return -1;
     }
-    return Socket::Receive(p, n, flags);
+    return Socket::Receive(p, n, flags, e);
 }
 
-ssize_t TcpSocket::Receive(StreamBuffer* buf, int flags) noexcept
+ssize_t TcpSocket::Receive(StreamBuffer* buf, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
     {
         return -1;
     }
-    return Socket::Receive(buf, flags);
+    return Socket::Receive(buf, flags, e);
 }
 
 //////////////////////////////////////////////////////////////////////////////////

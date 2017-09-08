@@ -23,42 +23,31 @@
 NETB_BEGIN
 
 //
-// ErrorClass is used for error classfification. 
-//
-class ErrorClass
-{
-public:
-    virtual ~ErrorClass() noexcept { }
-    virtual const char* Name() const noexcept;
-    virtual void Throw(const class Error& e) const noexcept;
-};
-const class ErrorClass& ErrorClass() noexcept;
-
-//
 // Error object is used to transfer error status from functions to caller. 
-// As a general error, it holds a text info to descript the error status. 
-// As a runtime error, it holds the error code. Actually user may also define 
-// error codes for non-runtime errors. 
+// It holds a text info to descript the error and a optional associated code 
+// number. The formats of info and code are not determined. They are varied 
+// on error classifications.
 //
 class Error
 {
 public:
-    // Error Info, Error Code
+    // No error, or empty error
     Error() noexcept;
     Error(const std::string& info, int code = 0) noexcept;
     Error(const class ErrorClass& cls, const std::string& info = "", int code = 0) noexcept;
     ~Error() noexcept;
 
     // Error status
-    operator bool() const { return _class != NULL; }
+    operator bool() const noexcept { return _class != NULL; }
+    bool Empty() const noexcept { return _class == NULL; }
 
     // Get
-    const class ErrorClass& Class() const { return *_class; }
-    const std::string& Info() const { return _info; }
-    int Code() const { return _code; }
+    const class ErrorClass& Class() const noexcept;
+    const std::string& Info() const noexcept { return _info; }
+    int Code() const noexcept { return _code; }
 
     // Set 
-    void Reset() noexcept;
+    void Reset() noexcept; // Set to empty
     void Set(const std::string& info, int code = 0) noexcept;
     void Set(const class ErrorClass& cls, const std::string& info = 0, int code = 0) noexcept;
     void SetClass(const class ErrorClass& cls) noexcept;
@@ -71,19 +60,43 @@ private:
     int _code;
 };
 
-// Usually error is returned as an out parameter (pointer) of functions. 
-// Using this macro to set error object for flexibility
+// Macros to set error object given by pointer
 #define SET_ERROR_CLASS(e, cls) do{ if(e) e->SetClass(cls); } while(0) // no trailing ;
 #define SET_ERROR_INFO(e, info) do{ if(e) e->SetInfo(info); } while(0) // no trailing ;
 #define SET_ERROR_CODE(e, code) do{ if(e) e->SetCode(code); } while(0) // no trailing ;
 
-#define SET_ERROR(e, info, code) do{ if(e) e->Set(ErrorClass(), info, code); } while(0) // no trailing ;
-
 // Throw exception based on an error
 #define THROW_ERROR(e) do{ e.Class().Throw(e); } while(0)
 
+//
+// ErrorClass is used for error classfification. 
+// The base class indicate unclassified errors and throw Exception
+//
+class ErrorClass
+{
+public:
+    virtual ~ErrorClass() noexcept { }
+    virtual const char* Name() const noexcept;
+    virtual void Throw(const class Error& e) const noexcept;
+};
+const class ErrorClass& ErrorClass() noexcept;
+
+// Macro to set error object with unclassified error class
+#define SET_ERROR(e, info, code) do{ if(e) e->Set(ErrorClass(), info, code); } while(0) // no trailing ;
+
+//
+// A dummy error class, used to indicate no error
 // 
-// Macros to declare and implement new error class
+class NoError : public ErrorClass
+{
+public:
+    const char* Name() const noexcept;
+    void Throw(const Error& e) const noexcept;
+};
+const class ErrorClass& NoError() noexcept;
+
+// 
+// Macros to declare and implement other error classes
 //
 #define DECLARE_ERROR_CLASS(CLS, BASE)                              \
     class CLS : public BASE                                         \
@@ -108,16 +121,6 @@ private:
         static class CLS s##CLS;                                    \
         return s##CLS;                                              \
     }                                                              
-
-//
-// Declare other error classes 
-//
-DECLARE_ERROR_CLASS(SocketError, ErrorClass)
-DECLARE_ERROR_CLASS(AddressError, ErrorClass)
-
-// Macros to set errors
-#define SET_SOCKET_ERROR(e, info, code) do{ if(e) e->Set(SocketError(), info, code); } while(0) // no trailing ;
-#define SET_ADDRESS_ERROR(e, info, code) do{ if(e) e->Set(AddressError(), info, code); } while(0) // no trailing ;
 
 NETB_END
 

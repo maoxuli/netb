@@ -220,6 +220,12 @@ public:
 	inline bool operator>(const SocketAddress& a) const noexcept { return (a < *this); }
 	inline bool operator<=(const SocketAddress& a) const noexcept { return !(a < *this); }
 	inline bool operator>=(const SocketAddress& a) const noexcept { return !(*this < a); }
+
+private: 
+	// Error info
+	std::string ErrorInfo(const std::string& info) const noexcept;
+	std::string ErrorInfo(const std::string& info, int value) const noexcept;
+	std::string ErrorInfo(const std::string& info, const std::string& addr) const noexcept;
 };
 
 NETB_END

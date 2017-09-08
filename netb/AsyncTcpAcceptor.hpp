@@ -54,23 +54,26 @@ public:
     // Close, and ready for open again
     virtual bool Close(Error* e = NULL) noexcept;
 
-    // Accept a connection, in block or non-block mode
+    // Accept a connection, not work in this mode
     virtual SOCKET Accept() // thow on errors
     {
-        return INVALID_SOCKET;
+        throw LogicException("Function not work in this mode.");
     }
+
     virtual SOCKET Accept(Error* e) noexcept
     {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return INVALID_SOCKET;
     }
 
-    // address is a pointer rather a reference, so could be NULL
     virtual SOCKET AcceptFrom(SocketAddress* addr) // throw on errors
     {
-        return INVALID_SOCKET;
+       throw LogicException("Function not work in this mode.");
     }
+    
     virtual SOCKET AcceptFrom(SocketAddress* addr, Error* e) noexcept
     {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return INVALID_SOCKET;
     }
 

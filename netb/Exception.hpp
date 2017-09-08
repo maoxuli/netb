@@ -24,21 +24,27 @@
 
 NETB_BEGIN
 
-class Exception : public std::runtime_error
+//
+// Declare base exception
+//
+class Exception : public std::exception
 {
 public: 
     Exception(const std::string& info = "", int code = 0) noexcept
-        : std::runtime_error(info), _code(code) { }
+        : std::exception(), _info(info), _code(code) { }
     virtual ~Exception() noexcept { }
-    virtual const class ErrorClass& Class() const noexcept;
-    virtual std::string Info() const noexcept { return runtime_error::what(); }
+    virtual const char* what() const noexcept { return _info.c_str(); }
+    virtual std::string Info() const noexcept { return _info; }
     virtual int Code() const noexcept { return _code; }
+    virtual const class ErrorClass& Class() const noexcept;
+
 private:
+    std::string _info;
     int _code;
 };
 
 //
-// Macros to declare and implement exceptions
+// Macros to declare and implement other exceptions
 //
 #define DECLARE_EXCEPTION(CLS, BASE)                                        \
     class CLS : public BASE                                                 \
@@ -56,11 +62,18 @@ private:
         return EC();                                                        \
     }                                      
 
-//
-// Declare other exceptions
-//
-DECLARE_EXCEPTION(SocketException, Exception)
-DECLARE_EXCEPTION(AddressException, Exception)
+
+// System error, errors that occurred in system calling, always with an error code
+// Marcros to declare exception, declare error class, and set error object 
+DECLARE_EXCEPTION(SystemException, Exception)
+DECLARE_ERROR_CLASS(SystemError, ErrorClass)
+#define SET_SYSTEM_ERROR(e, info) do{ if(e) e->Set(SystemError(), info, ErrorCode::Current()); } while(0) // no trailing ;
+
+// Logic error, errors of logic that produce unexcepcted results
+// Marcros to declare exception, declare error class, and set error object
+DECLARE_EXCEPTION(LogicException, Exception)
+DECLARE_ERROR_CLASS(LogicError, ErrorClass)
+#define SET_LOGIC_ERROR(e, info) do{ if(e) e->Set(LogicError(), info); } while(0) // no trailing ;
 
 NETB_END
 

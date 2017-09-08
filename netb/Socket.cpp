@@ -37,7 +37,7 @@ bool CloseSocket(SOCKET s, Error* e) noexcept
     {
         std::ostringstream info;
         info << "Errors on closing socket. [" << s << "]."; 
-        SET_SOCKET_ERROR(e, info.str(), ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, info.str());
         return false;
     }  
     return true;
@@ -92,7 +92,7 @@ bool Socket::InitSocket(int domain, int type, int protocol, Error* e) noexcept
     _fd = ::socket(domain, type, protocol);
     if(_fd == INVALID_SOCKET)
     {
-        SET_SOCKET_ERROR(e, ErrorInfo("Open socket failed."), ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, ErrorInfo("Open socket failed."));
         return false;
     }
     return true;
@@ -165,7 +165,7 @@ bool Socket::Shutdown(int how, Error* e) noexcept
     int ret = ::shutdown(_fd, how);
     if(ret < 0)
     {
-        SET_SOCKET_ERROR(e, ErrorInfo("Shutdown socket failed.", _fd), ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, ErrorInfo("Shutdown socket failed.", _fd));
         return false;
     }
     return true;
@@ -175,10 +175,6 @@ bool Socket::Shutdown(int how, Error* e) noexcept
 sa_family_t Socket::Family(Error* e) const noexcept
 {
     SocketAddress addr = Address(e);
-    if(addr.Empty() && e)
-    {
-        return PF_UNSPEC;
-    }
     return addr.Family();
 }
 
@@ -194,13 +190,18 @@ int Socket::Type(Error* e) const noexcept
     socklen_t len = sizeof(int);
     if(!GetOption(SOL_SOCKET, SO_TYPE, &type, &len, e))
     {
-        return 0;
+        return -1;
     }
     return type;
 }
 
 int Socket::Protocol(Error* e) const noexcept
 {
+    if(_fd == INVALID_SOCKET) 
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return -1;
+    }
     assert(false);
     return 0;
 }
@@ -231,7 +232,7 @@ bool Socket::Bind(const SocketAddress& addr, Error* e) noexcept
     assert(_fd != INVALID_SOCKET);
     if(::bind(_fd, addr.Addr(), addr.Length()) < 0)
     {
-        SET_SOCKET_ERROR(e, ErrorInfo("Bind address to socket failed.", _fd, addr), ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, ErrorInfo("Bind address to socket failed.", _fd, addr));
         return false;
     }
     return true;
@@ -242,11 +243,15 @@ SocketAddress Socket::Address(Error* e) const noexcept
 {
     struct sockaddr_storage addr;
     memset(&addr, 0, sizeof(struct sockaddr_storage));
-    if(_fd == INVALID_SOCKET) return addr;
+    if(_fd == INVALID_SOCKET) 
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return addr;
+    }
     socklen_t addrlen = sizeof(struct sockaddr_storage);
     if(::getsockname(_fd, (sockaddr*)&addr, &addrlen) < 0)
     {
-        SET_SOCKET_ERROR(e, ErrorInfo("Get socket local address failed.", _fd), ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, ErrorInfo("Get socket local address failed.", _fd));
     }
     return addr;
 }
@@ -268,7 +273,7 @@ bool Socket::Listen(int backlog, Error* e) noexcept
     if(_fd == INVALID_SOCKET)
     {
         SocketAddress addr(0, AF_INET); // default any address
-        if(!Bind(addr, e))
+        if(!Bind(addr, e)) // Bind will init socket by default
         {
             return false;
         }
@@ -276,7 +281,7 @@ bool Socket::Listen(int backlog, Error* e) noexcept
     assert(_fd != INVALID_SOCKET);
     if(::listen(_fd, backlog) < 0)
     {
-        SET_SOCKET_ERROR(e, ErrorInfo("Socket lsiten failed.", _fd), ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, ErrorInfo("Socket lsiten failed.", _fd));
         return false;
     }
     return true;
@@ -297,13 +302,17 @@ SOCKET Socket::Accept()
 
 SOCKET Socket::Accept(Error* e) noexcept
 {
-    assert(_fd != INVALID_SOCKET);
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return -1;
+    }
     SOCKET s;
     while((s = ::accept(_fd, NULL, NULL)) == INVALID_SOCKET)
     {
         if(!ErrorCode::IsInterrupted())
         {
-            SET_SOCKET_ERROR(e, ErrorInfo("Socket accept failed.", _fd), ErrorCode::Current());
+            SET_SYSTEM_ERROR(e, ErrorInfo("Socket accept failed.", _fd));
             break;
         }
     }
@@ -325,8 +334,12 @@ SOCKET Socket::AcceptFrom(SocketAddress* addr)
 
 SOCKET Socket::AcceptFrom(SocketAddress* addr, Error* e) noexcept
 {
-    assert(_fd != INVALID_SOCKET);
     if(!addr) return Accept(e);
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return -1;
+    }
     SOCKET s;
     addr->Reset();
     socklen_t addrlen = addr->Length();
@@ -334,7 +347,7 @@ SOCKET Socket::AcceptFrom(SocketAddress* addr, Error* e) noexcept
     {
         if(!ErrorCode::IsInterrupted())
         {
-            SET_SOCKET_ERROR(e, ErrorInfo("Socket accept failed.", _fd), ErrorCode::Current());
+            SET_SYSTEM_ERROR(e, ErrorInfo("Socket accept failed.", _fd));
             break;
         }
     }
@@ -369,11 +382,12 @@ bool Socket::Connect(const SocketAddress& addr, Error* e) noexcept
         if(ErrorCode::IsInProgress()) 
         {
             // non-block mode, status need to be checked later
+            SET_SYSTEM_ERROR(e, ErrorInfo("Connect would block.", _fd, addr));
             break;
         }
         else if(!ErrorCode::IsInterrupted())
         {
-            SET_SOCKET_ERROR(e, ErrorInfo("Socket connect failed.", _fd, addr), ErrorCode::Current());
+            SET_SYSTEM_ERROR(e, ErrorInfo("Socket connect failed.", _fd, addr));
             return false;
         }
         // Only try again when returned for interruption in block mode.
@@ -386,11 +400,15 @@ SocketAddress Socket::ConnectedAddress(Error* e) const noexcept
 {
     struct sockaddr_storage addr;
     memset(&addr, 0, sizeof(struct sockaddr_storage));
-    if(_fd == INVALID_SOCKET) return addr;
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return addr;
+    }
     socklen_t addrlen = sizeof(struct sockaddr_storage);
     if(::getpeername(_fd, (struct sockaddr*)&addr, &addrlen) < 0)
     {
-        SET_SOCKET_ERROR(e, ErrorInfo("Get socket connected address failed.", _fd), ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, ErrorInfo("Get socket connected address failed.", _fd));
     }
     return addr;
 }
@@ -399,9 +417,14 @@ SocketAddress Socket::ConnectedAddress(Error* e) const noexcept
 // -1: block, 0: non-block, >0: block with timeout
 bool Socket::WaitForRead(int timeout, Error* e) noexcept
 {
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return -1;
+    }
     SocketSelector selector(_fd, SOCKET_EVENT_READ);
     std::vector<SocketSelector::SocketEvents> sockets;
-    if(!selector.Select(sockets, timeout, e))
+    if(!selector.Select(sockets, timeout, e) || sockets.empty())
     {
         return false;
     }
@@ -413,9 +436,14 @@ bool Socket::WaitForRead(int timeout, Error* e) noexcept
 
 bool Socket::WaitForWrite(int timeout, Error* e) noexcept
 {
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return -1;
+    }
     SocketSelector selector(_fd, SOCKET_EVENT_WRITE);
     std::vector<SocketSelector::SocketEvents> sockets;
-    if(!selector.Select(sockets, timeout, e))
+    if(!selector.Select(sockets, timeout, e) || sockets.empty())
     {
         return false;
     }
@@ -428,11 +456,20 @@ bool Socket::WaitForWrite(int timeout, Error* e) noexcept
 // -1: errors, 0: timeout, >0: events
 int Socket::WaitForReady(int timeout, Error* e) noexcept
 {
-    SocketSelector selector(_fd, SOCKET_EVENT_READ | SOCKET_EVENT_WRITE);
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return -1;
+    }
+    SocketSelector selector(_fd, SOCKET_EVENT_READ | SOCKET_EVENT_WRITE | SOCKET_EVENT_EXCEPT);
     std::vector<SocketSelector::SocketEvents> sockets;
     if(!selector.Select(sockets, timeout, e))
     {
         return -1;
+    }
+    if(sockets.empty())
+    {
+        return 0;
     }
     assert(!sockets.empty());
     assert(sockets[0].fd == _fd);
@@ -447,7 +484,7 @@ ssize_t Socket::Send(const void* p, size_t n, int flags, Error* e) noexcept
 { 
     if(_fd == INVALID_SOCKET)
     {
-        SET_SOCKET_ERROR(e, ErrorInfo("Socket is not opened."), 0);
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return -1;
     }
     assert(p != NULL);
@@ -457,14 +494,14 @@ ssize_t Socket::Send(const void* p, size_t n, int flags, Error* e) noexcept
         if(ErrorCode::IsWouldBlock())
         {
             // Non-block mode returned, need to wait for ready to send
-            SET_SOCKET_ERROR(e, ErrorInfo("Send would block.", _fd), ErrorCode::Current()); 
+            SET_SYSTEM_ERROR(e, ErrorInfo("Send would block.", _fd)); 
             ret = 0;
             break;
         }
         else if(!ErrorCode::IsInterrupted())
         {
             // return on errors
-            SET_SOCKET_ERROR(e, ErrorInfo("Send errors.", _fd), ErrorCode::Current()); 
+            SET_SYSTEM_ERROR(e, ErrorInfo("Send errors.", _fd)); 
             break;
         }
         // Only try again when returned for interruption in block mode
@@ -490,7 +527,7 @@ ssize_t Socket::Receive(void* p, size_t n, int flags, Error* e) noexcept
 {
     if(_fd == INVALID_SOCKET)
     {
-        SET_SOCKET_ERROR(e, ErrorInfo("Socket is not opened."), 0);
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return -1;
     }
     assert(p != NULL);
@@ -500,14 +537,14 @@ ssize_t Socket::Receive(void* p, size_t n, int flags, Error* e) noexcept
         if(ErrorCode::IsWouldBlock())
         {
             // Non-block mode returned, need to wait for ready to receive 
-            SET_SOCKET_ERROR(e, ErrorInfo("Receive would block.", _fd), ErrorCode::Current());
+            SET_SYSTEM_ERROR(e, ErrorInfo("Receive would block.", _fd));
             ret = 0;
             break;
         }
         if(!ErrorCode::IsInterrupted())
         {
             // return on errors
-            SET_SOCKET_ERROR(e, ErrorInfo("Receive errors.", _fd), ErrorCode::Current()); 
+            SET_SYSTEM_ERROR(e, ErrorInfo("Receive errors.", _fd)); 
             break;
         }
         // Only try again when returned for interruption in block mode.
@@ -535,12 +572,12 @@ ssize_t Socket::Receive(StreamBuffer* buf, int flags, Error* e) noexcept
 // Todo: check the address is equal to remote address when connected
 ssize_t Socket::SendTo(const void* p, size_t n, const SocketAddress* addr, int flags, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
+    if(!addr) return Send(p, n, flags, e);
+    if(_fd == INVALID_SOCKET
+       && !InitSocket(addr->Family(), SOCK_STREAM, IPPROTO_TCP, e))
     {
-        SET_SOCKET_ERROR(e, ErrorInfo("Socket is not opened."), 0);
         return -1;
     }
-    if(!addr) return Send(p, n, flags, e);
     assert(p != NULL);
     ssize_t ret;
     while((ret = ::sendto(_fd, p, n, flags, addr->Addr(), addr->Length())) < 0)
@@ -548,14 +585,14 @@ ssize_t Socket::SendTo(const void* p, size_t n, const SocketAddress* addr, int f
         if(ErrorCode::IsWouldBlock())
         {
             // Non-block mode returned, need to wait for ready to send
-            SET_SOCKET_ERROR(e, ErrorInfo("SendTo would block.", _fd), ErrorCode::Current());
+            SET_SYSTEM_ERROR(e, ErrorInfo("SendTo would block.", _fd));
             ret = 0;
             break;
         }
         else if(!ErrorCode::IsInterrupted())
         {
             // return on errors
-            SET_SOCKET_ERROR(e, ErrorInfo("SendTo errors.", _fd), ErrorCode::Current());
+            SET_SYSTEM_ERROR(e, ErrorInfo("SendTo errors.", _fd));
             break;
         }
         // Only try again when returned for interruption in block mode
@@ -580,10 +617,9 @@ ssize_t Socket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags, 
 // Todo: check the address is equal to remote address when connected
 ssize_t Socket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags, Error* e) noexcept
 {
-    
     if(_fd == INVALID_SOCKET)
     {
-        SET_SOCKET_ERROR(e, ErrorInfo("Socket is not opened."), 0);
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return -1;
     }
     if(!addr) return Receive(p, n, flags, e);
@@ -595,14 +631,14 @@ ssize_t Socket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags, E
         if(ErrorCode::IsWouldBlock())
         {
             // Non-block mode returned, need to wait for ready to receive 
-            SET_SOCKET_ERROR(e, ErrorInfo("ReceiveFrom would block.", _fd), ErrorCode::Current());
+            SET_SYSTEM_ERROR(e, ErrorInfo("ReceiveFrom would block.", _fd));
             ret = 0;
             break;
         }
         if(!ErrorCode::IsInterrupted())
         {
             // return on errors
-            SET_SOCKET_ERROR(e, ErrorInfo("ReceiveFrom errors.", _fd), ErrorCode::Current());
+            SET_SYSTEM_ERROR(e, ErrorInfo("ReceiveFrom errors.", _fd));
             break;
         }
         // Only try again when returned for interruption in block mode.
@@ -623,11 +659,21 @@ ssize_t Socket::ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags, E
 
 ssize_t Socket::SendMessage(const struct msghdr* msg, int flags, Error* e) noexcept
 {
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return -1;
+    }
     assert(false);
 }
 
 ssize_t Socket::ReceiveMessage(struct msghdr* msg, int flags, Error* e) noexcept
 {
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return -1;
+    }
     assert(false);
 }
 
@@ -646,6 +692,11 @@ Socket& Socket::Block(bool block)
 
 bool Socket::Block(bool block, Error* e) noexcept
 {
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return false;
+    }
 #ifdef _WIN32
     unsigned long arg = block ? 0 : 1;
     int ret = ::ioctlsocket(_fd, FIONBIO, &arg);
@@ -657,9 +708,7 @@ bool Socket::Block(bool block, Error* e) noexcept
 #endif
     if(ret < 0)
     {
-        std::ostringstream info;
-        info << "Set socket block option failed [" << _fd << "][" << block << "].";
-        SET_SOCKET_ERROR(e, info.str(), ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, ErrorInfo("Set socket block option failed.", _fd, block));
         return false;
     }
     return true;
@@ -678,12 +727,15 @@ Socket& Socket::ReuseAddress(bool reuse)
 
 bool Socket::ReuseAddress(bool reuse, Error* e) noexcept
 {
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return false;
+    }
     int flag = reuse ? 1 : 0;
     if(::setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, int(sizeof(int))) != 0)
     {
-        std::ostringstream info;
-        info << "Set socket reuse address option failed [" << _fd << "][" << reuse << "].";
-        SET_SOCKET_ERROR(e, info.str(), ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, ErrorInfo("Set socket reuse address option failed.", _fd, reuse));
         return false;
     }
     return true;
@@ -702,6 +754,11 @@ Socket& Socket::ReusePort(bool reuse)
 
 bool Socket::ReusePort(bool reuse, Error* e) noexcept
 {
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return false;
+    }
     assert(false);
     return false;
 }
@@ -709,11 +766,16 @@ bool Socket::ReusePort(bool reuse, Error* e) noexcept
 // Set socket options
 bool Socket::SetOption(int level, int name, const void* val, socklen_t len, Error* e) noexcept
 {
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return false;
+    }
     if(::setsockopt(_fd, level, name, val, len) < 0)
     {
         std::ostringstream info;
         info << "Set socket option failed [" << _fd << "][" << level << "," << name << "," << val << "," << len << "].";
-        SET_SOCKET_ERROR(e, info.str(), ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, info.str());
         return false;
     }
     return true;
@@ -722,11 +784,16 @@ bool Socket::SetOption(int level, int name, const void* val, socklen_t len, Erro
 // Get socket options
 bool Socket::GetOption(int level, int name, void* val, socklen_t* len, Error* e) const noexcept
 {
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return false;
+    }
     if(::getsockopt(_fd, level, name, val, len) < 0)
     {
         std::ostringstream info;
         info << "Get socket option failed [" << _fd << "][" << level << "," << name << "," << val << "," << len << "].";
-        SET_SOCKET_ERROR(e, info.str(), ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, info.str());
         return false;
     }
     return true;

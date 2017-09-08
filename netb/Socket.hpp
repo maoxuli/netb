@@ -210,6 +210,7 @@ private:
     // Error info
     std::string ErrorInfo(const std::string& info) const noexcept;
     std::string ErrorInfo(const std::string& info, SOCKET s) const noexcept;
+    std::string ErrorInfo(const std::string& info, SOCKET s, bool value) const noexcept;
     std::string ErrorInfo(const std::string& info, SOCKET s, const SocketAddress& addr) const noexcept;
 };
 

@@ -149,7 +149,7 @@ socklen_t SocketAddress::Length(Error* e) const noexcept
     }
     if(this->ss_family != AF_UNSPEC)
     {
-        SET_ERROR(e, "Unsupported address family.", ErrorCode::UnsupportedFamily());
+        SET_LOGIC_ERROR(e, ErrorInfo("Unsupported address family.", this->ss_family));
         return 0;
     }
     return sizeof(struct sockaddr_storage);
@@ -204,9 +204,7 @@ bool SocketAddress::Host(const std::string& host, Error* e) noexcept
     }
     else // unsupported family
     {
-        std::ostringstream info;
-        info << "Set host address but family is not supported [" << ToString() << "].";
-        SET_ADDRESS_ERROR(e, info.str(), ErrorCode::UnsupportedFamily());
+        SET_LOGIC_ERROR(e, ErrorInfo("Unsupported address family.", this->ss_family));
         return false;
     }
     // error on inet_pton
@@ -214,27 +212,17 @@ bool SocketAddress::Host(const std::string& host, Error* e) noexcept
     {
         if(ret == 0) // src does not contain a character string representing a valid network address in the specified address family.
         {
-            // Todo: analyze the string to check if FamilyMismatchException
-            std::ostringstream info;
-            info << "Convert string to IP address but string not contain a valid IP address in the family [" << host << "] [" << ToString() << "]."; 
-            SET_ADDRESS_ERROR(e, info.str(), 0);
-            return false;
+            SET_LOGIC_ERROR(e, ErrorInfo("inet_pton arg is not a valid address.", host));
         }
         else if(ret == -1)
         {
-            if(ErrorCode::IsUnsupportedFamily())
-            {
-                std::ostringstream info;
-                info << "Convert string to IP address but family is supported [" << host << "] [" << ToString() << "].";
-                SET_ADDRESS_ERROR(e, info.str(), ErrorCode::UnsupportedFamily());
-                return false;
-            }
+            SET_SYSTEM_ERROR(e, ErrorInfo("inet_pton return system errors."));
         }
         else // unknown error
         {
-            SET_ADDRESS_ERROR(e, "Convert string to IP address failed with unknown reason.", 0);
-            return false;
+            SET_LOGIC_ERROR(e, ErrorInfo("inet_pton return unknown errors.", ret));
         }  
+        return false;
     }
     return true;
 }
@@ -264,9 +252,7 @@ bool SocketAddress::Port(unsigned short port, Error* e) noexcept
     }
     else // unsupported family
     {
-        std::ostringstream info;
-        info << "Set port but family is not supported [" << ToString() << "].";
-        SET_ADDRESS_ERROR(e, info.str(), ErrorCode::UnsupportedFamily());
+        SET_LOGIC_ERROR(e, ErrorInfo("Unsupported address family", this->ss_family));
         return false;
     }
     return true;
@@ -297,7 +283,7 @@ std::string SocketAddress::Host(Error* e) const noexcept
             return host;
         }
         assert(false);
-        SET_ADDRESS_ERROR(e, "inet_ntop failed.", 0);
+        SET_SYSTEM_ERROR(e, "inet_ntop failed.");
     }
     else if(this->ss_family == AF_INET6)
     {
@@ -308,15 +294,15 @@ std::string SocketAddress::Host(Error* e) const noexcept
             return host;
         }
         assert(false);
-        SET_ADDRESS_ERROR(e, "inet_ntop failed.", 0);
+        SET_SYSTEM_ERROR(e, "inet_ntop failed.");
     }
     else if(this->ss_family == AF_UNSPEC)
     {
-        SET_ADDRESS_ERROR(e, "Address is empty.", 0);
+        SET_LOGIC_ERROR(e, ErrorInfo("Empty address."));
     }
     else
     {
-        SET_ADDRESS_ERROR(e, "Unsupported address family", ErrorCode::UnsupportedFamily());
+        SET_LOGIC_ERROR(e, ErrorInfo("Unsupported address family,", this->ss_family));
     }
     return "";
 }
@@ -346,11 +332,11 @@ unsigned short SocketAddress::Port(Error* e) const noexcept
     }
     else if(this->ss_family == AF_UNSPEC)
     {
-        SET_ADDRESS_ERROR(e, "Address is empty.", 0);
+        SET_LOGIC_ERROR(e, ErrorInfo("Empty address."));
     }
     else
     {
-        SET_ADDRESS_ERROR(e, "Unsupported address family", ErrorCode::UnsupportedFamily());
+        SET_LOGIC_ERROR(e, ErrorInfo("Unsupported address family,", this->ss_family));
     }
     return 0;
 }
@@ -402,9 +388,9 @@ std::string SocketAddress::ToString(Error* e) const noexcept
 {    
     char namebuf[1024];
     namebuf[0] = '\0';
-    if(getnameinfo(Addr(), Length(), namebuf, sizeof(namebuf), 0, 0, NI_NUMERICHOST) != 0)
+    if(::getnameinfo(Addr(), Length(), namebuf, sizeof(namebuf), 0, 0, NI_NUMERICHOST) != 0)
     {
-        SET_ADDRESS_ERROR(e, "getnameinfo failed.", ErrorCode::Current());
+        SET_SYSTEM_ERROR(e, "getnameinfo failed.");
         return "";
     }
     std::ostringstream oss;

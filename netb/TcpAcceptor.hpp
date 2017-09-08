@@ -49,6 +49,7 @@ public:
 
     // Close, stop to accept incomming connection
     // Close the socket, ready for open again
+    // return false on errors, but socket is closed anyway
     virtual bool Close(Error* e = NULL) noexcept;
 
     // Status

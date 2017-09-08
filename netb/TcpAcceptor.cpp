@@ -67,14 +67,15 @@ void TcpAcceptor::Open()
 // Open on saved address
 bool TcpAcceptor::Open(Error* e) noexcept
 {
-    if(_opened) 
+    // Always let caller close 
+    if(_opened)
     {
-        SET_SOCKET_ERROR(e, "TcpAcceptor has been opened.", 0);
+        SET_LOGIC_ERROR(e, "Has been opened already.");
         return false;
     }
+    // Open on initial address
     SocketAddress addr(_address); 
-    // If no address is given, use default family and any local address (0:0)
-    if(addr.Empty())
+    if(addr.Empty()) // If no initial address, any address for default family
     {
         addr.Reset(AF_INET); // noexcept
     }
@@ -94,25 +95,22 @@ void TcpAcceptor::Open(const SocketAddress& addr)
 // Open on given address
 bool TcpAcceptor::Open(const SocketAddress& addr, Error* e) noexcept
 {
+    // Always let caller close 
     if(_opened)
     {
-        SET_SOCKET_ERROR(e, "TcpAcceptor has been opened already.", 0);
+        SET_LOGIC_ERROR(e, "Has been opened already.");
         return false;
     }
-    assert(!Socket::Valid());
-    // if socket is not yet init, create it now
+
+    // if socket is not yet init, do it now
     if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP, e))
     {
         return false;
     }
-    // bind to address
-    if(!Socket::Bind(addr, e) || !Socket::Listen(_backlog, e))
-    {
-        return false;
-    }
-    // Save bound address
-    _address = addr;
-    return true;
+    assert(!Socket::Valid());
+
+    // bind address and listen
+    return Socket::Bind(addr, e) && Socket::Listen(_backlog, e);
 }
 
 // Close socket, stop to accept incomming connection
@@ -124,8 +122,10 @@ bool TcpAcceptor::Close(Error* e) noexcept
 
 SocketAddress TcpAcceptor::Address(Error* e) const noexcept
 {
-    if(IsOpened())
+    if(_opened)
+    {
         return Socket::Address();
+    }
     return _address;
 }
 
@@ -143,6 +143,11 @@ SOCKET TcpAcceptor::Accept()
 
 SOCKET TcpAcceptor::Accept(Error* e) noexcept
 {
+    if(!_opened)
+    {
+        SET_LOGIC_ERROR(e, "Not opened yet.");
+        return INVALID_SOCKET;
+    }
     if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
     {
         return INVALID_SOCKET;
@@ -168,6 +173,11 @@ SOCKET TcpAcceptor::AcceptFrom(SocketAddress* addr, Error* e) noexcept
     {
         return Accept(e);
     }
+    if(!_opened)
+    {
+        SET_LOGIC_ERROR(e, "Not opened yet.");
+        return INVALID_SOCKET;
+    }
     if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
     {
         return INVALID_SOCKET;
@@ -192,7 +202,7 @@ bool TcpAcceptor::Backlog(int size, Error* e) noexcept
 {
     if(size < 1)
     {
-        SET_ERROR(e, "Invalid backlog for TCP socket.", 0);
+        SET_LOGIC_ERROR(e, "Invalid backlog for TCP socket.");
         return false;
     } 
     _backlog = size;

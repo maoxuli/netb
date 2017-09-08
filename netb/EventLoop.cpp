@@ -47,19 +47,21 @@ void EventLoop::Run()
     
     while(!_stop)
     {
-        // Seleting on events
+        // Block to wait for active events
         _active_handlers.clear();
-        _selector.WaitForEvents(_active_handlers, -1); // Block to wait for active events
-        // Events handling
-        _event_handling = true;
-        for(std::vector<EventHandler*>::const_iterator it = _active_handlers.begin();
-             it != _active_handlers.end(); ++it)
+        if(_selector.WaitForEvents(_active_handlers, -1, NULL) && !_active_handlers.empty()) 
         {
-            _current_handler = *it;
-            _current_handler->HandleEvents();
+            // Events handling
+            _event_handling = true;
+            for(std::vector<EventHandler*>::const_iterator it = _active_handlers.begin();
+                it != _active_handlers.end(); ++it)
+            {
+                _current_handler = *it;
+                _current_handler->HandleEvents();
+            }
+            _current_handler = NULL;
+            _event_handling = false;
         }
-        _current_handler = NULL;
-        _event_handling = false;
         // Invoking Queued functions
         std::vector<const Functor> functions;
         _queue_invoking = true;

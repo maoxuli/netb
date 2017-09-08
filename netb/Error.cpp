@@ -20,9 +20,7 @@
 
 NETB_BEGIN
 
-//
-// Error
-//
+// No error, dummy error class
 Error::Error() noexcept
 : _class(NULL)
 , _info("")
@@ -31,6 +29,7 @@ Error::Error() noexcept
 
 }
 
+// Unclassified error, base error class
 Error::Error(const std::string& info, int code) noexcept
 : _class(&ErrorClass())
 , _info(info)
@@ -53,6 +52,16 @@ Error::~Error() noexcept
 
 }
 
+const class ErrorClass& Error::Class() const noexcept 
+{
+    if(_class != NULL) 
+    {
+        return *_class;
+    }
+    return NoError();
+}
+
+// Set to no error, empty error
 void Error::Reset() noexcept
 {
     _class = NULL;
@@ -64,7 +73,7 @@ void Error::Set(const std::string& info, int code) noexcept
 {
     _info = info;
     _code = code; 
-    if(!_class) _class = &ErrorClass();
+    if(_class == NULL) _class = &ErrorClass();
 }
 
 void Error::Set(const class ErrorClass& cls, const std::string& info, int code) noexcept
@@ -82,18 +91,18 @@ void Error::SetClass(const class ErrorClass& cls) noexcept
 void Error::SetInfo(const std::string& info) noexcept
 {
     _info = info;
-    if(!_class) _class = &ErrorClass();
+    if(_class == NULL) _class = &ErrorClass();
 }
 
 void Error::SetCode(int code) noexcept
 {
     _code = code;
-    if(!_class) _class = &ErrorClass();
+    if(_class == NULL) _class = &ErrorClass();
 }
 
-//
-// ErrorClass
-//
+////////////////////////////////////////////////////////////////////////
+
+// Implement unclassified error class
 const char* ErrorClass::Name() const noexcept
 {
     return "Error";
@@ -110,10 +119,23 @@ const class ErrorClass& ErrorClass() noexcept
     return sErrorClass;
 }
 
-//
-// Implement other error classes
-//
-IMPLEMENT_ERROR_CLASS(SocketError, "SocketError", SocketException)
-IMPLEMENT_ERROR_CLASS(AddressError, "AddressError", AddressException)
+///////////////////////////////////////////////////////////////////////
+
+// Implement dummy error class
+const char* NoError::Name() const noexcept
+{
+    return "";
+}
+
+void NoError::Throw(const Error& e) const noexcept
+{
+
+}
+
+const class ErrorClass& NoError() noexcept 
+{
+    static class NoError sNoError;
+    return sNoError;
+}
 
 NETB_END

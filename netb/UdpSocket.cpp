@@ -70,10 +70,7 @@ void UdpSocket::Open()
 // return false on errors
 bool UdpSocket::Open(Error* e) noexcept
 {
-    if(_opened)
-    {
-        return true;
-    }
+    if(_opened)  return true;
     SocketAddress addr(_address);
     if(addr.Empty())
     {
@@ -134,9 +131,9 @@ bool UdpSocket::Close(Error* e) noexcept
 // return empty address on errors
 SocketAddress UdpSocket::Address(Error* e) const noexcept
 {
-    if(IsOpened())
+    if(_opened)
     {
-        return Socket::Address();
+        return Socket::Address(e);
     }
     return _address;
 }
@@ -157,6 +154,7 @@ void UdpSocket::Connect(const SocketAddress& addr)
 // return false on errors
 bool UdpSocket::Connect(const SocketAddress& addr, Error* e) noexcept
 {
+    assert(!addr.Empty());
     if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
     {
         return false;
@@ -175,6 +173,7 @@ bool UdpSocket::Connect(const SocketAddress& addr, Error* e) noexcept
         return false;
     }
     _connected_address = addr;
+    _connected = !_connected_address.Empty();
     return true;
 }
 
@@ -184,7 +183,7 @@ SocketAddress UdpSocket::ConnectedAddress(Error* e) const noexcept
 {
     if(!_connected)
     {
-        SET_SOCKET_ERROR(e, "Not connected.", 0);
+        SET_LOGIC_ERROR(e, "Not connected.");
         return _connected_address;
     }
     return Socket::ConnectedAddress(e);
@@ -192,90 +191,90 @@ SocketAddress UdpSocket::ConnectedAddress(Error* e) const noexcept
 
 // Send data to given address
 // Todo: check connected status and conflict with connected address
-ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, int flags) noexcept
+ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, e))
     {
         return -1;
     }
-    return Socket::SendTo(p, n, addr, flags);
+    return Socket::SendTo(p, n, addr, flags, e);
 }
 
 // Send data to given address
 // Todo: check connected status and conflict with connected address
-ssize_t UdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags) noexcept
+ssize_t UdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, e))
     {
         return -1;
     }
-    return Socket::SendTo(buf, addr, flags);
+    return Socket::SendTo(buf, addr, flags, e);
 }
 
 // Send data to connected address
 // Todo: check connected status
-ssize_t UdpSocket::Send(const void* p, size_t n, int flags) noexcept
+ssize_t UdpSocket::Send(const void* p, size_t n, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, e))
     {
         return -1;
     }
-    return Socket::Send(p, n, flags);
+    return Socket::Send(p, n, flags, e);
 }
 
 // Send data to connected address
 // Todo: check connected status
-ssize_t UdpSocket::Send(StreamBuffer* buf, int flags) noexcept
+ssize_t UdpSocket::Send(StreamBuffer* buf, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, e))
     {
         return -1;
     }
-    return Socket::Send(buf, flags);
+    return Socket::Send(buf, flags, e);
 }
 
 // Receive data and get remote address
 // Todo: check connected status
-ssize_t UdpSocket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags) noexcept
+ssize_t UdpSocket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
     {
         return -1;
     }
-    return Socket::ReceiveFrom(p, n, addr, flags);
+    return Socket::ReceiveFrom(p, n, addr, flags, e);
 }
 
 // Receive data and get remote address
 // Todo: check connected status
-ssize_t UdpSocket::ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags) noexcept
+ssize_t UdpSocket::ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
     {
         return -1;
     }
-    return Socket::ReceiveFrom(buf, addr, flags);
+    return Socket::ReceiveFrom(buf, addr, flags, e);
 }
 
 // Receive data from connected address
 // Todo: check connected status
-ssize_t UdpSocket::Receive(void* p, size_t n, int flags) noexcept
+ssize_t UdpSocket::Receive(void* p, size_t n, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
     {
         return -1;
     }
-    return Socket::Receive(p, n, flags);
+    return Socket::Receive(p, n, flags, e);
 }
 
 // Receive data from connected address
 // Todo: check connected status
-ssize_t UdpSocket::Receive(StreamBuffer* buf, int flags) noexcept
+ssize_t UdpSocket::Receive(StreamBuffer* buf, int flags, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, NULL))
+    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
     {
         return -1;
     }
-    return Socket::Receive(buf, flags);
+    return Socket::Receive(buf, flags, e);
 }
 
 /////////////////////////////////////////////////////////////////////////////

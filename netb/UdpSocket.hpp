@@ -29,9 +29,7 @@ NETB_BEGIN
 class UdpSocket : private Socket
 {
 public:
-    // Constructor, with local address info
-    // The socket will not created and local address is not bound in construction
-    // but both will happen implicitly if it is necessary for a function call.
+    // Constructor, with initial local address
     UdpSocket() noexcept; // no address
     explicit UdpSocket(sa_family_t family) noexcept; // any address of given family
     explicit UdpSocket(const SocketAddress& addr) noexcept; // initial address
@@ -42,17 +40,19 @@ public:
     // Internal socket is exposed for external use, e.g. for select
     SOCKET GetSocket() const noexcept { return Socket::Descriptor(); }
 
-    // Open
+    // Open to receive data
     // Create socket and bind to initial local address
     virtual void Open(); // throw on errors
     virtual bool Open(Error* e) noexcept;
 
-    // Open
+    // Open to receive data
     // Create socket and bind to given address
     virtual void Open(const SocketAddress& addr); // throw on errors
     virtual bool Open(const SocketAddress& addr, Error* e) noexcept;
 
-    // Close opened socket
+    // Close opened socket, and ready for open again
+    // return false when errors occurred
+    // but the socket is closed anyway, even with errors
     virtual bool Close(Error* e = NULL) noexcept;
 
     // Status of opened
@@ -75,20 +75,20 @@ public:
     SocketAddress ConnectedAddress(Error* e = NULL) const noexcept;
 
     // Send data to given address
-    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int flags = 0) noexcept;
-    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags = 0) noexcept;
+    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
+    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
 
     // Send data to connected address
-    virtual ssize_t Send(const void* p, size_t n, int flags = 0) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, int flags = 0) noexcept;
+    virtual ssize_t Send(const void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
+    virtual ssize_t Send(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
 
     // Receive data and get remote address
-    virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0) noexcept;
-    virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0) noexcept;
+    virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
+    virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
 
     // Receive data from connected address
-    virtual ssize_t Receive(void* p, size_t n, int flags = 0) noexcept;
-    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0) noexcept;
+    virtual ssize_t Receive(void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
+    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
 
 public:
     // IO mode

@@ -171,14 +171,14 @@ bool AsyncTcpSocket::Close(Error* e) noexcept
 // The actual number of bytes that was sent out is notified with SentCallback.
 // return a number less than the data size, indicate the sending buffer is full.
 // return value is less than 0, indicate errors occurred. 
-ssize_t AsyncTcpSocket::Send(const void* p, size_t n, int flags) noexcept
+ssize_t AsyncTcpSocket::Send(const void* p, size_t n, int flags, Error* e) noexcept
 {
     if(_loop->IsInLoopThread())
     {
         ssize_t sent = 0;
         if(_out_buffer.Empty())
         {
-            sent = TcpSocket::Send(p, n, flags);
+            sent = TcpSocket::Send(p, n, flags, e);
         }
         if(sent < n) // async send
         {
@@ -203,9 +203,9 @@ ssize_t AsyncTcpSocket::Send(const void* p, size_t n, int flags) noexcept
 // Send data
 // The actual data sending must be done on the thread loop 
 // to ensure the order of data sending
-ssize_t AsyncTcpSocket::Send(StreamBuffer* buf, int flags) noexcept
+ssize_t AsyncTcpSocket::Send(StreamBuffer* buf, int flags, Error* e) noexcept
 {
-    ssize_t ret = Send(buf->Read(), buf->Readable(), flags);
+    ssize_t ret = Send(buf->Read(), buf->Readable(), flags, e);
     if(ret > 0)
     {
         buf->Read(ret);

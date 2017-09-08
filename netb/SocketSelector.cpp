@@ -137,7 +137,8 @@ void SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout)
 }
 
 // Select sockets with active events
-// timeout seconds, -1 for block
+// timeout of miliseconds, -1 for block
+// Return false for errors
 bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Error* e) noexcept
 {
     ssize_t ret = 0;
@@ -159,49 +160,46 @@ bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Err
             ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, &tv); 
         }
 
-        if(ret == 0)
+        if(ret < 0) // errors
         {
-            // timeout, return with error
-            SET_SOCKET_ERROR(e, "Socket select timeout.", ErrorCode::Timeout());
+            // only try again on system interruption
+            if(ErrorCode::IsInterrupted())
+            {
+                continue;
+            }
+            // otherwise return with errors
+            SET_SYSTEM_ERROR(e, "Socket select failed.");
             return false;
         }
-        else if(ret < 0)
-        {
-            // only try again on system interruption, otherwise return with errors
-            if(!ErrorCode::IsInterrupted())
-            {
-                SET_SOCKET_ERROR(e, "Socket select failed.", ErrorCode::Current());
-                return false;
-            }
-        }
-        else  // succeed, breakl to process
-        {
-            break;
-        }
+        // success, proceed
+        break;
     }
+
     // Check active sockets if not timeout
     sockets.clear();
-    for(std::vector<SOCKET>::iterator it = _sockets.begin(), 
-        end = _sockets.end(); it != end; ++it)
+    if(ret > 0)
     {
-        SOCKET fd = *it;
-        int events = SOCKET_EVENT_NONE;
-        if(FD_ISSET(fd, &_active_read_set))
+        for(auto it = _sockets.begin(), end = _sockets.end(); it != end; ++it)
         {
-            events |= SOCKET_EVENT_READ;
-        }
-        if(FD_ISSET(fd, &_active_write_set))
-        {
-            events |= SOCKET_EVENT_WRITE;
-        }
-        if(FD_ISSET(fd, &_active_except_set))
-        {
-            events |= SOCKET_EVENT_EXCEPT;
-        }
+            SOCKET fd = *it;
+            int events = SOCKET_EVENT_NONE;
+            if(FD_ISSET(fd, &_active_read_set))
+            {
+                events |= SOCKET_EVENT_READ;
+            }
+            if(FD_ISSET(fd, &_active_write_set))
+            {
+                events |= SOCKET_EVENT_WRITE;
+            }
+            if(FD_ISSET(fd, &_active_except_set))
+            {
+                events |= SOCKET_EVENT_EXCEPT;
+            }
 
-        if(events != SOCKET_EVENT_NONE)
-        {
-            sockets.push_back(SocketEvents(fd, events));
+            if(events != SOCKET_EVENT_NONE)
+            {
+                sockets.push_back(SocketEvents(fd, events));
+            }
         }
     }
     return true;

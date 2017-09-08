@@ -58,16 +58,18 @@ public:
     virtual bool Close(Error* e = NULL) noexcept;
 
     // Send data over the connection
-    virtual ssize_t Send(const void* p, size_t n, int flags = 0) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, int flags = 0) noexcept;
+    virtual ssize_t Send(const void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
+    virtual ssize_t Send(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
 
     // Receive data from the connection
-    virtual ssize_t Receive(void* p, size_t n, int flags = 0) noexcept
+    virtual ssize_t Receive(void* p, size_t n, int flags = 0, Error* e = NULL) noexcept
     {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
     }
-    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0) noexcept
+    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept
     {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
     }
 
