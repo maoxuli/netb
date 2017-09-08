@@ -153,7 +153,7 @@ bool AsyncUdpSocket::Close(Error* e) noexcept
     return false;
 }
 
-ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, int flags) noexcept
+ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, int flags, Error* e) noexcept
 {
     // Out of thread sending, lock and buffer
     if(!_loop->IsInLoopThread())
@@ -166,7 +166,7 @@ ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* add
     ssize_t sent = 0;
     if(_out_buffers.empty())
     {
-        sent = UdpSocket::SendTo(p, n, addr, flags);
+        sent = UdpSocket::SendTo(p, n, addr, flags, e);
     }
     if(sent < n)
     {
@@ -176,9 +176,9 @@ ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* add
     return sent;
 }
 
-ssize_t AsyncUdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags) noexcept
+ssize_t AsyncUdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags, Error* e) noexcept
 {
-    ssize_t sent = SendTo(buf->Read(), buf->Readable(), addr);
+    ssize_t sent = SendTo(buf->Read(), buf->Readable(), addr, flags, e);
     if(sent > 0)
     {
         buf->Read(sent);
@@ -186,13 +186,13 @@ ssize_t AsyncUdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int
     return sent;
 }
 
-ssize_t AsyncUdpSocket::Send(const void* p, size_t n, int flags) noexcept
+ssize_t AsyncUdpSocket::Send(const void* p, size_t n, int flags, Error* e) noexcept
 {
     assert(false);
     return -1;
 }
 
-ssize_t AsyncUdpSocket::Send(StreamBuffer* buf, int flags) noexcept
+ssize_t AsyncUdpSocket::Send(StreamBuffer* buf, int flags, Error* e) noexcept
 {
     assert(false);
     return -1;

@@ -102,7 +102,6 @@ void Error::SetCode(int code) noexcept
 
 ////////////////////////////////////////////////////////////////////////
 
-// Implement unclassified error class
 const char* ErrorClass::Name() const noexcept
 {
     return "Error";
@@ -132,7 +131,7 @@ void NoError::Throw(const Error& e) const noexcept
 
 }
 
-const class ErrorClass& NoError() noexcept 
+const class NoError& NoError() noexcept 
 {
     static class NoError sNoError;
     return sNoError;

@@ -65,30 +65,34 @@ public:
     virtual bool Close(Error* e = NULL) noexcept;
 
     // Send data to given address
-    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int flags = 0) noexcept;
-    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags = 0) noexcept;
+    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
+    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
 
     // Send data to connected address
-    virtual ssize_t Send(const void* p, size_t n, int flags = 0) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, int flags = 0) noexcept;
+    virtual ssize_t Send(const void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
+    virtual ssize_t Send(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
 
     // Receive data and get remote address
-    virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0) noexcept
+    virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept
     {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
     }
-    virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0) noexcept
+    virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept
     {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
     }
 
     // Receive data from connected address
-    virtual ssize_t Receive(void* p, size_t n, int flags = 0) noexcept
+    virtual ssize_t Receive(void* p, size_t n, int flags = 0, Error* e = NULL) noexcept
     {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
     }
-    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0) noexcept
+    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept
     {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
     }
 

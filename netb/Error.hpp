@@ -71,11 +71,12 @@ private:
 //
 // ErrorClass is used for error classfification. 
 // The base class indicate unclassified errors and throw Exception
+// The ErrorClass is a bridge between Error and Exception. Usually an ErrorClass 
+// is defined for a Exception.
 //
 class ErrorClass
 {
 public:
-    virtual ~ErrorClass() noexcept { }
     virtual const char* Name() const noexcept;
     virtual void Throw(const class Error& e) const noexcept;
 };
@@ -93,7 +94,7 @@ public:
     const char* Name() const noexcept;
     void Throw(const Error& e) const noexcept;
 };
-const class ErrorClass& NoError() noexcept;
+const class NoError& NoError() noexcept;
 
 // 
 // Macros to declare and implement other error classes
@@ -105,7 +106,11 @@ const class ErrorClass& NoError() noexcept;
         const char* Name() const noexcept;                          \
         void Throw(const Error& e) const noexcept;                  \
     };                                                              \
-    const class ErrorClass& CLS() noexcept;
+    const class CLS& CLS() noexcept                                 \
+    {                                                               \
+        static class CLS s##CLS;                                    \
+        return s##CLS;                                              \
+    }  
 
 #define IMPLEMENT_ERROR_CLASS(CLS, NAME, EXCEPTION)                 \
     const char* CLS::Name() const noexcept                          \
@@ -115,12 +120,7 @@ const class ErrorClass& NoError() noexcept;
     void CLS::Throw(const Error& e) const noexcept                  \
     {                                                               \
         if(e) throw EXCEPTION(e.Info(), e.Code());                  \
-    }                                                               \
-    const class ErrorClass& CLS() noexcept                          \
-    {                                                               \
-        static class CLS s##CLS;                                    \
-        return s##CLS;                                              \
-    }                                                              
+    }                                                     
 
 NETB_END
 
