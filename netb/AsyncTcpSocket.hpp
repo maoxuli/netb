@@ -32,13 +32,17 @@ NETB_BEGIN
 class AsyncTcpSocket : public TcpSocket
 {
 public:
-    // Constructor, with local address info
+    // Any local address, family is given by connected address
     explicit AsyncTcpSocket(EventLoop* loop) noexcept;
-    AsyncTcpSocket(EventLoop* loop, sa_family_t family) noexcept; 
-    AsyncTcpSocket(EventLoop* loop, const SocketAddress& addr) noexcept;
 
-    // Constructor, with externally established connection
-    AsyncTcpSocket(EventLoop* loop, SOCKET s, const SocketAddress* connected) noexcept;
+    // Any local address of given family, only working in given family
+    AsyncTcpSocket(EventLoop* loop, sa_family_t family) noexcept; 
+
+    // Fixed local address, only working in the family of given address
+    AsyncTcpSocket(EventLoop* loop, const SocketAddress& addr, bool reuse_addr = true, bool reuse_port = true) noexcept;
+
+    // Externally established connection with connected address
+    AsyncTcpSocket(EventLoop* loop, SOCKET s, const SocketAddress* addr) noexcept;
 
     // Destructor
     virtual ~AsyncTcpSocket() noexcept;
@@ -46,34 +50,28 @@ public:
     // Event loop is exposed for external use
     EventLoop* GetLoop() const noexcept { return _loop; }
 
-    // Connect to given address to establish connection
-    virtual void Connect(const SocketAddress& addr); // throw on erros
-    virtual bool Connect(const SocketAddress& addr, Error* e) noexcept;
-
-    // Set status of connected directly once connection is established externally
-    virtual void Connected(); // throw on errors
+    // Set status for externally established connection
+    // Enable async facility
     virtual bool Connected(Error* e) noexcept;
 
+    // Actively connect to remote address, in block mode
+    // Enable async facility on success
+    virtual bool Connect(const SocketAddress& addr, Error* e) noexcept;
+
+    // Actively connect to remote address, in non-block mode with timeout
+    // timeout of -1 for block mode
+    // Enable async facility on success
+    virtual bool Connect(const SocketAddress& addr, int timeout, Error* e) noexcept;
+
     // Close the connection
-    virtual bool Close(Error* e = NULL) noexcept;
+    // Clean asycn facility
+    virtual bool Close(Error* e = nullptr) noexcept;
 
     // Send data over the connection
-    virtual ssize_t Send(const void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
+    // in async mode, send always return immediately and data is buffered
+    virtual ssize_t Send(const void* p, size_t n, Error* e = nullptr) noexcept;
 
-    // Receive data from the connection
-    virtual ssize_t Receive(void* p, size_t n, int flags = 0, Error* e = NULL) noexcept
-    {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
-        return -1;
-    }
-    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept
-    {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
-        return -1;
-    }
-
-    // Notification of connected
+    // Notification of connected status
     typedef std::function<void (AsyncTcpSocket*, bool)> ConnectedCallback;
     void SetConnectedCallback(const ConnectedCallback& cb) noexcept { _connected_callback = cb; }
 
@@ -84,7 +82,48 @@ public:
     // Notification of data is received
     typedef std::function<void (AsyncTcpSocket*, StreamBuffer*)> ReceivedCallback;
     void SetReceivedCallback(const ReceivedCallback& cb) noexcept { _received_callback = cb; };
-        
+
+public:
+    // In asynchronous mode, send always working in async mode
+    // Send data over the connection, in non-block mode with timeout
+    virtual ssize_t Send(const void* p, size_t n, int timeout, Error* e = nullptr) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return -1;
+    }
+
+    virtual ssize_t Send(StreamBuffer* buf, int timeout, Error* e = nullptr) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return -1;
+    }
+
+   // In asynchronous mode, data is received internally
+   // and notify application by ReceivedCallback
+    virtual ssize_t Receive(void* p, size_t n, Error* e = nullptr) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return -1;
+    }
+
+    virtual ssize_t Receive(StreamBuffer* buf, Error* e = nullptr) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return -1;
+    }
+
+    virtual ssize_t Receive(void* p, size_t n, int timeout, Error* e = nullptr) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return -1;
+    }
+
+    virtual ssize_t Receive(StreamBuffer* buf, int timeout, Error* e = nullptr) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return -1;
+    }
+
 private:
     // Async facility
     EventLoop* _loop;
@@ -93,18 +132,22 @@ private:
     SentCallback _sent_callback;
     ReceivedCallback _received_callback;
 
-    // Buffer for receiving and sending
+    // Receiving buffer
     StreamBuffer _in_buffer;
+
+    // Sending buffer
     StreamBuffer _out_buffer;
     std::mutex _out_buffer_mutex;
 
-    // Enable reading and writing
-    bool EnableReading(Error* e = NULL) noexcept;
-    bool EnableWriting(Error* e = NULL) noexcept;
+    // Register I/O events to enable reading and writing
+    bool InitHandler(Error* = nullptr);
+    bool EnableReading(Error* e = nullptr);
+    bool EnableWriting(Error* e = nullptr);
     
     // EventHandler::EventCallback
-    void OnRead(SOCKET s) noexcept;
-    void OnWrite(SOCKET s) noexcept;
+    // I/O event is ready
+    void OnRead(SOCKET s);
+    void OnWrite(SOCKET s);
 };
 
 NETB_END

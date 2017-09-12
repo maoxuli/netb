@@ -21,30 +21,41 @@
 
 NETB_BEGIN
 
-// Constructor, with no address info
+// Prepare write buffer for socket receive
+#define PREPARE_BUFFER(buf) 											\
+		do{ 															\
+			assert(buf); 												\
+			if(!buf->Readable(DEFAULT_RECEIVE_BUFFER)) 					\
+			{															\
+				SET_LOGIC_ERROR(e, "No enough buffer for receiving.");	\
+				return -1;												\
+			}															\
+		} while(0) // no trailing ;
+
+// Any address determined by following operations
 UdpSocket::UdpSocket() noexcept
-: _timeout(-1)
-, _opened(false)
-, _connected(false)
+: _address() // empty address
+, _reuse_addr(false)
+, _reuse_port(false)
 {
 
 }
 
-// Constructor, with address family
+// Fixed family, address is determined by following operations
 UdpSocket::UdpSocket(sa_family_t family) noexcept
-: _timeout(-1)
-, _opened(false)
-, _connected(false)
+: _address() // empty address
+, _reuse_addr(false)
+, _reuse_port(false)
 {
+    // Fixed family with any address
     _address.Reset(family);
 }
 
-// Constructor, with initial local address
-UdpSocket::UdpSocket(const SocketAddress& addr) noexcept
+// Fixed address
+UdpSocket::UdpSocket(const SocketAddress& addr, bool reuse_addr, bool reuse_port) noexcept
 : _address(addr)
-, _timeout(-1)
-, _opened(false)
-, _connected(false)
+, _reuse_addr(reuse_addr)
+, _reuse_port(reuse_port)
 {
 
 }
@@ -55,290 +66,294 @@ UdpSocket::~UdpSocket() noexcept
 
 }
 
-// Open on current address
-// throw exception on errors
+// Open to receive data
+// Family or local address is given on initial
 void UdpSocket::Open()
 {
     Error e;
-    if(!Open(&e))
-    {
-        THROW_ERROR(e);
-    }
+    if(!Open(&e)) THROW_ERROR(e);
 }
 
-// Open on initial local address
-// return false on errors
+// Open to receive data
+// Family or local address is given on initial
 bool UdpSocket::Open(Error* e) noexcept
 {
-    if(_opened)  return true;
-    SocketAddress addr(_address);
-    if(addr.Empty())
+    if(_address.Empty()) // no initial address or family
     {
-        addr.Reset(AF_INET); // default family and any address
+        SET_LOGIC_ERROR(e, "Address or family not assigned before opening.");
+        return false;
     }
-    return Open(addr, e);
+    return Open(_address, _reuse_addr, _reuse_port, e);
 }
 
-// Open on given address
-// throw exception on errors
-void UdpSocket::Open(const SocketAddress& addr)
+// Open to receive data
+// Dynamic local address or fixed family with dynamic address
+void UdpSocket::Open(const SocketAddress& addr, bool reuse_addr, bool reuse_port)
 {
     Error e; 
-    if(!Open(addr, &e))
+    if(!Open(addr,reuse_addr, reuse_port, &e)) 
     {
         THROW_ERROR(e);
     }
 }
 
-// Open on given address
-// return false on errors
+// Open to receive data
+// Dynamic local address or fixed family with dynamic address
+// with default reuse rules
 bool UdpSocket::Open(const SocketAddress& addr, Error* e) noexcept
 {
-    if(_opened)
-    {
-        if(_address ==  addr || Address() == addr)
-        {
-            return true;
-        }
-        Close();
-    }
-    assert(!addr.Empty());
-    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP, e))
-    {
-        return false;
-    }
-    if(!Socket::Bind(addr, e))
-    {
-        return false;
-    }
-    _address = addr;
-    _opened = true;
-    return true;
+    return Open(addr, true, true, e);
 }
 
-// Close the opened socket
-// return false on errors
+// Open to receive data
+// Dynamic local address or fixed family with dynamic address
+bool UdpSocket::Open(const SocketAddress& addr, bool reuse_addr, bool reuse_port, Error* e) noexcept
+{
+    if(!_address.Empty() && addr != _address) // initial address vs given address
+    {
+        if(!_address.Any() || addr.Family() != _address.Family())
+        {
+            SET_LOGIC_ERROR(e, "Given address is not qualified for initial.");
+            return false;
+        }
+    }
+    // Open socket
+    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
+    {
+        return false;
+    }
+    // set reuse rules beore bind
+    if(!Socket::ReuseAddress(reuse_addr, e) || !Socket::ReusePort(reuse_port, e))
+    {
+        return false;
+    }
+    // bind address
+    return Socket::Bind(addr, e);
+}
+
+// Close and be ready to open again
+// return false on errors but socket is closed anyway
 bool UdpSocket::Close(Error* e) noexcept
 {
-    _connected = false;
-    _connected_address.Reset();
-    _opened = false;
     return Socket::Close(e);
 }
 
-// Get local address
-// given local address or actual bound address after connected
-// return empty address on errors
+// Local bound address or given local address
 SocketAddress UdpSocket::Address(Error* e) const noexcept
 {
-    if(_opened)
+    if(Socket::Valid())
     {
         return Socket::Address(e);
     }
     return _address;
 }
 
-// connect to given address
-// Throw exception on errors
+// Connect to a remote address
+// Empty address will remove the assocication
 void UdpSocket::Connect(const SocketAddress& addr)
 {
     Error e;
-    if(!Connect(addr, &e))
+    if(!Connect(addr, &e)) 
     {
         THROW_ERROR(e);
     }
 }
 
-// Connect to given address
-// Only bind to the address, no actual I/O occurred
-// return false on errors
+// Connect to a remote address
+// NULL address will remove the assocication
 bool UdpSocket::Connect(const SocketAddress& addr, Error* e) noexcept
 {
-    assert(!addr.Empty());
     if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
     {
         return false;
     }
-    if(_connected)
+    if(addr.Empty())
     {
-        // In theory _connected_address == ConnectedAddress()
-        // but who knows...it is not enforced here
-        if(_connected_address == addr || ConnectedAddress() == addr)
-        {
-            return true;
-        }
+        return Socket::Connect(addr, e);
     }
-    if(!Socket::Connect(addr, e))
+    if(addr.Family() != _address.Family())
     {
+        SET_LOGIC_ERROR(e, "Mismatched address family.");
         return false;
     }
-    _connected_address = addr;
-    _connected = !_connected_address.Empty();
-    return true;
+    return Socket::Connect(addr, e);
 }
 
 // Get connected address
-// return empty address on errors
 SocketAddress UdpSocket::ConnectedAddress(Error* e) const noexcept
 {
-    if(!_connected)
-    {
-        SET_LOGIC_ERROR(e, "Not connected.");
-        return _connected_address;
-    }
     return Socket::ConnectedAddress(e);
 }
 
-// Send data to given address
-// Todo: check connected status and conflict with connected address
-ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, int flags, Error* e) noexcept
+// Send data to given address, in block mode
+ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, e))
+    if(!Socket::Block(true, e)) return -1;
+    return Socket::SendTo(p, n, addr, 0, e);
+}
+
+// Send data to given address, in block mode
+ssize_t UdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, Error* e) noexcept
+{
+    assert(buf != NULL);
+    ssize_t ret = SendTo(buf->Read(), buf->Readable(), addr, e);
+    if(ret > 0) buf->Read(ret);
+    return ret;
+}
+
+// Send data to given address, in non-block mode with timeout
+ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, int timeout, Error* e) noexcept
+{
+    if(timeout < 0) return SendTo(p, n, addr, e);
+    if(Socket::Block(false, e)) return -1;
+
+    if(timeout > 0 && !Socket::WaitForWrite(timeout, e))
     {
         return -1;
     }
-    return Socket::SendTo(p, n, addr, flags, e);
+    return Socket::SendTo(p, n, addr, 0, e);
 }
 
-// Send data to given address
-// Todo: check connected status and conflict with connected address
-ssize_t UdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags, Error* e) noexcept
+// Send data to given address, in non-block mode with timeout
+ssize_t UdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int timeout, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, e))
+    assert(buf != NULL);
+    ssize_t ret = SendTo(buf->Read(), buf->Readable(), addr, timeout, e);
+    if(ret > 0) buf->Read(ret);
+    return ret;
+}
+
+// Send data to connected address, block mode
+ssize_t UdpSocket::Send(const void* p, size_t n, Error* e) noexcept
+{
+    if(Socket::Block(true, e)) return -1;
+    return Socket::Send(p, n, 0, e);
+}
+
+// Send data to connected address, block mode
+ssize_t UdpSocket::Send(StreamBuffer* buf, Error* e) noexcept
+{
+    ssize_t ret = Send(buf->Read(), buf->Readable(), e);
+    if(ret > 0) buf->Read(ret);
+    return ret;
+}
+
+// Send data to connected address, non-block mode with timeout
+ssize_t UdpSocket::Send(const void* p, size_t n, int timeout, Error* e) noexcept
+{
+    if(timeout < 0) return Send(p, n, e);
+    if(Socket::Block(false, e)) return -1;
+
+    if(timeout > 0 && !Socket::WaitForWrite(timeout, e))
     {
         return -1;
     }
-    return Socket::SendTo(buf, addr, flags, e);
+    return Socket::Send(p, n, 0, e);
 }
 
-// Send data to connected address
-// Todo: check connected status
-ssize_t UdpSocket::Send(const void* p, size_t n, int flags, Error* e) noexcept
+// Send data to connected address, non-block mode with timeout
+ssize_t UdpSocket::Send(StreamBuffer* buf, int timeout, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, e))
+    assert(buf != NULL);
+    ssize_t ret = Send(buf->Read(), buf->Readable(), timeout, e);
+    if(ret > 0) buf->Read(ret);
+    return ret;
+}
+
+// Receive data and get remote address, block mode
+ssize_t UdpSocket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, Error* e) noexcept
+{
+    if(!Socket::Block(true, e)) return -1;
+    return Socket::ReceiveFrom(p, n, addr, 0, e);
+}
+
+// Receive data and get remote address, block mode
+ssize_t UdpSocket::ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, Error* e) noexcept
+{
+    assert(buf != NULL);
+    if(!buf->Writable(RECEIVE_BUFFER_SIZE))
+    {
+        SET_LOGIC_ERROR(e, "No enought buffer to receive.");
+        return -1;
+    }
+    ssize_t ret = ReceiveFrom(buf->Write(), buf->Writable(), addr, e);
+    if(ret > 0) buf->Write(ret);
+    return ret;
+}
+
+// Receive data and get remote address, non-block mode with timeout
+ssize_t UdpSocket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int timeout, Error* e) noexcept
+{
+    if(timeout < 0) return ReceiveFrom(p, n, addr, e);
+    if(!Socket::Block(false, e)) return -1;
+
+    if(timeout > 0 && !Socket::WaitForRead(timeout, e))
     {
         return -1;
     }
-    return Socket::Send(p, n, flags, e);
+    return Socket::ReceiveFrom(p, n, addr, 0, e);
 }
 
-// Send data to connected address
-// Todo: check connected status
-ssize_t UdpSocket::Send(StreamBuffer* buf, int flags, Error* e) noexcept
+// Receive data and get remote address, non-block mode with timeout
+ssize_t UdpSocket::ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int timeout, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForWrite(_timeout, e))
+    assert(buf != NULL);
+    if(!buf->Writable(RECEIVE_BUFFER_SIZE))
+    {
+        SET_LOGIC_ERROR(e, "No enought buffer to receive.");
+        return -1;
+    }
+    ssize_t ret = ReceiveFrom(buf->Write(), buf->Writable(), addr, timeout, e);
+    if(ret > 0) buf->Write(ret);
+    return ret;
+}
+
+// Receive data from connected address, block mode
+ssize_t UdpSocket::Receive(void* p, size_t n, Error* e) noexcept
+{
+    assert(p != NULL && n > 0);
+    if(!Socket::Block(true, e)) return -1;
+    return Socket::Receive(p, n, 0, e);
+}
+
+// Receive data from connected address, block mode
+ssize_t UdpSocket::Receive(StreamBuffer* buf, Error* e) noexcept
+{
+    assert(buf != NULL);
+    if(!buf->Writable(RECEIVE_BUFFER_SIZE))
+    {
+        SET_LOGIC_ERROR(e, "No enought buffer to receive.");
+        return -1;
+    }
+    ssize_t ret = Receive(buf->Write(), buf->Writable(), e);
+    if(ret > 0) buf->Write(ret);
+    return ret;
+}
+
+// Receive data from connected address, non-block mode with timeout
+ssize_t UdpSocket::Receive(void* p, size_t n, int timeout, Error* e) noexcept
+{
+    assert(p != NULL && n > 0);
+    if(!Socket::Block(false, e)) return -1;
+    if(timeout > 0 && !Socket::WaitForRead(timeout, e))
     {
         return -1;
     }
-    return Socket::Send(buf, flags, e);
+    return Socket::Receive(p, n, 0, e);
 }
 
-// Receive data and get remote address
-// Todo: check connected status
-ssize_t UdpSocket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags, Error* e) noexcept
+// Receive data from connected address, non-block mode with timeout
+ssize_t UdpSocket::Receive(StreamBuffer* buf, int timeout, Error* e) noexcept
 {
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
+    assert(buf != NULL);
+    if(!buf->Writable(RECEIVE_BUFFER_SIZE))
     {
+        SET_LOGIC_ERROR(e, "No enought buffer to receive.");
         return -1;
     }
-    return Socket::ReceiveFrom(p, n, addr, flags, e);
-}
-
-// Receive data and get remote address
-// Todo: check connected status
-ssize_t UdpSocket::ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags, Error* e) noexcept
-{
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
-    {
-        return -1;
-    }
-    return Socket::ReceiveFrom(buf, addr, flags, e);
-}
-
-// Receive data from connected address
-// Todo: check connected status
-ssize_t UdpSocket::Receive(void* p, size_t n, int flags, Error* e) noexcept
-{
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
-    {
-        return -1;
-    }
-    return Socket::Receive(p, n, flags, e);
-}
-
-// Receive data from connected address
-// Todo: check connected status
-ssize_t UdpSocket::Receive(StreamBuffer* buf, int flags, Error* e) noexcept
-{
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
-    {
-        return -1;
-    }
-    return Socket::Receive(buf, flags, e);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-// I/O mode
-// -1: block, 0: non-block, >0: block with timeout
-// Throw exception on errors
-void UdpSocket::Block(int timeout)
-{
-    Error e;
-    if(Block(timeout, &e))
-    {
-        THROW_ERROR(e);
-    }
-}
-
-// I/O mode
-// -1: block, 0: non-block, >0: block with timeout
-// default is block
-// return false on errors
-bool UdpSocket::Block(int timeout, Error* e) noexcept 
-{
-    _timeout = timeout;
-    return Socket::Block(timeout < 0 ? true : false, e);
-}
-
-// Option of reuse address
-// default is false
-// throw exception on errors
-void UdpSocket::ReuseAddress(bool reuse)
-{
-    Error e;
-    if(!ReuseAddress(reuse, &e))
-    {
-        THROW_ERROR(e);
-    }
-}
-
-// Opention of reuse address
-// default is false
-// return false on errors
-bool UdpSocket::ReuseAddress(bool reuse, Error* e) noexcept
-{
-    return Socket::ReuseAddress(reuse, e);
-}
-
-// Option of reuse port
-// default is false
-// throw exception on errors
-void UdpSocket::ReusePort(bool reuse)
-{
-    Error e;
-    if(!ReusePort(reuse, &e))
-    {
-        THROW_ERROR(e);
-    }
-}
-
-// Option of reuse port
-// default is false
-// return false on errors
-bool UdpSocket::ReusePort(bool reuse, Error* e) noexcept
-{
-    return Socket::ReusePort(reuse, e);
+    ssize_t ret = Receive(buf->Write(), buf->Writable(), timeout, e);
+    if(ret > 0) buf->Write(ret);
+    return ret;
 }
 
 NETB_END 

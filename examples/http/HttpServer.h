@@ -18,9 +18,9 @@
 #ifndef NETB_HTTP_SERVER_H
 #define NETB_HTTP_SERVER_H
 
-#include "HttpMessage.h"
 #include "AsyncTcpAcceptor.hpp"
 #include "AsyncTcpSocket.hpp"
+#include "HttpMessage.hpp"
 #include <map>
 
 NETB_BEGIN

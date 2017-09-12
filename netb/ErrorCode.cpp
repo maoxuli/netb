@@ -50,50 +50,6 @@ std::string ErrorCode::Description(int code)
     return "";
 }
 
-int ErrorCode::Timeout()
-{
-    return 0;
-}
-
-// Invalid socket error code
-int ErrorCode::InvalidSocket()
-{
-#ifdef _WIN32
-    return WSAENOTSOCK;
-#else
-    return ENOTSOCK;
-#endif 
-}
-
-bool ErrorCode::IsInvalidSocket()
-{
-    return IsInvalidSocket(Current());
-}
-
-bool ErrorCode::IsInvalidSocket(int code)
-{
-#ifdef _WIN32
-    return code == WSAENOTSOCK;
-#else
-    return code == ENOTSOCK;
-#endif 
-}
-
-int ErrorCode::UnsupportedFamily()
-{
-    return 0;
-}
-
-bool ErrorCode::IsUnsupportedFamily()
-{
-    return IsUnsupportedFamily(Current());
-}
-
-bool ErrorCode::IsUnsupportedFamily(int code)
-{
-    return code == UnsupportedFamily();
-}
-
 // System interruption in block mode
 int ErrorCode::Interrupted()
 {

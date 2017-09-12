@@ -31,6 +31,9 @@
 #   define NETB_END
 #endif
 
+#define SAFE_NEW(ptr, ctor) do{ try{ ptr = new ctor; } catch(std::bad_alloc&){ ptr = nullptr; } } while(0) 
+#define SAFE_DELETE(ptr) do{ if(ptr) { delete ptr; ptr = nullptr; } } while(0)
+
 //
 // Header files that used everywhere
 // 

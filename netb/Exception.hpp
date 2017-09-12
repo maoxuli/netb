@@ -30,16 +30,15 @@ NETB_BEGIN
 class Exception : public std::exception
 {
 public: 
-    Exception(const std::string& info = "", int code = 0) noexcept
-        : std::exception(), _info(info), _code(code) { }
-    virtual ~Exception() noexcept { }
-    virtual const char* what() const noexcept { return _info.c_str(); }
-    virtual std::string Info() const noexcept { return _info; }
+    Exception(const std::string& msg = "", int code = 0) noexcept
+        : std::exception(), _message(msg), _code(code) { }
+    virtual const char* what() const noexcept { return _message.c_str(); }
+    virtual std::string Message() const noexcept { return _message; }
     virtual int Code() const noexcept { return _code; }
     virtual const class ErrorClass& Class() const noexcept;
-
+    virtual std::string ToString() const noexcept;
 private:
-    std::string _info;
+    std::string _message;
     int _code;
 };
 
@@ -50,9 +49,8 @@ private:
     class CLS : public BASE                                                 \
     {                                                                       \
     public:                                                                 \
-        CLS(const std::string& info = "", int code = 0) noexcept            \
-            : BASE(info, code) { }                                          \
-        ~CLS() noexcept { }                                                 \
+        CLS(const std::string& msg = "", int code = 0) noexcept             \
+            : BASE(msg, code) { }                                           \
         const class ErrorClass& Class() const noexcept;                     \
     };
 
@@ -67,13 +65,13 @@ private:
 // Marcros to declare exception, declare error class, and set error object 
 DECLARE_EXCEPTION(SystemException, Exception)
 DECLARE_ERROR_CLASS(SystemError, ErrorClass)
-#define SET_SYSTEM_ERROR(e, info) do{ if(e) e->Set(SystemError(), info, ErrorCode::Current()); } while(0) // no trailing ;
+#define SET_SYSTEM_ERROR(e, msg) do{ if(e) e->Set(SystemError(), (Error::StringStream() << msg), ErrorCode::Current()); } while(0) // no trailing ;
 
 // Logic error, errors of logic that produce unexcepcted results
 // Marcros to declare exception, declare error class, and set error object
 DECLARE_EXCEPTION(LogicException, Exception)
 DECLARE_ERROR_CLASS(LogicError, ErrorClass)
-#define SET_LOGIC_ERROR(e, info) do{ if(e) e->Set(LogicError(), info); } while(0) // no trailing ;
+#define SET_LOGIC_ERROR(e, msg) do{ if(e) e->Set(LogicError(), (Error::StringStream() << msg)); } while(0) // no trailing ;
 
 NETB_END
 

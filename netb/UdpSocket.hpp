@@ -19,20 +19,25 @@
 #define NETB_UDP_SOCKET_HPP
 
 #include "Socket.hpp"
+#include "StreamBuffer.hpp"
 
 NETB_BEGIN
 
 //
 // UdpSocket is a wraper class of UDP socket
 //
-
-class UdpSocket : private Socket
+class UdpSocket : protected Socket
 {
 public:
-    // Constructor, with initial local address
-    UdpSocket() noexcept; // no address
-    explicit UdpSocket(sa_family_t family) noexcept; // any address of given family
-    explicit UdpSocket(const SocketAddress& addr) noexcept; // initial address
+    // Any local address, determined by following operations
+    UdpSocket() noexcept;
+
+    // Fixed family, only working in given family
+    // Local address is determined by following operations
+    explicit UdpSocket(sa_family_t family) noexcept;
+
+    // Fixed local address
+    explicit UdpSocket(const SocketAddress& addr, bool reuse_addr = true, bool reuse_port = true) noexcept; // initial address
 
     // Destructor
     virtual ~UdpSocket() noexcept; 
@@ -41,75 +46,73 @@ public:
     SOCKET GetSocket() const noexcept { return Socket::Descriptor(); }
 
     // Open to receive data
-    // Create socket and bind to initial local address
+    // Fixed family or local address is given on initial
     virtual void Open(); // throw on errors
     virtual bool Open(Error* e) noexcept;
 
     // Open to receive data
-    // Create socket and bind to given address
-    virtual void Open(const SocketAddress& addr); // throw on errors
-    virtual bool Open(const SocketAddress& addr, Error* e) noexcept;
+    // Dynamic local address or fixed family with dynamic address
+    virtual void Open(const SocketAddress& addr, bool reuse_addr = true, bool reuse_port = true); // throw on errors
+    virtual bool Open(const SocketAddress& addr, Error* e) noexcept; // with default reuse rules
+    virtual bool Open(const SocketAddress& addr, bool reuse_addr, bool reuse_port, Error* e) noexcept;
 
     // Close opened socket, and ready for open again
     // return false when errors occurred
     // but the socket is closed anyway, even with errors
-    virtual bool Close(Error* e = NULL) noexcept;
+    virtual bool Close(Error* e = nullptr) noexcept;
 
-    // Status of opened
-    bool IsOpened() const noexcept { return _opened; }
-
-    // Local address
-    // Actual bound address after opened
-    SocketAddress Address(Error* e = NULL) const noexcept;
+    // Actual bound address of given address
+    SocketAddress Address(Error* e = nullptr) const noexcept;
 
     // Connect to a remote address
     // Empty address will remove the assocication
     void Connect(const SocketAddress& addr); // throw on errors
     bool Connect(const SocketAddress& addr, Error* e) noexcept;
 
-    // Status of connected
-    bool IsConnected() const noexcept { return _connected; }
-
     // Connected address
-    // Actual connected address after connected
-    SocketAddress ConnectedAddress(Error* e = NULL) const noexcept;
-
-    // Send data to given address
-    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
-    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
-
-    // Send data to connected address
-    virtual ssize_t Send(const void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
-
-    // Receive data and get remote address
-    virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
-    virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
-
-    // Receive data from connected address
-    virtual ssize_t Receive(void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
-    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
+    SocketAddress ConnectedAddress(Error* e = nullptr) const noexcept;
 
 public:
-    // IO mode
-    // -1: block, 0: non-block, >0: block with timeout
-    void Block(int timeout); // throw on erros
-    bool Block(int timeout, Error* e) noexcept;
+    // Send data to given address, in block mode
+    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, Error* e = nullptr) noexcept;
+    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, Error* e = nullptr) noexcept;
 
-    // Socket option, reuse address
-    void ReuseAddress(bool reuse); // throw on erros
-    bool ReuseAddress(bool reuse, Error* e) noexcept;
+    // Send data to given address, in non-block mode with timeout
+    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int timeout, Error* e = nullptr) noexcept;
+    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int timeout, Error* e = nullptr) noexcept;
 
-    // Socket option, reuse port
-    void ReusePort(bool reuse); // throw on errors
-    bool ReusePort(bool reuse, Error* e) noexcept;
+    // Send data to connected address, block mode
+    virtual ssize_t Send(const void* p, size_t n, Error* e = nullptr) noexcept;
+    virtual ssize_t Send(StreamBuffer* buf, Error* e = nullptr) noexcept;
 
-private:
-    SocketAddress _address; // Given local address
-    SocketAddress _connected_address; // Given connected address
-    int _timeout; // IO mode, support block with timeout
-    bool _opened;
-    bool _connected;
+    // Send data to connected address, in non-block mode with timeout
+    virtual ssize_t Send(const void* p, size_t n, int timeout, Error* e = nullptr) noexcept;
+    virtual ssize_t Send(StreamBuffer* buf, int timeout, Error* e = nullptr) noexcept;
+
+    // Receive data and get remote address, block mode
+    virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, Error* e = nullptr) noexcept;
+    virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, Error* e = nullptr) noexcept;
+
+    // Receive data and get remote address, in non-block mode with timeout
+    virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int timeout, Error* e = nullptr) noexcept;
+    virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int timeout, Error* e = nullptr) noexcept;
+
+    // Receive data from connected address, block mode
+    virtual ssize_t Receive(void* p, size_t n, Error* e = nullptr) noexcept;
+    virtual ssize_t Receive(StreamBuffer* buf, Error* e = nullptr) noexcept;
+
+    // Receive data from connected address, in non-block mode with timeout
+    virtual ssize_t Receive(void* p, size_t n, int timeout, Error* e = nullptr) noexcept;
+    virtual ssize_t Receive(StreamBuffer* buf, int timeout, Error* e = nullptr) noexcept;
+
+protected:
+    // Initial local address
+    // may be empty, fixed address, or any address with fixed family
+    SocketAddress _address; 
+
+    // reuse rules
+    bool _reuse_addr;
+    bool _reuse_port;
 };
 
 NETB_END

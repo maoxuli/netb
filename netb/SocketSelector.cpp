@@ -81,6 +81,7 @@ void SocketSelector::SetupEvents(SOCKET s, int events) noexcept
         if(events & SOCKET_EVENT_READ)
         {
             FD_SET(s, &_read_set);
+            std::cout << "Setup read socket: " << s << "\n";
         }
         else
         {
@@ -121,6 +122,7 @@ void SocketSelector::Remove(SOCKET s) noexcept
     }
     std::make_heap(_sockets.begin(), _sockets.end());
     FD_CLR(s, &_read_set);
+    std::cout << "Remove socket read: " << s << "\n";
     FD_CLR(s, &_write_set);
     FD_CLR(s, &_except_set);
 }
@@ -150,16 +152,20 @@ bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Err
 
         if(timeout < 0)
         {
-            ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, NULL); 
+            std::cout << "select socket max: " << _sockets.front() << "\n";
+            ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, nullptr); 
+            std::cout << "Select.\n";
         }
         else
         {
             struct timeval tv;
             tv.tv_sec = timeout;
             tv.tv_usec = 0;
+            std::cout << "select socket max: " << _sockets.front() << "\n";
             ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, &tv); 
+            std::cout << "Select.\n";
         }
-
+        std::cout << "select return: " << ret << "\n";
         if(ret < 0) // errors
         {
             // only try again on system interruption
@@ -185,6 +191,7 @@ bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Err
             int events = SOCKET_EVENT_NONE;
             if(FD_ISSET(fd, &_active_read_set))
             {
+                std::cout << "select socket read: " << fd << "\n";
                 events |= SOCKET_EVENT_READ;
             }
             if(FD_ISSET(fd, &_active_write_set))

@@ -2,4 +2,4 @@
 
 examples/echo/
 
-EchoServer and EchoClient.
+[RFC 862] EchoServer and EchoClient.

@@ -19,23 +19,28 @@
 #define NETB_TCP_SOCKET_HPP
 
 #include "Socket.hpp"
+#include "StreamBuffer.hpp"
 
 NETB_BEGIN
 
 //
 // TcpSocket is a wrapper class of TCP socket. 
 //
-
-class TcpSocket : private Socket
+class TcpSocket : protected Socket
 {
 public:
-    // Constructor, with local address 
-    TcpSocket() noexcept; // no address
-    explicit TcpSocket(sa_family_t family) noexcept; // any address of given family
-    explicit TcpSocket(const SocketAddress& addr) noexcept; // initial address
+    // any local address
+    // family is determined by connected address
+    TcpSocket() noexcept; 
 
-    // Constructor, with externally established connection
-    // connected addr is pointer, so could be NULL
+    // any local address
+    // fixed family
+    explicit TcpSocket(sa_family_t family) noexcept;
+
+    // fixed local address
+    explicit TcpSocket(const SocketAddress& addr, bool reuse_addr = true, bool reuse_port = true) noexcept;
+
+    // Externally established connection with connected address
     TcpSocket(SOCKET s, const SocketAddress* addr) noexcept;
 
     // Destructor
@@ -44,80 +49,60 @@ public:
     // Internal SOCKET descriptor is exposed for external use, e.g. for select
     SOCKET GetSocket() const noexcept { return Socket::Descriptor(); }
 
-    // If the connection is established externally
-    // Must set connected status after initiating
+    // Set connected status for externally established connection
     virtual void Connected(); // throw on errors
     virtual bool Connected(Error* e) noexcept; 
 
-    // Actively connect to remote address
+    // Actively connect to remote address, in block mode
     virtual void Connect(const SocketAddress& addr); // throw on errors
     virtual bool Connect(const SocketAddress& addr, Error* e) noexcept;
 
-    // Connected status
-    bool IsConnected() const noexcept { return _connected; }
-
-    // Local address
-    // Given initial address or actual bound address
-    SocketAddress Address(Error* e = NULL) const noexcept;
-
-    // Connected address
-    SocketAddress ConnectedAddress(Error* e = NULL) const noexcept;
+    // Actively connect to remote address, in non-block mode with timeout
+    // timeout of -1 for block mode
+    virtual void Connect(const SocketAddress& addr, int timeout); // throw on errors
+    virtual bool Connect(const SocketAddress& addr, int timeout, Error* e) noexcept;
 
     // close the socket
     // Return false on errors, but socket is closed anyway
-    bool Close(Error* e = NULL) noexcept;
+    virtual bool Close(Error* e = nullptr) noexcept;
 
-    // Send data over the connection
-    virtual ssize_t Send(const void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
+    // Bound local address or given address before connected
+    SocketAddress Address(Error* e = nullptr) const noexcept;
 
-    // Receive data from the connection
-    virtual ssize_t Receive(void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
-    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
+    // Connected address
+    SocketAddress ConnectedAddress(Error* e = nullptr) const noexcept;
 
-public:
-    // IO mode
-    // -1: block, 0: non-block, >0: block with timeout
-    void Block(int timeout); // throw on errors
-    bool Block(int timeout, Error* e) noexcept;
+    // Send data over the connection, in block mode
+    virtual ssize_t Send(const void* p, size_t n, Error* e = nullptr) noexcept;
+    virtual ssize_t Send(StreamBuffer* buf, Error* e = nullptr) noexcept;
 
-    // Option of reuse address
-    void ReuseAddress(bool reuse); // throw on errors
-    bool ReuseAddress(bool reuse, Error* e) noexcept;
+    // Send data over the connection, in non-block mode with timeout
+    // timeout of -1 for block mode
+    virtual ssize_t Send(const void* p, size_t n, int timeout, Error* e = nullptr) noexcept;
+    virtual ssize_t Send(StreamBuffer* buf, int timeout, Error* e = nullptr) noexcept;
 
-    // Option of reuse port
-    void ReusePort(bool reuse); // throw errors
-    bool ReusePort(bool reuse, Error* e) noexcept;
+    // Receive data from the connection, in block mode
+    virtual ssize_t Receive(void* p, size_t n, Error* e = nullptr) noexcept;
+    virtual ssize_t Receive(StreamBuffer* buf, Error* e = nullptr) noexcept;
 
-    // Option of no delay
-    // TCP_NODELAY
-    void NoDelay(bool no); // throw on errors
-    bool NoDelay(bool no, Error* e) noexcept;
+    // Receive data from the connection, in non-block mode with timeout
+    // timeout of -1 for block mode
+    virtual ssize_t Receive(void* p, size_t n, int timeout, Error* e = nullptr) noexcept;
+    virtual ssize_t Receive(StreamBuffer* buf, int timeout, Error* e = nullptr) noexcept;
 
-    // TCP_NOPUSH
-    void NoPush(bool no); // throw on errors
-    bool NoPush(bool no, Error* e) noexcept;
+protected:
+    // Initial local address: empty, fixed family, or fixed address
+    SocketAddress _address;
 
-    // Time in seconds to send keep alive probs, 0 for not keep alive
-    // See SO_KEEPALIVE and TCP_KEEPALIVE
-    void KeepAlive(int time); // throw on errors
-    bool KeepAlive(int time, Error* e) noexcept;
+    // Initial connected address, only used for externally established connection
+    SocketAddress _connected_address;
 
-    // TCP_MAXSEG
-    void SegmentSize(int size); // throw on errors
-    bool SegmentSize(int size, Error* e) noexcept;
+    // reuse rules, only used for fixed initial local address
+    bool _reuse_addr;
+    bool _reuse_port;
 
-    void SendBuffer(int size); // throw on errors
-    bool SendBuffer(int size, Error* e) noexcept;
-
-    void ReceiveBuffer(int size); // throw on errors
-    bool ReceiveBuffer(int size, Error* e) noexcept;
-
-private:
-    SocketAddress _address; // Given local address to bind
-    SocketAddress _connected_address; // Give connected address
-    int _timeout; // IO mode, support block with timout
-    bool _connected;
+    // Actual connect in block or non-block mode
+    bool DoConnect(const SocketAddress& addr, bool block, Error* e);
 };
 
 NETB_END

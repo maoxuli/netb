@@ -2,7 +2,7 @@
 build/*.o
 lib/*.a
 bin/*.dSYM
-bin/https
-bin/httpc
-bin/echos
-bin/echot
+bin/http*
+bin/echo*
+bin/tcp*
+bin/test*

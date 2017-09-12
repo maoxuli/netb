@@ -30,7 +30,7 @@ HttpConnection::HttpConnection(EventLoop* loop, SOCKET s, const SocketAddress* c
 void HttpConnection::OnReceived(AsyncTcpSocket* conn, StreamBuffer* buf)
 {
     assert(conn == this);
-    assert(buf != NULL);
+    assert(buf != nullptr);
     if(_request.FromBuffer(buf))
     {
         HandleRequest(conn);
@@ -49,7 +49,7 @@ void HttpConnection::HandleRequest(AsyncTcpSocket* conn)
 
 void HttpConnection::SendResponse(AsyncTcpSocket* conn, const HttpResponse& response)
 {
-    assert(conn != NULL);
+    assert(conn != nullptr);
     StreamBuffer buf;
     response.ToBuffer(&buf);
     conn->Send(&buf);
@@ -91,7 +91,7 @@ bool HttpServer::OnAccepted(AsyncTcpAcceptor* acceptor, SOCKET s, const SocketAd
 // Delete the connection if it is disconnected
 void HttpServer::OnConnected(AsyncTcpSocket* conn, bool connected)
 {
-    assert(conn != NULL);
+    assert(conn != nullptr);
     if(!connected)
     {
         auto it = _connections.find(conn->GetSocket());

@@ -122,23 +122,6 @@ bool StreamBuffer::Write(const void* p, size_t n, const char* delim)
 }
 
 // Available data to read
-// Before next delimit char
-ssize_t StreamBuffer::Readable(const char delim) const
-{
-    if(Readable() < sizeof(delim))
-    {
-        return -1;
-    }
-    const char* p1 = (const char*)Read();
-    const char* p2 = std::find(p1, (const char*)Write(), delim);
-    if(p2 == Write())
-    {
-        return -1;
-    }
-    return p2 - p1;
-}
-
-// Available data to read
 // Before next delimit string
 ssize_t StreamBuffer::Readable(const char* delim) const
 {
@@ -165,23 +148,6 @@ bool StreamBuffer::Read(void* p, size_t n)
     memcpy(p, Read(), n);
     Read(n);
     return true;
-}
-
-// Addressable data from position that offset the reading position
-// to next delimit char
-ssize_t StreamBuffer::Addressable(const char delim, size_t offset) const
-{
-    if(Addressable(offset) < sizeof(delim))
-    {
-        return -1;
-    }
-    const char* p1 = (const char*)Address(offset);
-    const char* p2 = std::find(p1, (const char*)Write(), delim);
-    if(p2 == Write())
-    {
-        return -1;
-    }
-    return p2 - p1;
 }
 
 // Addressable data from position that offset the reading position

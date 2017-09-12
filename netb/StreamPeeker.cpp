@@ -21,7 +21,7 @@
 NETB_BEGIN
 
 StreamPeeker::StreamPeeker()
-: _stream(NULL)
+: _stream(nullptr)
 , _offset(0)
 {
 
@@ -62,7 +62,7 @@ StreamPeeker& StreamPeeker::Attach(StreamBuffer& buf)
 
 bool StreamPeeker::Bytes(void* p, size_t n)
 {
-    if(_stream == NULL) return false;
+    if(_stream == nullptr) return false;
 
     if(_stream->Peek(p, n, _offset))
     {
@@ -74,7 +74,7 @@ bool StreamPeeker::Bytes(void* p, size_t n)
 
 bool StreamPeeker::String(std::string& s)
 {
-    if(_stream == NULL) return false;
+    if(_stream == nullptr) return false;
     size_t n = _stream->Addressable(_offset);
     if(n == 0) return false;
     return String(s, n);
@@ -82,7 +82,7 @@ bool StreamPeeker::String(std::string& s)
 
 bool StreamPeeker::String(std::string& s, size_t n)
 {
-    if(_stream == NULL) return false;
+    if(_stream == nullptr) return false;
     if(_stream->Addressable(_offset) < n) return false;
 
     const unsigned char* p = (const unsigned char*)_stream->Address(_offset);
@@ -93,7 +93,7 @@ bool StreamPeeker::String(std::string& s, size_t n)
 
 bool StreamPeeker::String(std::string& s, const char* delim)
 {
-    if(_stream == NULL) return false;
+    if(_stream == nullptr) return false;
     if(_stream->Addressable(_offset) < strlen(delim)) return false;
 
     ssize_t n = _stream->Addressable(delim, _offset);

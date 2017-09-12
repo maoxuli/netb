@@ -11,7 +11,7 @@ Exception is standard mechanism for C++ to handle errors, and by default, NetB A
 To avoid using exception, the caller may pass a Error object into the NetB API, and then the API will not throw any exception. The Error object works as an out parameter to return the datails of errors. 
 
 3. Only check success and failure
-If the caller only care if the NetBase API is working properly, and does not care the details of errors, a NULL can be passed to the out parameter of Error object, then the API will neither throw exception nor return error object. The return value of the API usually carry information that may indicate if the API is successful or failed.  
+If the caller only care if the NetBase API is working properly, and does not care the details of errors, a nullptr can be passed to the out parameter of Error object, then the API will neither throw exception nor return error object. The return value of the API usually carry information that may indicate if the API is successful or failed.  
 
 It is worth to mention that, the three levels of error handling can be mixed to use as requirements. That means you may catch an exception and then ignore it or return it by error object, and you may get error by out parameter and then throw a exception based on the error objet. The design supports extensions to classify errors and associate a classfication of error to an exception. Please refer files of Error, Exception, and ErrorCode for details about the error handling.  
 

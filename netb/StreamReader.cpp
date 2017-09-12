@@ -21,7 +21,7 @@
 NETB_BEGIN
 
 StreamReader::StreamReader()
-: _stream(NULL)
+: _stream(nullptr)
 {
 
 }
@@ -57,7 +57,7 @@ StreamReader& StreamReader::Attach(StreamBuffer& buf)
 
 bool StreamReader::Bytes(void* p, size_t n)
 {
-    if(_stream == NULL) return false;
+    if(_stream == nullptr) return false;
     if(_stream->Readable() < n) return false;
 
     return _stream->Read(p, n);
@@ -65,7 +65,7 @@ bool StreamReader::Bytes(void* p, size_t n)
 
 bool StreamReader::String(std::string& s)
 {
-    if(_stream == NULL) return false;
+    if(_stream == nullptr) return false;
     size_t n = _stream->Readable();
     if(n == 0) return false;
     return String(s, n);
@@ -73,7 +73,7 @@ bool StreamReader::String(std::string& s)
 
 bool StreamReader::String(std::string& s, size_t n)
 {
-    if(_stream == NULL) return false;
+    if(_stream == nullptr) return false;
     if(_stream->Readable() < n) return false;
 
     const unsigned char* p = (const unsigned char*)_stream->Read();
@@ -84,7 +84,7 @@ bool StreamReader::String(std::string& s, size_t n)
 
 bool StreamReader::String(std::string& s, const char* delim)
 {
-    if(_stream == NULL) return false;
+    if(_stream == nullptr) return false;
     if(_stream->Readable() < strlen(delim)) return false;
 
     ssize_t n = _stream->Readable(delim);

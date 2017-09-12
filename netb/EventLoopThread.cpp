@@ -20,7 +20,7 @@
 NETB_BEGIN
 
 EventLoopThread::EventLoopThread()
-: _loop(NULL)
+: _loop(nullptr)
 {
     
 }
@@ -28,7 +28,7 @@ EventLoopThread::EventLoopThread()
 // Todo: thread safe
 EventLoopThread::~EventLoopThread()
 {
-    if(_loop != NULL)
+    if(_loop != nullptr)
     {
         _loop->Stop();
         _thread.join();
@@ -40,7 +40,7 @@ EventLoop* EventLoopThread::Start()
     _thread = std::thread(&EventLoopThread::ThreadFunc, this);
     {
         std::unique_lock<std::mutex> lock(_mutex);
-        while(_loop == NULL)
+        while(_loop == nullptr)
         {
             _condition.wait(lock);
         }

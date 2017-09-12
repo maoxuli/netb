@@ -25,13 +25,13 @@
 
 NETB_BEGIN
 
-// RFC 862/UDP
-// Echo client
-
-// UDP
+// TCP Echo Client, RFC 862
 class EchoClient : public TcpSocket
 {
 public:
+    EchoClient() : TcpSocket() { }
+    ~EchoClient() { }
+
     bool SendText(const std::string& s)
     {
         StreamBuffer buf;
@@ -43,6 +43,7 @@ public:
     {
         std::string s;
         StreamBuffer buf;
+        Block(1000);
         Receive(&buf);
         if(buf.Readable() > 0)
         {
@@ -52,15 +53,14 @@ public:
     }
 };
 
-
 NETB_END
 
 ///////////////////////////////////////////////////////////////////////////
 
 int main(const int argc, char* argv[])
 {
-    const char* host = NULL;
-    unsigned short port = 7; // By default, port is 7
+    std::string host;
+    unsigned short port = 9007; // By default, port is 7
     if(argc == 2) // echoclient 9007
     {
         int n = atoi(argv[1]);
@@ -79,7 +79,7 @@ int main(const int argc, char* argv[])
         }
     }
     netb::EchoClient client;
-    if(!client.Connect(netb::SocketAddress(host, port), NULL))
+    if(!client.Connect(netb::SocketAddress(host, port), nullptr))
     {
         std::cout << "Echo client failed to connect: " << host << ":" << port << ".\n";
         return -1;

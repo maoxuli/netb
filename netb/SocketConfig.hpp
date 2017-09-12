@@ -50,6 +50,8 @@ enum {
     SOCKET_EVENT_EXCEPT = 4
 };
 
+const int RECEIVE_BUFFER_SIZE = 2048;
+
 // Socket initializer for Winsock
 struct SocketInitializer
 {

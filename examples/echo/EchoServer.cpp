@@ -27,12 +27,9 @@
 
 NETB_BEGIN
 
-// RFC 862
-// Echo server
-
 using namespace std::placeholders;
 
-// UDP
+// UDP Echo Server, RFC 862
 class UdpEchoServer : public AsyncUdpSocket
 {
 public:
@@ -40,35 +37,31 @@ public:
     : AsyncUdpSocket(loop, SocketAddress(port))
     {
         SetReceivedCallback(std::bind(&UdpEchoServer::OnReceived, this, _1, _2, _3));
-        ReuseAddress(true);
-        ReusePort(true);
     }
 
 private:
     void OnReceived(AsyncUdpSocket* sock, StreamBuffer* buf, const SocketAddress* addr)
     {
-        assert(buf != NULL);
+        assert(buf != nullptr);
         std::string s;
-        if(StreamPeeker(buf).String(s, buf->Readable()))
+        if(StreamPeeker(buf).String(s))
         {
             std::cout << "Received: " << s << "\n";
         }
-        assert(sock != NULL);
-        assert(addr != NULL);
+        assert(sock != nullptr);
+        assert(addr != nullptr);
         sock->SendTo(buf, addr);
     }
 };
 
-// TCP
+// TCP Echo Server, RFC 862
 class TcpEchoServer : public AsyncTcpAcceptor
 {
 public:
     TcpEchoServer(EventLoop* loop, unsigned short port = 9007)
-    : AsyncTcpAcceptor(loop, SocketAddress(port))
+    : AsyncTcpAcceptor(loop, SocketAddress(port, AF_INET))
     {
         SetAcceptedCallback(std::bind(&TcpEchoServer::OnAccepted, this, _1, _2, _3));
-        ReuseAddress(true);
-        ReusePort(true);
     }
 
 private:
@@ -78,22 +71,23 @@ private:
     {
         assert(s != INVALID_SOCKET);
         assert(_connections.find(s) == _connections.end());
-        std::cout << "Connected: " << s << "\n";
+        std::cout << "Connected [" << s << "]\n";
+        if(addr != nullptr) std::cout << "From [" << addr->ToString() << "]\n";
         AsyncTcpSocket* conn = new AsyncTcpSocket(GetLoop(), s, addr);
-        assert(conn != NULL);
-        conn->SetConnectedCallback(std::bind(&TcpEchoServer::OnConnected, this, _1, _2));
-        conn->SetReceivedCallback(std::bind(&TcpEchoServer::OnReceived, this, _1, _2));
+        assert(conn != nullptr);
+        conn->SetConnectedCallback(std::bind(&TcpEchoServer::OnConnected, this, _1, _2)); // for disconnected
+        conn->SetReceivedCallback(std::bind(&TcpEchoServer::OnReceived, this, _1, _2)); // for received
         conn->Connected();
         _connections[s] = conn;
-        return true;
+        return true; // accept the connection
     }
 
     void OnConnected(AsyncTcpSocket* conn, bool connected)
     {
-        assert(conn != NULL);
+        assert(conn != nullptr);
         if(!connected)
         {
-            std::cout << "Disconnected: " << conn->GetSocket() << "\n";
+            std::cout << "Disconnected [" << conn->GetSocket() << "]\n";
             auto it = _connections.find(conn->GetSocket());
             assert(it != _connections.end());
             delete it->second;
@@ -103,9 +97,9 @@ private:
 
     void OnReceived(AsyncTcpSocket* conn, StreamBuffer* buf)
     {
-        assert(conn != NULL);
+        assert(conn != nullptr);
         std::string s;
-        if(StreamPeeker(buf).String(s, buf->Readable()))
+        if(StreamPeeker(buf).String(s))
         {
             std::cout << "Received: " << s << "\n";
         }
@@ -117,7 +111,8 @@ NETB_END
 
 /////////////////////////////////////////////////////////////////////////////
 
-// Open echo server on given port, by default 9007
+// Server
+// Todo: exit singals
 int main(const int argc, char* argv[])
 {
     // Service port, by default 9007
@@ -130,22 +125,23 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
-
-    // Thread loop
+    // Open both TCP server and UDP server
+    // running on single thread (current thread)
     netb::EventLoop loop;
-    netb::Error e;
-    netb::UdpEchoServer udps(&loop, port);
+    //netb::UdpEchoServer udps(&loop, port);
     netb::TcpEchoServer tcps(&loop, port);
-    if(!udps.Open(&e))
+    netb::Error e;
+    /*if(!udps.Open(&e))
     {
-        std::cout << "UDP server open failed. " << e.Info() << "\n";
+        std::cout << "UDP server open failed. [" << e.Info() << "][" << e.Code() << "]\n";
     }
-    std::cout << "UDP server opened on: " << udps.Address().ToString() << "\n";
+    std::cout << "UDP server opened. [" << udps.Address().ToString() << "]\n";*/
     if(!tcps.Open(&e))
     {
-        std::cout << "TCP server open failed. " << e.Info() << "\n";
+        std::cout << "TCP server open failed. [" << e.Info() << "][" << e.Code() << "]\n";
+        return -1;
     }
-    std::cout << "TCP server opened on: " << tcps.Address().ToString() << "\n";
+    std::cout << "TCP server opened. [" << tcps.Address().ToString() << "]\n";
     loop.Run();
     return 0;
 }

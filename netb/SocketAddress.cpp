@@ -33,7 +33,6 @@ SocketAddress::SocketAddress() noexcept
 // By default, local wildcard host (INADDR_ANY, or all 0)
 // throw UnsupportedFamilyException, only when unsupported family is given
 SocketAddress::SocketAddress(unsigned short port, sa_family_t family)
-try
 {
     Reset(family); // no except
     if(port > 0)
@@ -41,11 +40,6 @@ try
         Port(port); // may throw exception
     }
 }
-catch(...)
-{
-    // rethrow by default
-}
-
 
 // Given port, 0 for any port
 // Given family
@@ -75,7 +69,6 @@ SocketAddress::SocketAddress(unsigned short port, sa_family_t family, Error* e) 
 // throw InvalidAddressException, when host is not a valid address in the family
 // throw FamilyMismatchException, when host is in wrong format for the family
 SocketAddress::SocketAddress(const std::string& host, unsigned short port, sa_family_t family)
-try
 {
     Reset(family); // noexcept
     if(host != "any" || host != "wildcard")
@@ -86,10 +79,6 @@ try
     {
         Port(port); // may throw
     }
-}
-catch(...)
-{
-    // rethrow by default
 }
 
 // Given host, may be:
@@ -109,11 +98,11 @@ SocketAddress::SocketAddress(const std::string& host, unsigned short port, sa_fa
     Reset(family); // noexcept
     if(host != "any" || host != "wildcard")
     {
-        Host(host, e); // may throw
+        Host(host, e); // noexcept
     }
     if(!e && port > 0)
     {
-        Port(port, e); // may throw
+        Port(port, e); // noexcept
     }
 }
 
@@ -149,7 +138,7 @@ socklen_t SocketAddress::Length(Error* e) const noexcept
     }
     if(this->ss_family != AF_UNSPEC)
     {
-        SET_LOGIC_ERROR(e, ErrorInfo("Unsupported address family.", this->ss_family));
+        SET_LOGIC_ERROR(e, "Unsupported address family [" << this->ss_family << "]");
         return 0;
     }
     return sizeof(struct sockaddr_storage);
@@ -204,7 +193,7 @@ bool SocketAddress::Host(const std::string& host, Error* e) noexcept
     }
     else // unsupported family
     {
-        SET_LOGIC_ERROR(e, ErrorInfo("Unsupported address family.", this->ss_family));
+        SET_LOGIC_ERROR(e, "Unsupported address family [" << this->ss_family << "]");
         return false;
     }
     // error on inet_pton
@@ -212,15 +201,15 @@ bool SocketAddress::Host(const std::string& host, Error* e) noexcept
     {
         if(ret == 0) // src does not contain a character string representing a valid network address in the specified address family.
         {
-            SET_LOGIC_ERROR(e, ErrorInfo("inet_pton arg is not a valid address.", host));
+            SET_LOGIC_ERROR(e, "inet_pton arg is not a valid address [" << host << "]");
         }
         else if(ret == -1)
         {
-            SET_SYSTEM_ERROR(e, ErrorInfo("inet_pton return system errors."));
+            SET_SYSTEM_ERROR(e, "inet_pton return system errors.");
         }
         else // unknown error
         {
-            SET_LOGIC_ERROR(e, ErrorInfo("inet_pton return unknown errors.", ret));
+            SET_LOGIC_ERROR(e, "inet_pton return unknown errors [" << ret << "]");
         }  
         return false;
     }
@@ -252,7 +241,7 @@ bool SocketAddress::Port(unsigned short port, Error* e) noexcept
     }
     else // unsupported family
     {
-        SET_LOGIC_ERROR(e, ErrorInfo("Unsupported address family", this->ss_family));
+        SET_LOGIC_ERROR(e, "Unsupported address family [" << this->ss_family << "]");
         return false;
     }
     return true;
@@ -278,7 +267,7 @@ std::string SocketAddress::Host(Error* e) const noexcept
         const struct sockaddr_in* addr = reinterpret_cast<const struct sockaddr_in*>(this);
         char host[INET_ADDRSTRLEN];
         host[0] = '\0';
-        if(inet_ntop(AF_INET, &addr->sin_addr, host, INET_ADDRSTRLEN) != NULL)
+        if(inet_ntop(AF_INET, &addr->sin_addr, host, INET_ADDRSTRLEN) != nullptr)
         {
             return host;
         }
@@ -289,7 +278,7 @@ std::string SocketAddress::Host(Error* e) const noexcept
     {
         const struct sockaddr_in6* addr = reinterpret_cast<const struct sockaddr_in6*>(this);
         char host[INET6_ADDRSTRLEN];
-        if(inet_ntop(AF_INET6, &addr->sin6_addr, host, INET6_ADDRSTRLEN) != NULL)
+        if(inet_ntop(AF_INET6, &addr->sin6_addr, host, INET6_ADDRSTRLEN) != nullptr)
         {
             return host;
         }
@@ -298,11 +287,11 @@ std::string SocketAddress::Host(Error* e) const noexcept
     }
     else if(this->ss_family == AF_UNSPEC)
     {
-        SET_LOGIC_ERROR(e, ErrorInfo("Empty address."));
+        SET_LOGIC_ERROR(e, "Empty address.");
     }
     else
     {
-        SET_LOGIC_ERROR(e, ErrorInfo("Unsupported address family,", this->ss_family));
+        SET_LOGIC_ERROR(e, "Unsupported address family [" << this->ss_family << "]");
     }
     return "";
 }
@@ -332,11 +321,11 @@ unsigned short SocketAddress::Port(Error* e) const noexcept
     }
     else if(this->ss_family == AF_UNSPEC)
     {
-        SET_LOGIC_ERROR(e, ErrorInfo("Empty address."));
+        SET_LOGIC_ERROR(e, "Empty address.");
     }
     else
     {
-        SET_LOGIC_ERROR(e, ErrorInfo("Unsupported address family,", this->ss_family));
+        SET_LOGIC_ERROR(e, "Unsupported address family [" << this->ss_family << "]");
     }
     return 0;
 }

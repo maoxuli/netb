@@ -20,48 +20,46 @@
 
 NETB_BEGIN
 
+// std::placeholders::_1, _2, ...
 using namespace std::placeholders;
 
-// Domain is not given, so socket is not created 
-// until calling of Open(), Connect(), or SendTo()
+// Any family and address determined by following operations
 AsyncUdpSocket::AsyncUdpSocket(EventLoop* loop) noexcept
 : UdpSocket()
 , _loop(loop)
-, _handler(NULL)
+, _handler(nullptr)
 {
-    assert(_loop != NULL);
+    assert(_loop);
 }
 
-// Socket is created for given domain
-// Address is set to "any" host and port for the given domain
+// Fixed family, only working for given family
 AsyncUdpSocket::AsyncUdpSocket(EventLoop* loop, sa_family_t family) noexcept
 : UdpSocket(family)
 , _loop(loop)
-, _handler(NULL)
+, _handler(nullptr)
 {
-    assert(_loop != NULL);
+    assert(_loop);
 }
 
-// Socket is created for the domain of given address
+// Fixed local address
 AsyncUdpSocket::AsyncUdpSocket(EventLoop* loop, const SocketAddress& addr) noexcept
 : UdpSocket(addr)
 , _loop(loop)
-, _handler(NULL)
+, _handler(nullptr)
 {
-    assert(_loop != NULL);
+    assert(_loop);
 }
 
-// Destructor, deriviation is allow for extension
+// Destructor
 AsyncUdpSocket::~AsyncUdpSocket() noexcept
 {
-    // Detach event handler from event loop to avoid further callback
+    // Isolate from event loop 
     if(_handler)
     {
         _handler->Detach(); // block until done
-        delete _handler;
+        SAFE_DELETE(_handler);
     }
-
-    // Clear sending buffer
+    // Clear sending buffers
     while(!_out_buffers.empty())
     {
         BufferAddress& ba = _out_buffers.front();
@@ -70,103 +68,99 @@ AsyncUdpSocket::~AsyncUdpSocket() noexcept
     }
 }
 
-bool AsyncUdpSocket::EnableReading(Error* e) noexcept
+// Init async facility
+bool AsyncUdpSocket::InitHandler(Error* e)
 {
-    assert(GetSocket() != INVALID_SOCKET);
-    if(_handler == NULL)
+    if(!_loop)
     {
-        try
+        SET_LOGIC_ERROR(e, "Event loop is not set.");
+        return false;
+    }
+    if(!Socket::Valid())
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened.");
+        return false;
+    }
+    if(!Socket::Block(false, e))
+    {
+        return false;
+    }
+    if(!_handler)
+    {
+        SAFE_NEW(_handler, EventHandler(_loop, GetSocket()));
+        if(!_handler)
         {
-            _handler = new EventHandler(_loop, GetSocket());
-        }
-        catch(std::bad_alloc&)
-        {
-            SET_ERROR(e, "New event handler failed.", 0);
-            _handler = NULL;
+            SET_LOGIC_ERROR(e, "New event handler failed.");
             return false;
         }
-        assert(_handler != NULL);
         _handler->SetReadCallback(std::bind(&AsyncUdpSocket::OnRead, this, _1));
         _handler->SetWriteCallback(std::bind(&AsyncUdpSocket::OnWrite, this, _1));
     }
-    assert(_handler != NULL);
+    return true;
+}
+
+// Register async I/O events
+bool AsyncUdpSocket::EnableReading(Error* e)
+{
+    if(!InitHandler(e)) return false;
+    assert(_handler);
     _handler->EnableReading();
     return true;
 }
 
-bool AsyncUdpSocket::EnableWriting(Error* e) noexcept
+// Register async I/O events
+bool AsyncUdpSocket::EnableWriting(Error* e)
 {
-    assert(UdpSocket::GetSocket() != INVALID_SOCKET);
-    if(_handler == NULL)
-    {
-        try
-        {
-            _handler = new EventHandler(_loop, GetSocket());
-        }
-        catch(std::bad_alloc&)
-        {
-            SET_ERROR(e, "New event handler failed.", 0);
-            _handler = NULL;
-            return false;
-        }
-        assert(_handler != NULL);
-        _handler->SetReadCallback(std::bind(&AsyncUdpSocket::OnRead, this, _1));
-        _handler->SetWriteCallback(std::bind(&AsyncUdpSocket::OnWrite, this, _1));
-    }
-    assert(_handler != NULL);
+    if(!InitHandler(e)) return false;
+    assert(_handler);
     _handler->EnableWriting();
     return true;
 }
 
 // Open to receive data
-void AsyncUdpSocket::Open()
+// Enable async I/O 
+bool AsyncUdpSocket::Open(const SocketAddress& addr, bool reuse_addr, bool reuse_port, Error* e) noexcept
 {
-    Error e;
-    if(!Open(&e))
+    if(!UdpSocket::Open(addr, reuse_addr, reuse_port, e) || !EnableReading(e))
     {
-        THROW_ERROR(e);
+        Close(); // clean on failure
+        return false;
     }
+    return true;
 }
 
-bool AsyncUdpSocket::Open(Error* e) noexcept
-{
-    return UdpSocket::Open(e) && EnableReading(e);
-}
-
-void AsyncUdpSocket::Open(const SocketAddress& addr)
-{
-    Error e;
-    if(!Open(addr, &e))
-    {
-        THROW_ERROR(e);
-    }
-}
-
-bool AsyncUdpSocket::Open(const SocketAddress& addr, Error* e) noexcept
-{
-    return UdpSocket::Open(addr, e) && EnableReading(e);
-}
-
+// Close 
+// clean asycn I/O
 bool AsyncUdpSocket::Close(Error* e) noexcept
 {
-    assert(false);
-    return false;
+    if(_handler)
+    {
+        _handler->Detach(); // block until done
+        SAFE_DELETE(_handler);
+    }
+    return UdpSocket::Close(e);
 }
 
-ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, int flags, Error* e) noexcept
+// In async mode, data may be buffered to sending
+// Todo: buffer limit, error handling
+ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, Error* e) noexcept
 {
     // Out of thread sending, lock and buffer
+    assert(_loop);
     if(!_loop->IsInLoopThread())
     {
-        std::unique_lock<std::mutex> lock(_out_buffers_mutex);
-        _out_buffers.push(BufferAddress(new StreamBuffer(p, n), addr));
+        {
+            std::unique_lock<std::mutex> lock(_out_buffers_mutex);
+            _out_buffers.push(BufferAddress(new StreamBuffer(p, n), addr));
+        }
         EnableWriting();
         return n;
     }
+    // In thread sending
     ssize_t sent = 0;
     if(_out_buffers.empty())
     {
-        sent = UdpSocket::SendTo(p, n, addr, flags, e);
+        sent = UdpSocket::SendTo(p, n, addr, 0, e);
     }
     if(sent < n)
     {
@@ -176,23 +170,8 @@ ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* add
     return sent;
 }
 
-ssize_t AsyncUdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags, Error* e) noexcept
-{
-    ssize_t sent = SendTo(buf->Read(), buf->Readable(), addr, flags, e);
-    if(sent > 0)
-    {
-        buf->Read(sent);
-    }
-    return sent;
-}
-
-ssize_t AsyncUdpSocket::Send(const void* p, size_t n, int flags, Error* e) noexcept
-{
-    assert(false);
-    return -1;
-}
-
-ssize_t AsyncUdpSocket::Send(StreamBuffer* buf, int flags, Error* e) noexcept
+// In async mode, data may be buffered for sending
+ssize_t AsyncUdpSocket::Send(const void* p, size_t n, Error* e) noexcept
 {
     assert(false);
     return -1;
@@ -200,14 +179,14 @@ ssize_t AsyncUdpSocket::Send(StreamBuffer* buf, int flags, Error* e) noexcept
 
 // EventHandler::EventCallback
 // Read is ready
-void AsyncUdpSocket::OnRead(SOCKET s) noexcept
+void AsyncUdpSocket::OnRead(SOCKET s)
 {
     assert(s == GetSocket());
     ssize_t n = 0;
     SocketAddress addr;
-    if(_in_buffer.Writable(2048))
+    if(_in_buffer.Writable(RECEIVE_BUFFER_SIZE))
     {
-        n = UdpSocket::ReceiveFrom(_in_buffer.Write(), _in_buffer.Writable(), &addr);
+        n = UdpSocket::ReceiveFrom(_in_buffer.Write(), _in_buffer.Writable(), &addr, 0);
     }
     if(n > 0)
     {
@@ -223,20 +202,27 @@ void AsyncUdpSocket::OnRead(SOCKET s) noexcept
     }
 }
 
-void AsyncUdpSocket::OnWrite(SOCKET s) noexcept
+// EventHandler::EventCallback
+// Write is ready
+void AsyncUdpSocket::OnWrite(SOCKET s)
 {
     assert(s == GetSocket());
     std::unique_lock<std::mutex> lock(_out_buffers_mutex);
     while(!_out_buffers.empty())
     {
         BufferAddress& ba = _out_buffers.front();
-        SendTo(ba.buf, &ba.addr);
+        UdpSocket::SendTo(ba.buf, &ba.addr, 0);
         if(!ba.buf->Empty())
         {
             break;
         }
         delete ba.buf;
         _out_buffers.pop();
+    }
+    if(_out_buffers.empty())
+    {
+        assert(_handler);
+        _handler->DisableWriting();
     }
 }
 

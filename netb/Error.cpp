@@ -22,26 +22,26 @@ NETB_BEGIN
 
 // No error, dummy error class
 Error::Error() noexcept
-: _class(NULL)
-, _info("")
+: _class(nullptr)
+, _message("")
 , _code(0)
 {
 
 }
 
 // Unclassified error, base error class
-Error::Error(const std::string& info, int code) noexcept
+Error::Error(const std::string& msg, int code) noexcept
 : _class(&ErrorClass())
-, _info(info)
+, _message(msg)
 , _code(code)
 
 {
 
 }
 
-Error::Error(const class ErrorClass& cls, const std::string& info, int code) noexcept
+Error::Error(const class ErrorClass& cls, const std::string& msg, int code) noexcept
 : _class(&cls)
-, _info(info)
+, _message(msg)
 , _code(code)
 {
 
@@ -54,7 +54,7 @@ Error::~Error() noexcept
 
 const class ErrorClass& Error::Class() const noexcept 
 {
-    if(_class != NULL) 
+    if(_class != nullptr) 
     {
         return *_class;
     }
@@ -64,22 +64,22 @@ const class ErrorClass& Error::Class() const noexcept
 // Set to no error, empty error
 void Error::Reset() noexcept
 {
-    _class = NULL;
-    _info = "";
+    _class = nullptr;
+    _message = "";
     _code = 0; 
 }
 
-void Error::Set(const std::string& info, int code) noexcept
+void Error::Set(const std::string& msg, int code) noexcept
 {
-    _info = info;
+    _message = msg;
     _code = code; 
-    if(_class == NULL) _class = &ErrorClass();
+    if(_class == nullptr) _class = &ErrorClass();
 }
 
-void Error::Set(const class ErrorClass& cls, const std::string& info, int code) noexcept
+void Error::Set(const class ErrorClass& cls, const std::string& msg, int code) noexcept
 {
     _class = &cls;
-    _info = info;
+    _message = msg;
     _code = code; 
 }
 
@@ -88,16 +88,16 @@ void Error::SetClass(const class ErrorClass& cls) noexcept
     _class = &cls;
 }
 
-void Error::SetInfo(const std::string& info) noexcept
+void Error::SetMessage(const std::string& msg) noexcept
 {
-    _info = info;
-    if(_class == NULL) _class = &ErrorClass();
+    _message = msg;
+    if(_class == nullptr) _class = &ErrorClass();
 }
 
 void Error::SetCode(int code) noexcept
 {
     _code = code;
-    if(_class == NULL) _class = &ErrorClass();
+    if(_class == nullptr) _class = &ErrorClass();
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -109,7 +109,7 @@ const char* ErrorClass::Name() const noexcept
 
 void ErrorClass::Throw(const Error& e) const noexcept
 {
-    if(e) throw Exception(e.Info(), e.Code());
+    if(e) throw Exception(e.Message(), e.Code());
 }
 
 const class ErrorClass& ErrorClass() noexcept

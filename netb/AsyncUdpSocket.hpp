@@ -21,88 +21,115 @@
 #include "UdpSocket.hpp"
 #include "EventLoop.hpp"
 #include "EventHandler.hpp"
-#include "StreamBuffer.hpp"
-#include <functional>
 #include <queue>
 
 NETB_BEGIN
 
 //
-// AysncUdpSocket is a wraper class of UDP socket that supports async I/O. 
-// 
-// Send() and SendTo() work in non-block mode, and calling them will return 
-// immediately. The return values indicate the number of bytes that written 
-// into sedning buffer, rather than sent out. The data in sending buffer 
-// will be sent out internally and the count is notified by a callback. 
-//
-// There is no functions used for receiving data. Data is received internally 
-// into receiving buffer and the buffer address is notified by a callback. 
+// AysncUdpSocket is a wraper class of UDP socket with async I/O. 
 //
 class AsyncUdpSocket : public UdpSocket
 {
 public:
-    // Constructor, with local address info
+    // Any family and local address determined by following operations 
     explicit AsyncUdpSocket(EventLoop* loop) noexcept;
+
+    // Fixed family, only working in given family
     AsyncUdpSocket(EventLoop* loop, sa_family_t family) noexcept;
+
+    // Fixed local address
     AsyncUdpSocket(EventLoop* loop, const SocketAddress& addr) noexcept;
 
     // Destructor
     virtual ~AsyncUdpSocket() noexcept;
 
-    // Event loop is exposed for external use
+    // Get event loop
     EventLoop* GetLoop() const { return _loop; }
     
     // Open to receive data
-    virtual void Open(); // throw on errors
-    virtual bool Open(Error* e) noexcept;
-
-    // Open to receive data
-    // Bind to given address
-    virtual void Open(const SocketAddress& addr); // throw on errors
-    virtual bool Open(const SocketAddress& addr, Error* e) noexcept;
+    // Override to enable async I/O facility
+    virtual bool Open(const SocketAddress& addr, bool reuse_addr = true, bool reuse_port = true, Error* e = nullptr) noexcept;
 
     // Close
-    virtual bool Close(Error* e = NULL) noexcept;
+    // Override to clean async I/O facility
+    virtual bool Close(Error* e = nullptr) noexcept;
 
     // Send data to given address
-    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
-    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept;
+    // Async I/O, return immediately and data may be buffered for sending
+    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, Error* e = nullptr) noexcept;
+    //virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, Error* e = nullptr) noexcept;
 
     // Send data to connected address
-    virtual ssize_t Send(const void* p, size_t n, int flags = 0, Error* e = NULL) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept;
+    // Async I/O, return immediately and data may be buffered for sending
+    virtual ssize_t Send(const void* p, size_t n, Error* e = nullptr) noexcept;
+    //virtual ssize_t Send(StreamBuffer* buf, Error* e = nullptr) noexcept;
 
-    // Receive data and get remote address
-    virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept
+    // Async notification of data is sent
+    typedef std::function<void (AsyncUdpSocket*, size_t, const SocketAddress*)> SentCallback;
+    void SetSentCallback(const SentCallback& cb) noexcept { _sent_callback = cb; }
+
+    // Async notification of data is received
+    typedef std::function<void (AsyncUdpSocket*, StreamBuffer*, const SocketAddress*)> ReceivedCallback;
+    void SetReceivedCallback(const ReceivedCallback& cb) noexcept { _received_callback = cb; };
+
+public:
+    // In async mode, send data with timeout is not necessary, data may be buffered for sending
+    // to given address
+    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int timeout, Error* e = nullptr) noexcept
     {
         SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
     }
-    virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0, Error* e = NULL) noexcept
+
+    // to given address
+    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int timeout, Error* e = nullptr) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return -1;
+    }
+
+    // to connected address
+    virtual ssize_t Send(const void* p, size_t n, int timeout, Error* e = nullptr) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return -1;
+    }
+
+    // to connected address
+    virtual ssize_t Send(StreamBuffer* buffer, int timeout, Error* e = nullptr) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return -1;
+    }
+
+    // In async mode, data is received internally and notified by callback.
+    // Receive data and get remote address
+    virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0, Error* e = nullptr) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return -1;
+    }
+
+    // Receive data and get remote address
+    virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0, Error* e = nullptr) noexcept
     {
         SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
     }
 
     // Receive data from connected address
-    virtual ssize_t Receive(void* p, size_t n, int flags = 0, Error* e = NULL) noexcept
-    {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
-        return -1;
-    }
-    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0, Error* e = NULL) noexcept
+    virtual ssize_t Receive(void* p, size_t n, int flags = 0, Error* e = nullptr) noexcept
     {
         SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
     }
 
-    // Notification of data is sent
-    typedef std::function<void (AsyncUdpSocket*, size_t, const SocketAddress*)> SentCallback;
-    void SetSentCallback(const SentCallback& cb) { _sent_callback = cb; }
-
-    // Notification of data is received
-    typedef std::function<void (AsyncUdpSocket*, StreamBuffer*, const SocketAddress*)> ReceivedCallback;
-    void SetReceivedCallback(const ReceivedCallback& cb) { _received_callback = cb; };
+    // Receive data from connected address
+    virtual ssize_t Receive(StreamBuffer* buf, int flags = 0, Error* e = nullptr) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return -1;
+    }
 
 private:
     // Aysnc facility
@@ -112,32 +139,30 @@ private:
     ReceivedCallback _received_callback;
 
     // Receiving buffer
-    // I/O in single thread
-    // a complete datagram is received and notified each time
-    // buffer will be clear after each callback
+    // for a single single message
     StreamBuffer _in_buffer;
 
     // Sending buffer
-    // buffer and send out 
+    // message and peer address
     struct BufferAddress
     {
         BufferAddress(StreamBuffer* b, SocketAddress sa)
         : buf(b), addr(sa) { }
-        
         StreamBuffer* buf;
         SocketAddress addr;
-
     };
     std::queue<BufferAddress> _out_buffers;
     std::mutex _out_buffers_mutex;
 
     // Enable reading and writing
-    bool EnableReading(Error* e = NULL) noexcept;
-    bool EnableWriting(Error* e = NULL) noexcept;
+    bool InitHandler(Error* e = nullptr);
+    bool EnableReading(Error* e = nullptr);
+    bool EnableWriting(Error* e = nullptr);
 
     // EventHandler::EventCallback;
-    void OnRead(const SOCKET s) noexcept;
-    void OnWrite(const SOCKET s) noexcept;
+    // On I/O ready events
+    void OnRead(const SOCKET s);
+    void OnWrite(const SOCKET s);
 };
 
 NETB_END

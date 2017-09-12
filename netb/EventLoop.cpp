@@ -22,7 +22,7 @@ NETB_BEGIN
 EventLoop::EventLoop()
 : _thread_id(std::this_thread::get_id())
 , _stop(false)
-, _current_handler(NULL)
+, _current_handler(nullptr)
 , _event_handling(false)
 , _queue_invoking(false)
 , _wakeup_handler(this, _wakeup_pipe.ReadSocket())
@@ -49,7 +49,7 @@ void EventLoop::Run()
     {
         // Block to wait for active events
         _active_handlers.clear();
-        if(_selector.WaitForEvents(_active_handlers, -1, NULL) && !_active_handlers.empty()) 
+        if(_selector.WaitForEvents(_active_handlers, -1, nullptr) && !_active_handlers.empty()) 
         {
             // Events handling
             _event_handling = true;
@@ -59,7 +59,7 @@ void EventLoop::Run()
                 _current_handler = *it;
                 _current_handler->HandleEvents();
             }
-            _current_handler = NULL;
+            _current_handler = nullptr;
             _event_handling = false;
         }
         // Invoking Queued functions

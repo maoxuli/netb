@@ -21,30 +21,33 @@
 
 NETB_BEGIN
 
-// No given address
+// dynamic address
 TcpAcceptor::TcpAcceptor() noexcept
-: _timeout(-1) // by dedault in block mode
+: _address() // empty address
+, _reuse_addr(false)
+, _reuse_port(false)
 , _backlog(SOMAXCONN)
-, _opened(false)
 {
 
 }
 
-// Any address of given family
+// fixed family, with any address or dynamic address
 TcpAcceptor::TcpAcceptor(sa_family_t family) noexcept
-: _timeout(-1) // by dedault in block mode
+: _address() // empty address
+, _reuse_addr(false)
+, _reuse_port(false)
 , _backlog(SOMAXCONN)
-, _opened(false)
 {
-    _address.Reset(family); // noexcept
+    // fixed family with any address
+    _address.Reset(family);
 }
 
-// given address
-TcpAcceptor::TcpAcceptor(const SocketAddress& addr) noexcept
-: _address(addr) // noexcept
-, _timeout(-1) // by dedault in block mode
+// fixed address
+TcpAcceptor::TcpAcceptor(const SocketAddress& addr, bool reuse_addr, bool reuse_port) noexcept
+: _address(addr)
+, _reuse_addr(reuse_addr)
+, _reuse_port(reuse_port)
 , _backlog(SOMAXCONN)
-, _opened(false)
 {
 
 }
@@ -54,206 +57,145 @@ TcpAcceptor::~TcpAcceptor() noexcept
 
 }
 
-// Open on saved address
+// Backlog for listen, -1 for default
+void TcpAcceptor::SetBacklog(int backlog) noexcept
+{
+    _backlog = backlog < 0 ? SOMAXCONN : backlog;
+}
+
+// Open with fix address or fix family with any address
 void TcpAcceptor::Open()
 {
     Error e;
-    if(!Open(&e))
+    if(!Open(&e)) 
     {
         THROW_ERROR(e);
     }
 }
 
-// Open on saved address
+// Open with fix address or fix family with any address
 bool TcpAcceptor::Open(Error* e) noexcept
 {
-    // Always let caller close 
-    if(_opened)
+    if(_address.Empty()) // no initial address or family
     {
-        SET_LOGIC_ERROR(e, "Has been opened already.");
+        SET_LOGIC_ERROR(e, "Address or family not assigned before opening");
         return false;
     }
-    // Open on initial address
-    SocketAddress addr(_address); 
-    if(addr.Empty()) // If no initial address, any address for default family
-    {
-        addr.Reset(AF_INET); // noexcept
-    }
-    return Open(addr, e);
+    return Open(_address, _reuse_addr, _reuse_port, e);
 }
 
-// Open on given address
-void TcpAcceptor::Open(const SocketAddress& addr)
+// Open with dynamic address, or fixed family with dynamic address
+void TcpAcceptor::Open(const SocketAddress& addr, bool reuse_addr, bool reuse_port)
 {
     Error e;
-    if(!Open(addr, &e))
+    if(!Open(addr, reuse_addr, reuse_port, &e)) 
     {
         THROW_ERROR(e);
     }
 }
 
-// Open on given address
+// Open with dynamic address, or fixed family with dynamic address
+// with default reuse rule
 bool TcpAcceptor::Open(const SocketAddress& addr, Error* e) noexcept
 {
-    // Always let caller close 
-    if(_opened)
-    {
-        SET_LOGIC_ERROR(e, "Has been opened already.");
-        return false;
-    }
+    return Open(addr, true, true, e);
+}
 
-    // if socket is not yet init, do it now
+// Open with dynamic address, or fixed family with dynamic address
+bool TcpAcceptor::Open(const SocketAddress& addr, bool reuse_addr, bool reuse_port, Error* e) noexcept
+{
+    if(!_address.Empty() && addr != _address) // initial address vs given address
+    {
+        if(!_address.Any() || addr.Family() != _address.Family())
+        {
+            SET_LOGIC_ERROR(e, "Given address is not qualified for initial.");
+            return false;
+        }
+    }
+    // Open socket
     if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP, e))
     {
         return false;
     }
-    assert(!Socket::Valid());
-
+    // set reuse rules beore bind
+    if(!Socket::ReuseAddress(reuse_addr, e) || !Socket::ReusePort(reuse_port, e))
+    {
+        return false;
+    }
     // bind address and listen
     return Socket::Bind(addr, e) && Socket::Listen(_backlog, e);
 }
 
-// Close socket, stop to accept incomming connection
+// Close and be ready to open again
 bool TcpAcceptor::Close(Error* e) noexcept
 {
-    _opened = false;
     return Socket::Close(e); 
 }
 
+// bound address or given address before opened
 SocketAddress TcpAcceptor::Address(Error* e) const noexcept
 {
-    if(_opened)
+    if(Socket::Valid())
     {
-        return Socket::Address();
+        return Socket::Address(e);
     }
     return _address;
 }
 
-// Accept a connection
-SOCKET TcpAcceptor::Accept()
+// Accept a connection, in block mode
+SOCKET TcpAcceptor::Accept(SocketAddress* addr)
 {
     Error e;
     SOCKET s;
-    if((s = Accept(&e)) == INVALID_SOCKET)
+    if((s = Accept(addr, &e)) == INVALID_SOCKET)
     {
         THROW_ERROR(e);
     }
     return s;
 }
 
-SOCKET TcpAcceptor::Accept(Error* e) noexcept
+// Accept a connection, in block mode
+SOCKET TcpAcceptor::Accept(SocketAddress* addr, Error* e) noexcept
 {
-    if(!_opened)
-    {
-        SET_LOGIC_ERROR(e, "Not opened yet.");
-        return INVALID_SOCKET;
-    }
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
+    if(!Socket::Block(true, e)) // set to block mode
     {
         return INVALID_SOCKET;
     }
-    return Socket::Accept(e);
+    return Socket::Accept(addr, e); // block mode
 }
 
-SOCKET TcpAcceptor::AcceptFrom(SocketAddress* addr)
+// Accept a connection, in non-block mode with timeout
+SOCKET TcpAcceptor::Accept(SocketAddress* addr, int timeout)
 {
     Error e;
     SOCKET s;
-    if((s = AcceptFrom(addr, &e)) == INVALID_SOCKET)
+    if((s = Accept(addr, timeout, &e)) == INVALID_SOCKET)
     {
         THROW_ERROR(e);
     }
     return s;
 }
 
-// Accept a connection
-SOCKET TcpAcceptor::AcceptFrom(SocketAddress* addr, Error* e) noexcept
+// Accept a connection, in non-block mode with timeout
+SOCKET TcpAcceptor::Accept(SocketAddress* addr, int timeout, Error* e) noexcept
 {
-    if(addr == NULL)
+    if(timeout < 0) // block mode
     {
-        return Accept(e);
+        return Accept(addr, e);
     }
-    if(!_opened)
-    {
-        SET_LOGIC_ERROR(e, "Not opened yet.");
-        return INVALID_SOCKET;
-    }
-    if(_timeout > 0 && !Socket::WaitForRead(_timeout, e))
+    if(!Socket::Block(false, e)) // set to non-block mode
     {
         return INVALID_SOCKET;
     }
-    return Socket::AcceptFrom(addr, e);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-// Backlog for listen
-void TcpAcceptor::Backlog(int size)
-{
-    Error e;
-    if(!Backlog(size, &e))
+    // Here we check ready status first and then accept in non-block mode. 
+    // A more official flow is accept in non-block mode first, and then 
+    // check the status, if it is EWOULDBLOCK or EAGIN, then check ready 
+    // in timeout time, and accept again on ready event. 
+    if(timeout > 0 && !Socket::WaitForRead(timeout, e)) // timout
     {
-        THROW_ERROR(e);
+        return INVALID_SOCKET;
     }
-}
-
-// Backlog for listen
-bool TcpAcceptor::Backlog(int size, Error* e) noexcept
-{
-    if(size < 1)
-    {
-        SET_LOGIC_ERROR(e, "Invalid backlog for TCP socket.");
-        return false;
-    } 
-    _backlog = size;
-    return true;
-}
-
-// I/O block
-void TcpAcceptor::Block(int timeout) 
-{
-    Error e;
-    if(!Block(timeout, &e))
-    {
-        THROW_ERROR(e);
-    }
-}
-
-// -1: block, 0: non-block, >0: block with timeout
-bool TcpAcceptor::Block(int timeout, Error* e) noexcept
-{
-    _timeout = timeout;
-    return Socket::Block(timeout < 0 ? true : false, e);
-}
-
-// Option
-void TcpAcceptor::ReuseAddress(bool reuse) // default is false
-{
-    Error e;
-    if(!ReuseAddress(reuse, &e))
-    {
-        THROW_ERROR(e);
-    }
-}
-
-bool TcpAcceptor::ReuseAddress(bool reuse, Error* e) noexcept
-{
-    return Socket::ReuseAddress(reuse, e);
-}
-
-// Option
-void TcpAcceptor::ReusePort(bool reuse)  // default is false
-{
-    Error e;
-    if(!ReusePort(reuse, &e))
-    {
-        THROW_ERROR(e);
-    }
-}
-
-bool TcpAcceptor::ReusePort(bool reuse, Error* e) noexcept
-{
-    return Socket::ReusePort(reuse, e);
+    return Socket::Accept(addr, e); // non-block mode
 }
 
 NETB_END

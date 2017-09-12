@@ -20,149 +20,158 @@
 
 NETB_BEGIN
 
+// std::placeholders::_1, _2, ...
 using namespace std::placeholders;
 
-// With no address info
+// Any local address, family is given by connected address
 AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop) noexcept
 : TcpSocket()
 , _loop(loop)
-, _handler(NULL)
+, _handler(nullptr)
 {
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
 }
 
-// With any address of given family
+// Any local address of given family, only working in given family
 AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, sa_family_t family) noexcept
 : TcpSocket(family)
 , _loop(loop)
-, _handler(NULL)
+, _handler(nullptr)
 {
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
 }
 
 
-// With given address
-AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, const SocketAddress& addr) noexcept
-: TcpSocket(addr)
+// Fixed local address, only working in the family of given address
+AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, const SocketAddress& addr, bool reuse_addr, bool reuse_port) noexcept
+: TcpSocket(addr, reuse_addr, reuse_port)
 , _loop(loop)
-, _handler(NULL)
+, _handler(nullptr)
 {
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
 }
 
-// With externally established connection
-AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, SOCKET s, const SocketAddress* connected) noexcept
-: TcpSocket(s, connected)
+// Externally established connection with connected address
+AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, SOCKET s, const SocketAddress* addr) noexcept
+: TcpSocket(s, addr)
 , _loop(loop)
-, _handler(NULL)
+, _handler(nullptr)
 {
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
 }
 
-// Destructor, deriviation is allowed for extension
+// Destructor
 AsyncTcpSocket::~AsyncTcpSocket() noexcept
 {
-    if(_handler != NULL)
+    // Isolate from event loop
+    if(_handler != nullptr)
     {
-        delete _handler;
+        _handler->Detach(); // block until done
+        SAFE_DELETE(_handler);
     }
 }
 
-bool AsyncTcpSocket::EnableReading(Error* e) noexcept
+// Init async I/O events handler
+bool AsyncTcpSocket::InitHandler(Error* e)
 {
-    assert(_loop != NULL);
-    assert(GetSocket() != INVALID_SOCKET);
-    // Init read event handler
-    if(_handler == NULL)
-    try
+    if(_loop == nullptr)
     {
-        _handler = new EventHandler(_loop, GetSocket());
+        SET_LOGIC_ERROR(e, "Event loop is not set.");
+        return false;
+    }
+    if(!Socket::Valid())
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened.");
+        return false;
+    }
+    if(!Socket::Block(false, e))
+    {
+        return false;
+    }
+    if(_handler == nullptr)
+    {
+        SAFE_NEW(_handler, EventHandler(_loop, GetSocket()));
+        if(_handler == nullptr)
+        {
+            SET_LOGIC_ERROR(e, "New event handler failed.");
+            return false;
+        }
         _handler->SetReadCallback(std::bind(&AsyncTcpSocket::OnRead, this, _1));
         _handler->SetWriteCallback(std::bind(&AsyncTcpSocket::OnWrite, this, _1));
     }
-    catch(std::bad_alloc&)
-    {
-        SET_ERROR(e, "New EventHandler failed.", 0);
-        _handler = NULL;
-        return false;
-    }
-    assert(_handler != NULL);
-    // Set socket to non-block
-    if(!TcpSocket::Block(0, e))
+    return true;
+}
+
+// Register I/O events to enable reading
+bool AsyncTcpSocket::EnableReading(Error* e)
+{
+    if(!InitHandler(e))
     {
         return false;
     }
-    // Register interested event 
     _handler->EnableReading();
     return true;
 }
 
-bool AsyncTcpSocket::EnableWriting(Error* e) noexcept
+// Reister I/O events to enable writing
+bool AsyncTcpSocket::EnableWriting(Error* e)
 {
-    assert(_loop != NULL);
-    assert(GetSocket() != INVALID_SOCKET);
-    // Init read event handler
-    if(_handler == NULL)
-    try
-    {
-        _handler = new EventHandler(_loop, GetSocket());
-        _handler->SetReadCallback(std::bind(&AsyncTcpSocket::OnRead, this, _1));
-        _handler->SetWriteCallback(std::bind(&AsyncTcpSocket::OnWrite, this, _1));
-    }
-    catch(std::bad_alloc&)
-    {
-        SET_ERROR(e, "New EventHandler failed.", 0);
-        _handler = NULL;
-        return false;
-    }
-    assert(_handler != NULL);
-    // Set socket to non-block
-    if(!TcpSocket::Block(0, e))
+    if(!InitHandler(e))
     {
         return false;
     }
-    // Register interested event 
     _handler->EnableWriting();
     return true;
 }
 
-void AsyncTcpSocket::Connected() 
-{
-    Error e;
-    if(!EnableReading(&e))
-    {
-        THROW_ERROR(e);
-    }
-}
-
+// Set status for externally established connection
+// Enable async facility on success
 bool AsyncTcpSocket::Connected(Error* e) noexcept 
 {
     return TcpSocket::Connected(e) && EnableReading(e);
 }
 
-void AsyncTcpSocket::Connect(const SocketAddress& addr)
-{
-    Error e;
-    if(!Connect(addr, &e))
-    {
-        THROW_ERROR(e);
-    }
-}
-
+// Actively connect to remote address, in block mode
+// Enable async facility on success
 bool AsyncTcpSocket::Connect(const SocketAddress& addr, Error* e) noexcept
 {
-    return (TcpSocket::Connect(addr, e) && EnableReading(e));
-}
-
-bool AsyncTcpSocket::Close(Error* e) noexcept
-{
-    if(IsConnected())
+    if(!TcpSocket::Connect(addr, e) || !EnableReading(e))
     {
-        TcpSocket::Close();
-        assert(_handler != NULL);
-        _handler->Detach();
+        Close(); // clean on failure
+        return false;
     }
     return true;
+}
+
+// Actively connect to remote address, in non-block mode with timeout
+// timeout of -1 for async mode
+// Enable async facility on success
+// Todo: async mode, enable async waiting for connected events and notify
+bool AsyncTcpSocket::Connect(const SocketAddress& addr, int timeout, Error* e) noexcept
+{
+    if(timeout < 0)
+    {
+        return Connect(addr, e);
+    }
+    if(!TcpSocket::Connect(addr, timeout, e) || !EnableReading(e))
+    {
+        Close(); // Clean on failure
+        return false;
+    }
+    return true;
+}
+
+// Close the connection
+// Clean async facility
+bool AsyncTcpSocket::Close(Error* e) noexcept
+{
+    // Isolate from event loop first
+    if(_handler != nullptr)
+    {
+        _handler->Detach(); // block until done
+        SAFE_DELETE(_handler);
+    }
+    return TcpSocket::Close(e);
 }
 
 // Async mode I/O
@@ -171,22 +180,26 @@ bool AsyncTcpSocket::Close(Error* e) noexcept
 // The actual number of bytes that was sent out is notified with SentCallback.
 // return a number less than the data size, indicate the sending buffer is full.
 // return value is less than 0, indicate errors occurred. 
-ssize_t AsyncTcpSocket::Send(const void* p, size_t n, int flags, Error* e) noexcept
+ssize_t AsyncTcpSocket::Send(const void* p, size_t n, Error* e) noexcept
 {
+    assert(_loop != nullptr);
     if(_loop->IsInLoopThread())
     {
         ssize_t sent = 0;
         if(_out_buffer.Empty())
         {
-            sent = TcpSocket::Send(p, n, flags, e);
+            sent = TcpSocket::Send(p, n, 0, e); // non-block send
         }
-        if(sent < n) // async send
+        if(sent < n) // buffered left data
         {
-            size_t offset = sent > 0 ? sent : 0;
-            if(_out_buffer.Write((unsigned char*)p + offset, n - offset))
+            size_t off = sent < 0 ? 0 : sent;
+            if(_out_buffer.Write((unsigned char*)p + off, n - off))
             {
-                sent  = n;
+                sent = n;
             }
+        }
+        if(!_out_buffer.Empty())
+        {
             EnableWriting();
         }
         return sent;
@@ -200,22 +213,9 @@ ssize_t AsyncTcpSocket::Send(const void* p, size_t n, int flags, Error* e) noexc
     return n;
 }
 
-// Send data
-// The actual data sending must be done on the thread loop 
-// to ensure the order of data sending
-ssize_t AsyncTcpSocket::Send(StreamBuffer* buf, int flags, Error* e) noexcept
-{
-    ssize_t ret = Send(buf->Read(), buf->Readable(), flags, e);
-    if(ret > 0)
-    {
-        buf->Read(ret);
-    }
-    return ret;
-}
-
 // Ready to read
-// Read data into in buffer
-void AsyncTcpSocket::OnRead(SOCKET s) noexcept
+// Read data into in buffer and notify
+void AsyncTcpSocket::OnRead(SOCKET s)
 {
     ssize_t n = 0;
     if(_in_buffer.Writable(2048))
@@ -232,23 +232,27 @@ void AsyncTcpSocket::OnRead(SOCKET s) noexcept
     }
     else // Error
     {
-        std::cout << "AsyncTcpSocket::OnRead return " << n << ", code: " << ErrorCode::Current() << ". Close!\n";
-        TcpSocket::Close();
+        std::cout << "AsyncTcpSocket::OnRead: " << n << " [" << ErrorCode::Current() << "]\n";
+        Close();
+        if(_connected_callback)
+        {
+            _connected_callback(this, false);
+        }
     }
 }
 
 // Ready to write
-// Try to send data in out buffer
-void AsyncTcpSocket::OnWrite(SOCKET s) noexcept
+// Try to send data in out buffer and notify
+void AsyncTcpSocket::OnWrite(SOCKET s)
 {
     if(_out_buffer.Readable() > 0)
     {
-        ssize_t sent = TcpSocket::Send(_out_buffer.Read(), _out_buffer.Readable());
+        ssize_t sent = TcpSocket::Send(&_out_buffer, 0);
         if(sent > 0) _out_buffer.Read(sent);
     }
     if(_out_buffer.Readable() == 0)
     {
-        assert(_handler != NULL);
+        assert(_handler != nullptr);
         _handler->DisableWriting();
     }
 }

@@ -29,7 +29,7 @@ const char* HttpMessage::CRLF = "\r\n";
 HttpMessage::HttpMessage(const char* version) 
 : _version(version)
 , _body_len(0)
-, _body(NULL)
+, _body(nullptr)
 , _state(STATE::READY)
 {
 
@@ -53,7 +53,7 @@ void HttpMessage::Reset()
     if(!_body)
     {
         delete[] _body; 
-        _body = NULL; 
+        _body = nullptr; 
     }
     _body_len = 0;
 
@@ -116,7 +116,7 @@ const char* HttpMessage::GetHeader(const char* key) const
         }
         ++it;
     }
-    return NULL;
+    return nullptr;
 }
 
 long HttpMessage::GetHeaderAsInt(const char* key) const
@@ -183,7 +183,7 @@ bool HttpMessage::ToBuffer(StreamBuffer* buf) const
         }
     }
     writer.String(CRLF, 2);
-    if(_body_len > 0 && _body != NULL)
+    if(_body_len > 0 && _body != nullptr)
     {
         if(!writer.Bytes(_body, _body_len))
         {
@@ -246,7 +246,7 @@ void HttpMessage::ReadBody(StreamBuffer* buf)
 {
     assert(_state == STATE::BODY);
     assert(_body_len > 0);
-    if(_body == NULL) _body = new unsigned char[_body_len];
+    if(_body == nullptr) _body = new unsigned char[_body_len];
     if(StreamReader(buf).Bytes(_body, _body_len))
     {
         _state = STATE::OKAY;
@@ -413,7 +413,7 @@ std::map<int, const char*> HttpResponse::s_default_phrases =
     { 504, "Gateway Time-out" },
     { 505, "Rtsp Version not supported" },
     { 551, "Option not supported" },
-    {   0, NULL }
+    {   0, nullptr }
 };
 
 // HTTP/1.1 code phrase CRLF

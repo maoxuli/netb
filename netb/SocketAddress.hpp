@@ -66,11 +66,10 @@ public:
 	// If given family is not supported, throw UnsupportedFamilyException
 	// If given host is not a valid format, throw InvalidAddressException
 	// If given host is not in the family, throw FamilyMismatchException
-	SocketAddress(const std::string& host, unsigned short port, sa_family_t family = AF_INET);
+	SocketAddress(const std::string& host, unsigned short port, sa_family_t family = AF_INET); // throw on erros
 	SocketAddress(const std::string& host, unsigned short port, sa_family_t family, Error* e) noexcept;
 
 	// Copy constructor
-	// no throw
 	SocketAddress(const SocketAddress& sa) noexcept { memcpy(this, &sa,sizeof(struct sockaddr_storage)); }
 	SocketAddress(const SocketAddress* sa) noexcept { memcpy(this, sa,sizeof(struct sockaddr_storage)); }
 
@@ -147,17 +146,17 @@ public:
 
 	// Check special address
 	// If address family is not supported, throw UnsupportedFamilyException
-	bool Wildcard(Error* e = NULL) const noexcept; // INADDR_ANY:0
-	bool Any(Error* e = NULL) const noexcept; // INADDR_ANY:0
-	bool AnyPort(Error* e = NULL) const noexcept; // 0
-	bool AnyHost(Error* e = NULL) const noexcept; // INADDR_ANY
-	bool Localhost(Error* e = NULL) const noexcept; // "localhost"
-	bool Loopback(Error* e = NULL) const noexcept; // INADDR_LOOPBACK
-	bool Broadcast(Error* e = NULL) const noexcept; // INADDR_NONE
-	bool Multicast(Error* e = NULL) const noexcept; // 224.0.0.0 to 239.255.255.255
+	bool Wildcard(Error* e = nullptr) const noexcept; // INADDR_ANY:0
+	bool Any(Error* e = nullptr) const noexcept; // INADDR_ANY:0
+	bool AnyPort(Error* e = nullptr) const noexcept; // 0
+	bool AnyHost(Error* e = nullptr) const noexcept; // INADDR_ANY
+	bool Localhost(Error* e = nullptr) const noexcept; // "localhost"
+	bool Loopback(Error* e = nullptr) const noexcept; // INADDR_LOOPBACK
+	bool Broadcast(Error* e = nullptr) const noexcept; // INADDR_NONE
+	bool Multicast(Error* e = nullptr) const noexcept; // 224.0.0.0 to 239.255.255.255
 
 	// Output the address to string
-	std::string ToString(Error* e = NULL) const noexcept;
+	std::string ToString(Error* e = nullptr) const noexcept;
 
 public: 
 	// Copy counstructor, from data structures used in socket address
@@ -220,12 +219,6 @@ public:
 	inline bool operator>(const SocketAddress& a) const noexcept { return (a < *this); }
 	inline bool operator<=(const SocketAddress& a) const noexcept { return !(a < *this); }
 	inline bool operator>=(const SocketAddress& a) const noexcept { return !(*this < a); }
-
-private: 
-	// Error info
-	std::string ErrorInfo(const std::string& info) const noexcept;
-	std::string ErrorInfo(const std::string& info, int value) const noexcept;
-	std::string ErrorInfo(const std::string& info, const std::string& addr) const noexcept;
 };
 
 NETB_END

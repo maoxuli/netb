@@ -30,10 +30,14 @@ NETB_BEGIN
 class AsyncTcpAcceptor : public TcpAcceptor
 {
 public:
-    // Constructor, with local address info
-    explicit AsyncTcpAcceptor(EventLoop* loop) noexcept; // no address info
-    AsyncTcpAcceptor(EventLoop* loop, sa_family_t family) noexcept; // any address of given family
-    AsyncTcpAcceptor(EventLoop* loop, const SocketAddress& addr) noexcept; // given address
+    // Dynamic address
+    explicit AsyncTcpAcceptor(EventLoop* loop) noexcept;
+
+    // Fixed family with any or dynamic address
+    AsyncTcpAcceptor(EventLoop* loop, sa_family_t family) noexcept; 
+
+    // Fixed address
+    AsyncTcpAcceptor(EventLoop* loop, const SocketAddress& addr, bool reuse_addr = true, bool reuse_port = true) noexcept;
 
     // Destructor
     virtual ~AsyncTcpAcceptor() noexcept;
@@ -41,48 +45,44 @@ public:
     // Event loop is exposed for external use
     EventLoop* GetLoop() const { return _loop; } 
 
-    // Open is overriden to enable async I/O
-    // Init event handler and register interested events
-    virtual void Open(); // throw on errors
-    virtual bool Open(Error* e) noexcept;
+    // The actual open process
+    // Enable async facility on success to accept incomming connections
+    virtual bool Open(const SocketAddress& addr, bool reuse_addr, bool reuse_port, Error* e) noexcept;
 
-    // Open on given address
-    // Init event handler and register interested events
-    virtual void Open(const SocketAddress& addr); // throw on errers
-    virtual bool Open(const SocketAddress& addr, Error* e) noexcept;
-
-    // Close, and ready for open again
-    virtual bool Close(Error* e = NULL) noexcept;
-
-    // Accept a connection, not work in this mode
-    virtual SOCKET Accept() // thow on errors
-    {
-        throw LogicException("Function not work in this mode.");
-    }
-
-    virtual SOCKET Accept(Error* e) noexcept
-    {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
-        return INVALID_SOCKET;
-    }
-
-    virtual SOCKET AcceptFrom(SocketAddress* addr) // throw on errors
-    {
-       throw LogicException("Function not work in this mode.");
-    }
-    
-    virtual SOCKET AcceptFrom(SocketAddress* addr, Error* e) noexcept
-    {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
-        return INVALID_SOCKET;
-    }
+    // Close
+    // Clean async facility 
+    virtual bool Close(Error* e = nullptr) noexcept;
 
     // Notificaiton of connection is accepted
-    // Address is a const pointer, rather than a reference, so it could be NULL
     // If the callback return false, indicate application did not take over the ownership of socket, 
     // the socket should be closed internally
     typedef std::function<bool (AsyncTcpAcceptor*, SOCKET, const SocketAddress*)> AcceptedCallback;
     void SetAcceptedCallback(const AcceptedCallback& cb) noexcept { _accepted_callback = cb; }
+
+public:
+    // In async mode, incomming connections are accetpted internally 
+    // and notify the application by AcceptedCallback
+    virtual SOCKET Accept(SocketAddress* addr = nullptr) // thow on errors
+    {
+        throw LogicException("Function not work in this mode.");
+    }
+
+    virtual SOCKET Accept(SocketAddress* addr, Error* e) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return INVALID_SOCKET;
+    }
+
+    virtual SOCKET Accept(SocketAddress* addr, int timeout) // throw on errors
+    {
+       throw LogicException("Function not work in this mode.");
+    }
+    
+    virtual SOCKET AcceptFrom(SocketAddress* addr, int timeout, Error* e) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return INVALID_SOCKET;
+    }
 
 private: 
     // Async facility
@@ -90,11 +90,13 @@ private:
     EventHandler* _handler;
     AcceptedCallback _accepted_callback;
 
-    // Enable async reading
-    bool EnableReading(Error* e) noexcept;
+    // Register I/O events to enable async reading
+    bool EnableReading(Error* e);
 
     // EventHandler::ReadCallbck
-    void OnRead(SOCKET s) noexcept;
+    // I/O event is ready
+    // Accept incomming connections and notifiy by callback
+    void OnRead(SOCKET s);
 };
 
 NETB_END

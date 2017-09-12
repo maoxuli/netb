@@ -44,7 +44,7 @@ SocketPipe::SocketPipe(Error* e) noexcept
     catch(const Exception& ex)
     {
         SET_ERROR_CLASS(e, ex.Class());
-        SET_ERROR_INFO(e, ex.Info());
+        SET_ERROR_MESSAGE(e, ex.Message());
         SET_ERROR_CODE(e, ex.Code());
     }
 }
@@ -61,7 +61,8 @@ void SocketPipe::MakePair(Socket& reader, Socket& writer)
     {
         // Reader socket listen on any port of local loopback address 
         SocketAddress addr("loopback", 0);
-        reader.Bind(addr).Listen(1);
+        reader.Bind(addr);
+        reader.Listen(1);
         addr = reader.Address(); // actual address
 
         // Establish connection from writer socket to reader socket

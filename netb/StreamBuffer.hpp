@@ -166,7 +166,6 @@ public:
     }
 
     // Available data to read before next delimit char or string
-    ssize_t Readable(const char delim) const;
     ssize_t Readable(const char* delim) const; 
 
     // Pointer to read position
@@ -208,19 +207,18 @@ public:
 
     // Addressable data from position that offset to the reading position 
     // to next delimit char or string
-    ssize_t Addressable(const char delim, size_t offset = 0) const; 
     ssize_t Addressable(const char* delim, size_t offset = 0) const; 
 
     // Pointer to position that offset to the reading position 
     // For external use, such as peek or update data in buffer 
     const void* Address(size_t offset = 0) const
     {
-        return _write_index - _read_index < offset ? NULL : Begin() + _read_index + offset;
+        return _write_index - _read_index < offset ? nullptr : Begin() + _read_index + offset;
     }
 
     void* Address(size_t offset = 0) 
     {
-        return _write_index - _read_index < offset ? NULL : Begin() + _read_index + offset;
+        return _write_index - _read_index < offset ? nullptr : Begin() + _read_index + offset;
     }
 
     // Peek data at position that offset to the reading position

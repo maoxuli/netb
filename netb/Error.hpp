@@ -24,49 +24,80 @@ NETB_BEGIN
 
 //
 // Error object is used to transfer error status from functions to caller. 
-// It holds a text info to descript the error and a optional associated code 
-// number. The formats of info and code are not determined. They are varied 
+// It holds a text message to descript the error and a optional associated code 
+// number. The formats of message and code are not determined. They are varied 
 // on error classifications.
 //
 class Error
 {
 public:
-    // No error, or empty error
+    // Error with nothing indicate no error
     Error() noexcept;
-    Error(const std::string& info, int code = 0) noexcept;
-    Error(const class ErrorClass& cls, const std::string& info = "", int code = 0) noexcept;
+
+    // An unclassified error can be denoted by text message and error code
+    // The classification is set to a default one
+    Error(const std::string& msg, int code = 0) noexcept;
+
+    // Classification of an error is denoted by a ErrorClass (or its subclass) object
+    Error(const class ErrorClass& cls, const std::string& msg = "", int code = 0) noexcept;
+
+    // Destructor
     ~Error() noexcept;
 
     // Error status
-    operator bool() const noexcept { return _class != NULL; }
-    bool Empty() const noexcept { return _class == NULL; }
+    operator bool() const noexcept { return _class; }
+    bool Empty() const noexcept { return !_class; }
 
     // Get
     const class ErrorClass& Class() const noexcept;
-    const std::string& Info() const noexcept { return _info; }
+    const std::string& Message() const noexcept { return _message; }
     int Code() const noexcept { return _code; }
 
     // Set 
     void Reset() noexcept; // Set to empty
-    void Set(const std::string& info, int code = 0) noexcept;
-    void Set(const class ErrorClass& cls, const std::string& info = 0, int code = 0) noexcept;
+    void Set(const std::string& msg, int code = 0) noexcept; // unclassified error
+    void Set(const class ErrorClass& cls, const std::string& msg = 0, int code = 0) noexcept;
     void SetClass(const class ErrorClass& cls) noexcept;
-    void SetInfo(const std::string& info) noexcept;
+    void SetMessage(const std::string& msg) noexcept;
     void SetCode(int code) noexcept;
+
+    // To string for log
+    std::string ToString() const noexcept;
 
 private:
     const class ErrorClass* _class;
-    std::string _info;
+    std::string _message;
     int _code;
+
+public:
+    // Helper class for formatting error message
+    class StringStream
+    {
+    public:
+        operator std::string() const
+        {
+            return stream.str();
+        }
+ 
+        template<typename T>
+        StringStream& operator << (const T& value)
+        {
+            stream << value;
+            return *this;
+        }
+
+    private:
+        std::ostringstream stream;
+    };
 };
 
 // Macros to set error object given by pointer
 #define SET_ERROR_CLASS(e, cls) do{ if(e) e->SetClass(cls); } while(0) // no trailing ;
-#define SET_ERROR_INFO(e, info) do{ if(e) e->SetInfo(info); } while(0) // no trailing ;
+#define SET_ERROR_MESSAGE(e, msg) do{ if(e) e->SetMessage((Error::StringStream() << msg)); } while(0) // no trailing ;
 #define SET_ERROR_CODE(e, code) do{ if(e) e->SetCode(code); } while(0) // no trailing ;
 
 // Throw exception based on an error
-#define THROW_ERROR(e) do{ e.Class().Throw(e); } while(0)
+#define THROW_ERROR(e) do{ if(e) e.Class().Throw(e); } while(0) // no trailing ;
 
 //
 // ErrorClass is used for error classfification. 
@@ -83,7 +114,7 @@ public:
 const class ErrorClass& ErrorClass() noexcept;
 
 // Macro to set error object with unclassified error class
-#define SET_ERROR(e, info, code) do{ if(e) e->Set(ErrorClass(), info, code); } while(0) // no trailing ;
+#define SET_ERROR(e, msg, code) do{ if(e) e->Set(ErrorClass(), (Error::StringStream() << msg), code); } while(0) // no trailing ;
 
 //
 // A dummy error class, used to indicate no error
@@ -106,11 +137,7 @@ const class NoError& NoError() noexcept;
         const char* Name() const noexcept;                          \
         void Throw(const Error& e) const noexcept;                  \
     };                                                              \
-    const class CLS& CLS() noexcept                                 \
-    {                                                               \
-        static class CLS s##CLS;                                    \
-        return s##CLS;                                              \
-    }  
+    const class CLS& CLS() noexcept;
 
 #define IMPLEMENT_ERROR_CLASS(CLS, NAME, EXCEPTION)                 \
     const char* CLS::Name() const noexcept                          \
@@ -119,8 +146,13 @@ const class NoError& NoError() noexcept;
     }                                                               \
     void CLS::Throw(const Error& e) const noexcept                  \
     {                                                               \
-        if(e) throw EXCEPTION(e.Info(), e.Code());                  \
-    }                                                     
+        if(e) throw EXCEPTION(e.Message(), e.Code());                  \
+    }                                                               \
+    const class CLS& CLS() noexcept                                 \
+    {                                                               \
+        static class CLS s##CLS;                                    \
+        return s##CLS;                                              \
+    }                                                    
 
 NETB_END
 

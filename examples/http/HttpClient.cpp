@@ -16,12 +16,12 @@
  */
 
 #include "TcpSocket.hpp"
-#include "HttpMessage.h"
+#include "HttpMessage.hpp"
 
 // HTTP client
 int main(const int argc, char* argv[])
 {
-    const char* host = NULL;
+    const char* host = nullptr;
     unsigned short port = 8080; // By default 8080
     assert(argc >= 2);
     if(argc == 2) // httpc 8090
@@ -44,7 +44,7 @@ int main(const int argc, char* argv[])
 
     netb::TcpSocket client;
     client.Block(10000); // block with 10s timeout
-    if(!client.Connect(netb::SocketAddress(host, port), NULL))
+    if(!client.Connect(netb::SocketAddress(host, port), nullptr))
     {
         std::cout << "HTTP client failed to connect: " << host << ":" << port << "\n";
         return -1;

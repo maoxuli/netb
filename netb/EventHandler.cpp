@@ -28,7 +28,7 @@ EventHandler::EventHandler(EventLoop* loop, SOCKET s)
 , _active_events(SOCKET_EVENT_NONE) 
 , _detached(true)
 {
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
 }
 
 EventHandler::~EventHandler()
@@ -41,7 +41,7 @@ EventHandler::~EventHandler()
 void EventHandler::Detach()
 {
     if(_detached) return;
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
     if(_loop->IsInLoopThread())
     {
         DetachInLoop();
@@ -62,7 +62,7 @@ void EventHandler::Detach()
 // Isolate from event loop
 void EventHandler::DetachInLoop()
 {
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
     _loop->AssertInLoopThread();
     _loop->RemoveHandler(this);
     std::unique_lock<std::mutex> lock(_detach_mutex);
@@ -73,36 +73,44 @@ void EventHandler::DetachInLoop()
 // Set intresting events
 void EventHandler::EnableReading()
 {
-    std::unique_lock<std::mutex> lock(_events_mutex);
-    _events |= SOCKET_EVENT_READ;
+    {
+        std::unique_lock<std::mutex> lock(_events_mutex);
+        _events |= SOCKET_EVENT_READ;
+    }
     Update();
 }
 
 void EventHandler::DisableReading()
 {
-    std::unique_lock<std::mutex> lock(_events_mutex);
-    _events &= ~SOCKET_EVENT_READ;
+    {
+        std::unique_lock<std::mutex> lock(_events_mutex);
+        _events &= ~SOCKET_EVENT_READ;
+    }
     Update();
 }
 
 void EventHandler::EnableWriting()
 {
-    std::unique_lock<std::mutex> lock(_events_mutex);
-    _events |= SOCKET_EVENT_WRITE;
+    {
+        std::unique_lock<std::mutex> lock(_events_mutex);
+        _events |= SOCKET_EVENT_WRITE;
+    }
     Update();
 }
 
 void EventHandler::DisableWriting()
 {
-    std::unique_lock<std::mutex> lock(_events_mutex);
-    _events &= ~SOCKET_EVENT_WRITE;
+    {
+        std::unique_lock<std::mutex> lock(_events_mutex);
+        _events &= ~SOCKET_EVENT_WRITE;
+    }
     Update();
 }
 
 // Notify event loop to update
 void EventHandler::Update()
 {
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
     if(_loop->IsInLoopThread())
     {
         UpdateInLoop();
@@ -116,7 +124,7 @@ void EventHandler::Update()
 // Notify event loop to update interested events
 void EventHandler::UpdateInLoop()
 {
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
     assert(_loop->IsInLoopThread());
     _loop->SetupHandler(this);
     _detached = false;

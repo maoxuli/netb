@@ -19,137 +19,124 @@
 
 NETB_BEGIN
 
+// std::placeholders::_1, _2, ...
 using namespace std::placeholders;
 
-// Constructor, with local address info
+// Dynamic address
 AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop) noexcept
-: TcpAcceptor() // noexcept
+: TcpAcceptor()
 , _loop(loop)
-, _handler(NULL)
+, _handler(nullptr)
 {
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
 }
 
-// Constructor, with local address info
+// Fixed family with any or dynamic address
 AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop, sa_family_t family) noexcept
-: TcpAcceptor(family) // rethrow by default
+: TcpAcceptor(family)
 , _loop(loop)
-, _handler(NULL)
+, _handler(nullptr)
 {
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
 }
 
-// Constructor, with local address info
-AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop, const SocketAddress& addr) noexcept
-: TcpAcceptor(addr) // rethrow by default
+// Fixed address
+AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop, const SocketAddress& addr, bool reuse_addr, bool reuse_port) noexcept
+: TcpAcceptor(addr, reuse_addr, reuse_port)
 , _loop(loop)
-, _handler(NULL)
+, _handler(nullptr)
 {
-    assert(_loop != NULL);
+    assert(_loop != nullptr);
 }
 
 // Destructor
 AsyncTcpAcceptor::~AsyncTcpAcceptor() noexcept
 {
-    if(_handler != NULL)
+    // Isolate from event loop before destroyed
+    if(_handler != nullptr)
     {
-        _handler->Detach(); // isolate from loop, block until done
-        delete _handler;
-        _handler = NULL;
+        _handler->Detach(); // block until done
+        SAFE_DELETE(_handler);
     }
 }
 
-// Enalbe aysnc after creating socket
-bool AsyncTcpAcceptor::EnableReading(Error* e) noexcept
+// Register I/O events to enable async reading
+bool AsyncTcpAcceptor::EnableReading(Error* e)
 {
-    assert(_loop != NULL);
-    assert(GetSocket() != INVALID_SOCKET);
-    // Init read event handler
-    if(_handler == NULL)
-    try
+    if(_loop == nullptr)
     {
-        _handler = new EventHandler(_loop, GetSocket());
+        SET_LOGIC_ERROR(e, "Event loop is not set.");
+        return false;
+    }
+    if(!_accepted_callback) 
+    {
+        SET_LOGIC_ERROR(e, "Accepted callback is not set.");
+        return false;
+    }
+    if(!Socket::Valid())
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened.");
+        return false;
+    }
+    // always set to non-block for async mode
+    // It is not necessary to set here, but can catch errors before actual I/O
+    if(!Socket::Block(false, e)) 
+    {
+        return false;
+    }
+    if(_handler == nullptr)
+    {
+        SAFE_NEW(_handler, EventHandler(_loop, GetSocket()));
+        if(_handler == nullptr)
+        {
+            SET_LOGIC_ERROR(e, "New EventHandler failed.");
+            return false;
+        }
         _handler->SetReadCallback(std::bind(&AsyncTcpAcceptor::OnRead, this, _1));
     }
-    catch(std::bad_alloc&)
-    {
-        SET_ERROR(e, "New EventHandler failed.", 0);
-        _handler = NULL;
-        return false;
-    }
-    assert(_handler != NULL);
-    // Set socket to non-block
-    if(!Block(false, e))
-    {
-        return false;
-    }
-    // Register interested event 
+    assert(_handler != nullptr);
     _handler->EnableReading();
     return true;
 }
 
-// Open for accepting connections
-void AsyncTcpAcceptor::Open()
+// Open
+// Enable async mode to accept incomming connections
+bool AsyncTcpAcceptor::Open(const SocketAddress& addr, bool reuse_addr, bool reuse_port, Error* e) noexcept
 {
-    Error e;
-    if(!Open(&e))
+    if(!TcpAcceptor::Open(addr, reuse_addr, reuse_port, e) || !EnableReading(e))
     {
-        THROW_ERROR(e);
-    }
-}
-
-// Open for accepting connection
-bool AsyncTcpAcceptor::Open(Error* e) noexcept
-{
-    if(!TcpAcceptor::Open(e))
-    {
+        Close(); // clean on failure
         return false;
     }
-    return EnableReading(e);
+    return true;
 }
 
-// Open on given address, start to accept connection
-void AsyncTcpAcceptor::Open(const SocketAddress& addr)
-{
-    Error e;
-    if(!Open(addr, &e))
-    {
-        THROW_ERROR(e);
-    }
-}
-
-// Open on given address, start to accept connection
-bool AsyncTcpAcceptor::Open(const SocketAddress& addr, Error* e) noexcept
-{
-    if(!TcpAcceptor::Open(addr, e))
-    {
-        return false;
-    } 
-    return EnableReading(e);
-}
-
+// Close
+// Clean async facility
 bool AsyncTcpAcceptor::Close(Error* e) noexcept
 {
-    if(_handler)
-    {
-        _handler->Detach();
+    // First isolate from event loop
+    if(_handler != nullptr)
+    { 
+        _handler->Detach(); // block until done
+        SAFE_DELETE(_handler);
     }
     return TcpAcceptor::Close(e);
 }
 
 // EventHandler::ReadCallbck
 // Called when TCP socket is ready to accept a incomming connection
-void AsyncTcpAcceptor::OnRead(SOCKET s) noexcept
+void AsyncTcpAcceptor::OnRead(SOCKET s)
 {
     assert(_accepted_callback);
     assert(s == GetSocket());
     SocketAddress in_addr;
-    SOCKET in_s = TcpAcceptor::AcceptFrom(&in_addr);
+    SOCKET in_s = TcpAcceptor::Accept(&in_addr, 0, nullptr); // non-block and ignore errors
     if(in_s != INVALID_SOCKET)
     { 
         if(!_accepted_callback || !_accepted_callback(this, in_s, &in_addr))
         {
-            CloseSocket(in_s);
+            CloseSocket(in_s); // clean on callback failure
         }
     }
 }

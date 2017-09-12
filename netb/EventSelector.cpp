@@ -41,7 +41,7 @@ bool EventSelector::WaitForEvents(std::vector<EventHandler*>& handlers, int time
         end = sockets.end(); it != end; ++it)
     {
         EventHandler* handler = _handlers[it->fd];
-        assert(handler != NULL);
+        assert(handler != nullptr);
         handler->SetActiveEvents(it->events);
         handlers.push_back(handler);
     }

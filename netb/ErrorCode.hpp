@@ -35,19 +35,6 @@ public:
     // Text description for error code
     static std::string Description(); // for current code
     static std::string Description(int code); // for given code
-
-    // Timeout error code
-    static int Timeout(); // get error code
-
-    // Invalid socket error code
-    static int InvalidSocket(); // get error code
-    static bool IsInvalidSocket(); // for current code
-    static bool IsInvalidSocket(int code); // for given code
-
-    // Unsupported protocol family
-    static int UnsupportedFamily(); // get error code
-    static bool IsUnsupportedFamily(); // for current code
-    static bool IsUnsupportedFamily(int code); // for given code
     
     // System interruption in block mode
     static int Interrupted(); // get error code

@@ -33,11 +33,9 @@ bool CloseSocket(SOCKET s, Error* e) noexcept
     int ret = ::close(s);
 #endif 
     s = INVALID_SOCKET;
-    if( ret < 0)
+    if(ret < 0)
     {
-        std::ostringstream info;
-        info << "Errors on closing socket. [" << s << "]."; 
-        SET_SYSTEM_ERROR(e, info.str());
+        SET_SYSTEM_ERROR(e, "Errors on closing socket [" << s << "]");
         return false;
     }  
     return true;
@@ -54,6 +52,7 @@ Socket::Socket() noexcept
 // Open socket for given domain, type, and protocol
 // No socket is opened if errors ocurred
 Socket::Socket(int domain, int type, int protocol)
+: _fd(INVALID_SOCKET)
 {
     Error e;
     if(!InitSocket(domain, type, protocol, &e))
@@ -65,6 +64,7 @@ Socket::Socket(int domain, int type, int protocol)
 // Open socket for given domain, type, and protocol
 // No socket is opened if errors ocurred
 Socket::Socket(int domain, int type, int protocol, Error* e) noexcept
+: _fd(INVALID_SOCKET)
 {
     InitSocket(domain, type, protocol, e);
 }
@@ -92,7 +92,7 @@ bool Socket::InitSocket(int domain, int type, int protocol, Error* e) noexcept
     _fd = ::socket(domain, type, protocol);
     if(_fd == INVALID_SOCKET)
     {
-        SET_SYSTEM_ERROR(e, ErrorInfo("Open socket failed."));
+        SET_SYSTEM_ERROR(e, "Open socket failed.");
         return false;
     }
     return true;
@@ -101,14 +101,13 @@ bool Socket::InitSocket(int domain, int type, int protocol, Error* e) noexcept
 // Open socket for given domain, type, and protocol
 // Close currently opened socket firstly, failure is ignored
 // No socket is opened if errors occurred
-Socket& Socket::Create(int domain, int type, int protocol)
+void Socket::Create(int domain, int type, int protocol)
 {
     Error e;
-    if(!Create(domain, type, protocol, &e))
+    if(!Create(domain, type, protocol, &e)) 
     {
         THROW_ERROR(e);
     }
-    return *this;
 }
 
 // Open socket for given domain, type, and protocol
@@ -116,27 +115,22 @@ Socket& Socket::Create(int domain, int type, int protocol)
 // No socket is opened if errors occurred
 bool Socket::Create(int domain, int type, int protocol, Error* e) noexcept
 {
-    if(_fd != INVALID_SOCKET)
+    if(_fd != INVALID_SOCKET) 
     {
-        Close(); // errors on closing is ignored
-    }
+        Close();
+    } 
     return InitSocket(domain, type, protocol, e);
 }
 
 // Attach an externally opened socket
 // Close currently opened socket firstly, failure is ignored
-Socket& Socket::Attach(SOCKET s) noexcept
+void Socket::Attach(SOCKET s) noexcept
 {
-    if(_fd == s)
-    {
-        return *this;
-    }
-    if(_fd != INVALID_SOCKET)
+    if(_fd != INVALID_SOCKET && _fd != s)
     {
         Close(); // errors on closing is ignored
     }
     _fd = s;
-    return *this;
 }
 
 // Separate the socket form the object
@@ -165,7 +159,7 @@ bool Socket::Shutdown(int how, Error* e) noexcept
     int ret = ::shutdown(_fd, how);
     if(ret < 0)
     {
-        SET_SYSTEM_ERROR(e, ErrorInfo("Shutdown socket failed.", _fd));
+        SET_SYSTEM_ERROR(e, "Shutdown socket failed [" << _fd << "]");
         return false;
     }
     return true;
@@ -210,14 +204,13 @@ int Socket::Protocol(Error* e) const noexcept
 
 // Explicitly bind to a local address
 // throw on errors
-Socket& Socket::Bind(const SocketAddress& addr)
+void Socket::Bind(const SocketAddress& addr)
 {
     Error e;
-    if(!Bind(addr, &e))
+    if(!Bind(addr, &e)) 
     {
         THROW_ERROR(e);
     }
-    return *this;
 }
 
 // bind to local address
@@ -232,7 +225,7 @@ bool Socket::Bind(const SocketAddress& addr, Error* e) noexcept
     assert(_fd != INVALID_SOCKET);
     if(::bind(_fd, addr.Addr(), addr.Length()) < 0)
     {
-        SET_SYSTEM_ERROR(e, ErrorInfo("Bind address to socket failed.", _fd, addr));
+        SET_SYSTEM_ERROR(e, "Bind address to socket failed [" << _fd << "][" << addr.ToString() << "]");
         return false;
     }
     return true;
@@ -251,21 +244,20 @@ SocketAddress Socket::Address(Error* e) const noexcept
     socklen_t addrlen = sizeof(struct sockaddr_storage);
     if(::getsockname(_fd, (sockaddr*)&addr, &addrlen) < 0)
     {
-        SET_SYSTEM_ERROR(e, ErrorInfo("Get socket local address failed.", _fd));
+        SET_SYSTEM_ERROR(e, "Get socket local address failed [" << _fd << "]");
     }
     return addr;
 }
 
 // TCP socket listen to start waiting for incomming connections
 // Throw on errors
-Socket& Socket::Listen(int backlog)
+void Socket::Listen(int backlog)
 {
     Error e;
-    if(!Listen(backlog, &e))
+    if(!Listen(backlog, &e)) 
     {
         THROW_ERROR(e);
     }
-    return *this;
 }
 
 bool Socket::Listen(int backlog, Error* e) noexcept
@@ -281,7 +273,7 @@ bool Socket::Listen(int backlog, Error* e) noexcept
     assert(_fd != INVALID_SOCKET);
     if(::listen(_fd, backlog) < 0)
     {
-        SET_SYSTEM_ERROR(e, ErrorInfo("Socket lsiten failed.", _fd));
+        SET_SYSTEM_ERROR(e, "Socket lsiten failed [" << _fd << "]");
         return false;
     }
     return true;
@@ -289,18 +281,19 @@ bool Socket::Listen(int backlog, Error* e) noexcept
 
 // TCP socket accepts an incomming connection
 // Note: ::accept is not a I/O function
-SOCKET Socket::Accept()
+SOCKET Socket::Accept(SocketAddress* addr)
 {
-    SOCKET s;
     Error e;
-    if((s = Accept(&e)) == INVALID_SOCKET)
+    SOCKET s;
+    if((s = Accept(addr, &e)) == INVALID_SOCKET)
     {
         THROW_ERROR(e);
     }
     return s;
 }
 
-SOCKET Socket::Accept(Error* e) noexcept
+// TCP socket accepts an incomming connection
+SOCKET Socket::Accept(SocketAddress* addr, Error* e) noexcept
 {
     if(_fd == INVALID_SOCKET)
     {
@@ -308,62 +301,29 @@ SOCKET Socket::Accept(Error* e) noexcept
         return -1;
     }
     SOCKET s;
-    while((s = ::accept(_fd, NULL, NULL)) == INVALID_SOCKET)
+    SocketAddress sa;
+    socklen_t addrlen = sa.Length();
+    while((s = ::accept(_fd, (sockaddr*)&sa, &addrlen)) == INVALID_SOCKET)
     {
         if(!ErrorCode::IsInterrupted())
         {
-            SET_SYSTEM_ERROR(e, ErrorInfo("Socket accept failed.", _fd));
-            break;
+            SET_SYSTEM_ERROR(e, "Socket accept failed [" <<  _fd << "]");
+            return INVALID_SOCKET;
         }
     }
-    return s;
-}
-
-// Accept with remote address
-// Equal to Accept() if addr is given by NULL
-SOCKET Socket::AcceptFrom(SocketAddress* addr)
-{
-    Error e;
-    SOCKET s;
-    if((s = AcceptFrom(addr, &e)) == INVALID_SOCKET)
-    {
-        THROW_ERROR(e);
-    }
-    return s;
-}
-
-SOCKET Socket::AcceptFrom(SocketAddress* addr, Error* e) noexcept
-{
-    if(!addr) return Accept(e);
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
-    SOCKET s;
-    addr->Reset();
-    socklen_t addrlen = addr->Length();
-    while((s = ::accept(_fd, (sockaddr*)addr, &addrlen)) == INVALID_SOCKET)
-    {
-        if(!ErrorCode::IsInterrupted())
-        {
-            SET_SYSTEM_ERROR(e, ErrorInfo("Socket accept failed.", _fd));
-            break;
-        }
-    }
+    if(addr != NULL) *addr = sa;
     return s;
 }
 
 // TCP socket connects to remote address to establish outgoing connection
 // UDP socket connects to bind a remote address only
-Socket& Socket::Connect(const SocketAddress& addr)
+void Socket::Connect(const SocketAddress& addr)
 {
     Error e;
-    if(!Connect(addr, &e))
+    if(!Connect(addr, &e)) 
     {
         THROW_ERROR(e);
     }
-    return *this;
 }
 
 // ::connect is a I/O function and has different behavior in block and non-block mode
@@ -379,18 +339,11 @@ bool Socket::Connect(const SocketAddress& addr, Error* e) noexcept
     }
     while(::connect(_fd, addr.Addr(), addr.Length()) < 0)
     {
-        if(ErrorCode::IsInProgress()) 
+        if(!ErrorCode::IsInterrupted())
         {
-            // non-block mode, status need to be checked later
-            SET_SYSTEM_ERROR(e, ErrorInfo("Connect would block.", _fd, addr));
-            break;
-        }
-        else if(!ErrorCode::IsInterrupted())
-        {
-            SET_SYSTEM_ERROR(e, ErrorInfo("Socket connect failed.", _fd, addr));
+            SET_SYSTEM_ERROR(e, "Socket connect failed [" << _fd << "][" << addr.ToString() << "]");
             return false;
         }
-        // Only try again when returned for interruption in block mode.
     }
     return true;
 }
@@ -408,7 +361,7 @@ SocketAddress Socket::ConnectedAddress(Error* e) const noexcept
     socklen_t addrlen = sizeof(struct sockaddr_storage);
     if(::getpeername(_fd, (struct sockaddr*)&addr, &addrlen) < 0)
     {
-        SET_SYSTEM_ERROR(e, ErrorInfo("Get socket connected address failed.", _fd));
+        SET_SYSTEM_ERROR(e, "Get socket connected address failed [" << _fd << "]");
     }
     return addr;
 }
@@ -487,35 +440,15 @@ ssize_t Socket::Send(const void* p, size_t n, int flags, Error* e) noexcept
         SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return -1;
     }
-    assert(p != NULL);
+    assert(p != nullptr);
     ssize_t ret;
     while((ret = ::send(_fd, p, n, flags)) < 0)
     {
-        if(ErrorCode::IsWouldBlock())
+        if(!ErrorCode::IsInterrupted())
         {
-            // Non-block mode returned, need to wait for ready to send
-            SET_SYSTEM_ERROR(e, ErrorInfo("Send would block.", _fd)); 
-            ret = 0;
+            SET_SYSTEM_ERROR(e, "Send errors [" << _fd << "]"); 
             break;
         }
-        else if(!ErrorCode::IsInterrupted())
-        {
-            // return on errors
-            SET_SYSTEM_ERROR(e, ErrorInfo("Send errors.", _fd)); 
-            break;
-        }
-        // Only try again when returned for interruption in block mode
-    }
-    return ret;
-}
-
-ssize_t Socket::Send(StreamBuffer* buf, int flags, Error* e) noexcept
-{
-    assert(buf != NULL);
-    ssize_t ret = Send(buf->Read(), buf->Readable(), flags, e);
-    if(ret > 0)
-    {
-        buf->Read(ret);
     }
     return ret;
 }
@@ -530,41 +463,21 @@ ssize_t Socket::Receive(void* p, size_t n, int flags, Error* e) noexcept
         SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return -1;
     }
-    assert(p != NULL);
+    assert(p != nullptr);
     ssize_t ret;
     while((ret = ::recv(_fd, p, n, flags)) < 0)
     {
-        if(ErrorCode::IsWouldBlock())
-        {
-            // Non-block mode returned, need to wait for ready to receive 
-            SET_SYSTEM_ERROR(e, ErrorInfo("Receive would block.", _fd));
-            ret = 0;
-            break;
-        }
         if(!ErrorCode::IsInterrupted())
         {
-            // return on errors
-            SET_SYSTEM_ERROR(e, ErrorInfo("Receive errors.", _fd)); 
+            SET_SYSTEM_ERROR(e, "Receive errors [" << _fd << "]"); 
             break;
         }
-        // Only try again when returned for interruption in block mode.
-    }
-    return ret;
-}
-
-ssize_t Socket::Receive(StreamBuffer* buf, int flags, Error* e) noexcept
-{
-    assert(buf != NULL);
-    ssize_t ret = Receive(buf->Write(), buf->Writable(), flags, e);
-    if(ret > 0)
-    {
-        buf->Write(ret);
     }
     return ret;
 }
 
 // Send and receive data through non-connected socket
-// If the socket is connected and addr is given by NULL, equivalent to Send and Receive
+// If the socket is connected and addr is given by nullptr, equivalent to Send and Receive
 // If the socket is connected and valid addr is given, addr must be equal to connected address
 // Return > 0 denotes the number of bytes has been sent
 // Return = 0 denotes not ready, try later
@@ -578,35 +491,15 @@ ssize_t Socket::SendTo(const void* p, size_t n, const SocketAddress* addr, int f
     {
         return -1;
     }
-    assert(p != NULL);
+    assert(p);
     ssize_t ret;
     while((ret = ::sendto(_fd, p, n, flags, addr->Addr(), addr->Length())) < 0)
     {
-        if(ErrorCode::IsWouldBlock())
+        if(!ErrorCode::IsInterrupted())
         {
-            // Non-block mode returned, need to wait for ready to send
-            SET_SYSTEM_ERROR(e, ErrorInfo("SendTo would block.", _fd));
-            ret = 0;
+            SET_SYSTEM_ERROR(e, "SendTo errors [" << _fd << "]");
             break;
         }
-        else if(!ErrorCode::IsInterrupted())
-        {
-            // return on errors
-            SET_SYSTEM_ERROR(e, ErrorInfo("SendTo errors.", _fd));
-            break;
-        }
-        // Only try again when returned for interruption in block mode
-    }
-    return ret;
-}
-
-ssize_t Socket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags, Error* e) noexcept
-{
-    assert(buf != NULL);
-    ssize_t ret = SendTo(buf->Read(), buf->Readable(), addr, flags, e);
-    if(ret > 0)
-    {
-        buf->Read(ret);
     }
     return ret;
 }
@@ -617,42 +510,17 @@ ssize_t Socket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int flags, 
 // Todo: check the address is equal to remote address when connected
 ssize_t Socket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     if(!addr) return Receive(p, n, flags, e);
-    assert(p != NULL);
+    assert(p);
     ssize_t ret;
     socklen_t addrlen = addr->Length();
     while((ret = ::recvfrom(_fd, p, n, flags, addr->Addr(), &addrlen)) < 0)
     {
-        if(ErrorCode::IsWouldBlock())
-        {
-            // Non-block mode returned, need to wait for ready to receive 
-            SET_SYSTEM_ERROR(e, ErrorInfo("ReceiveFrom would block.", _fd));
-            ret = 0;
-            break;
-        }
         if(!ErrorCode::IsInterrupted())
         {
-            // return on errors
-            SET_SYSTEM_ERROR(e, ErrorInfo("ReceiveFrom errors.", _fd));
+            SET_SYSTEM_ERROR(e, "ReceiveFrom errors [" << _fd << "]");
             break;
         }
-        // Only try again when returned for interruption in block mode.
-    }
-    return ret;
-}
-
-ssize_t Socket::ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags, Error* e) noexcept
-{
-    assert(buf != NULL);
-    ssize_t ret = ReceiveFrom(buf->Write(), buf->Writable(), addr, flags, e);
-    if(ret > 0)
-    {
-        buf->Write(ret);
     }
     return ret;
 }
@@ -665,6 +533,7 @@ ssize_t Socket::SendMessage(const struct msghdr* msg, int flags, Error* e) noexc
         return -1;
     }
     assert(false);
+    return -1;
 }
 
 ssize_t Socket::ReceiveMessage(struct msghdr* msg, int flags, Error* e) noexcept
@@ -675,19 +544,19 @@ ssize_t Socket::ReceiveMessage(struct msghdr* msg, int flags, Error* e) noexcept
         return -1;
     }
     assert(false);
+    return -1;
 }
 
 //////////////////////////////////////////////////////////////////////////////////
 
 // socket IO control, block mode or non-block mode
-Socket& Socket::Block(bool block)
+void Socket::Block(bool block)
 {
     Error e;
-    if(!Block(block, &e))
+    if(!Block(block, &e)) 
     {
         THROW_ERROR(e);
     }
-    return *this;
 }
 
 bool Socket::Block(bool block, Error* e) noexcept
@@ -708,21 +577,20 @@ bool Socket::Block(bool block, Error* e) noexcept
 #endif
     if(ret < 0)
     {
-        SET_SYSTEM_ERROR(e, ErrorInfo("Set socket block option failed.", _fd, block));
+        SET_SYSTEM_ERROR(e, "Set socket block option failed [" << _fd << "][" << block << "]");
         return false;
     }
     return true;
 }
 
 // socket option of reuse address
-Socket& Socket::ReuseAddress(bool reuse)
+void Socket::ReuseAddress(bool reuse)
 {
     Error e;
-    if(!ReuseAddress(reuse, &e))
+    if(!ReuseAddress(reuse, &e)) 
     {
         THROW_ERROR(e);
     }
-    return *this;
 }
 
 bool Socket::ReuseAddress(bool reuse, Error* e) noexcept
@@ -735,21 +603,20 @@ bool Socket::ReuseAddress(bool reuse, Error* e) noexcept
     int flag = reuse ? 1 : 0;
     if(::setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, int(sizeof(int))) != 0)
     {
-        SET_SYSTEM_ERROR(e, ErrorInfo("Set socket reuse address option failed.", _fd, reuse));
+        SET_SYSTEM_ERROR(e, "Set socket reuse address option failed [" << _fd << "][" << reuse << "]");
         return false;
     }
     return true;
 }
 
 // socket option of reuse port
-Socket& Socket::ReusePort(bool reuse)
+void Socket::ReusePort(bool reuse)
 {
     Error e;
-    if(!ReusePort(reuse, &e))
+    if(!ReusePort(reuse, &e)) 
     {
         THROW_ERROR(e);
     }
-    return *this;
 }
 
 bool Socket::ReusePort(bool reuse, Error* e) noexcept
@@ -759,8 +626,13 @@ bool Socket::ReusePort(bool reuse, Error* e) noexcept
         SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return false;
     }
-    assert(false);
-    return false;
+    int flag = reuse ? 1 : 0;
+    if(::setsockopt(_fd, SOL_SOCKET, SO_REUSEPORT, (char*)&flag, int(sizeof(int))) != 0)
+    {
+        SET_SYSTEM_ERROR(e, "Set socket reuse port option failed [" << _fd << "][" << reuse << "]");
+        return false;
+    }
+    return true;
 }
 
 // Set socket options
@@ -773,9 +645,8 @@ bool Socket::SetOption(int level, int name, const void* val, socklen_t len, Erro
     }
     if(::setsockopt(_fd, level, name, val, len) < 0)
     {
-        std::ostringstream info;
-        info << "Set socket option failed [" << _fd << "][" << level << "," << name << "," << val << "," << len << "].";
-        SET_SYSTEM_ERROR(e, info.str());
+        SET_SYSTEM_ERROR(e, "Set socket option failed [" << _fd << "][" 
+                        << level << "," << name << "," << val << "," << len << "]");
         return false;
     }
     return true;
@@ -791,9 +662,8 @@ bool Socket::GetOption(int level, int name, void* val, socklen_t* len, Error* e)
     }
     if(::getsockopt(_fd, level, name, val, len) < 0)
     {
-        std::ostringstream info;
-        info << "Get socket option failed [" << _fd << "][" << level << "," << name << "," << val << "," << len << "].";
-        SET_SYSTEM_ERROR(e, info.str());
+        SET_SYSTEM_ERROR(e, "Get socket option failed [" << _fd << "][" 
+                        << level << "," << name << "," << val << "," << len << "]");
         return false;
     }
     return true;
