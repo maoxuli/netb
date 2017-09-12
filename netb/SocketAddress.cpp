@@ -22,7 +22,6 @@
 NETB_BEGIN
 
 // Empty, for any protocols
-// no throw
 SocketAddress::SocketAddress() noexcept
 {
     Reset();

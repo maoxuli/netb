@@ -38,14 +38,14 @@ public:
     SOCKET WriteSocket() const { return _writer.Descriptor(); }
 
     // Blocked reading and writing
-    ssize_t Read(void* p, size_t n, int flags = 0) noexcept;
-    ssize_t Write(const void* p, size_t n, int flags = 0) noexcept;
+    ssize_t Read(void* p, size_t n, Error* e = nullptr) noexcept;
+    ssize_t Write(const void* p, size_t n, Error* e = nullptr) noexcept;
    
-private:
+protected:
     Socket _reader;
     Socket _writer;
 
-    void MakePair(Socket& reader, Socket& writer); // throw on errors
+    bool MakePair(Socket& reader, Socket& writer, Error* e); 
 };
 
 NETB_END

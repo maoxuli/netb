@@ -21,31 +21,22 @@ NETB_BEGIN
 
 SocketPipe::SocketPipe()
 {
-    try
+    _reader.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    _writer.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    
+    Error e;
+    if(!MakePair(_reader, _writer, &e))
     {
-        _reader.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-        _writer.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-        MakePair(_reader, _writer);
-    }
-    catch(...)
-    {
-        throw;
+        THROW_ERROR(e);
     }
 }
 
 SocketPipe::SocketPipe(Error* e) noexcept
 {
-    try
+    if(_reader.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP, e)
+       && _writer.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP, e))
     {
-        _reader.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-        _writer.Create(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-        MakePair(_reader, _writer);
-    }
-    catch(const Exception& ex)
-    {
-        SET_ERROR_CLASS(e, ex.Class());
-        SET_ERROR_MESSAGE(e, ex.Message());
-        SET_ERROR_CODE(e, ex.Code());
+        MakePair(_reader, _writer, e);
     }
 }
 
@@ -54,8 +45,7 @@ SocketPipe::~SocketPipe() noexcept
 
 }
 
-// throw on errors
-void SocketPipe::MakePair(Socket& reader, Socket& writer)
+bool SocketPipe::MakePair(Socket& reader, Socket& writer, Error* e)
 {
     try
     {
@@ -64,25 +54,27 @@ void SocketPipe::MakePair(Socket& reader, Socket& writer)
         reader.Bind(addr);
         reader.Listen(1);
         addr = reader.Address(); // actual address
-
         // Establish connection from writer socket to reader socket
         writer.Connect(addr);
         reader.Attach(reader.Accept());
     }
-    catch(...)
+    catch(const Exception& ex)
     {
-        throw;
+        SET_ERROR(e, ex.Message(), ex.Code());
+        SET_ERROR_CLASS(e, ex.Class());
+        return false;
     }
+    return true;
 }
 
-ssize_t SocketPipe::Read(void* p, size_t n, int flags) noexcept
+ssize_t SocketPipe::Read(void* p, size_t n, Error* e) noexcept
 {
-    return _reader.Receive(p, n, flags);
+    return _reader.Receive(p, n, 0, e);
 }
 
-ssize_t SocketPipe::Write(const void* p, size_t n, int flags) noexcept
+ssize_t SocketPipe::Write(const void* p, size_t n, Error* e) noexcept
 {
-    return _writer.Send(p, n, flags);
+    return _writer.Send(p, n, 0, e);
 }
 
 NETB_END

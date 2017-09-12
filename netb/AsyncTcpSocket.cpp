@@ -29,7 +29,7 @@ AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop) noexcept
 , _loop(loop)
 , _handler(nullptr)
 {
-    assert(_loop != nullptr);
+    assert(_loop);
 }
 
 // Any local address of given family, only working in given family
@@ -38,7 +38,7 @@ AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, sa_family_t family) noexcept
 , _loop(loop)
 , _handler(nullptr)
 {
-    assert(_loop != nullptr);
+    assert(_loop);
 }
 
 
@@ -48,7 +48,7 @@ AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, const SocketAddress& addr, bool 
 , _loop(loop)
 , _handler(nullptr)
 {
-    assert(_loop != nullptr);
+    assert(_loop);
 }
 
 // Externally established connection with connected address
@@ -57,24 +57,25 @@ AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, SOCKET s, const SocketAddress* a
 , _loop(loop)
 , _handler(nullptr)
 {
-    assert(_loop != nullptr);
+    assert(_loop);
 }
 
 // Destructor
 AsyncTcpSocket::~AsyncTcpSocket() noexcept
 {
     // Isolate from event loop
-    if(_handler != nullptr)
+    if(_handler)
     {
         _handler->Detach(); // block until done
-        SAFE_DELETE(_handler);
+        delete _handler;
+        _handler = nullptr;
     }
 }
 
 // Init async I/O events handler
 bool AsyncTcpSocket::InitHandler(Error* e)
 {
-    if(_loop == nullptr)
+    if(!_loop)
     {
         SET_LOGIC_ERROR(e, "Event loop is not set.");
         return false;
@@ -88,10 +89,10 @@ bool AsyncTcpSocket::InitHandler(Error* e)
     {
         return false;
     }
-    if(_handler == nullptr)
+    if(!_handler)
     {
-        SAFE_NEW(_handler, EventHandler(_loop, GetSocket()));
-        if(_handler == nullptr)
+        _handler = new (std::nothrow) EventHandler(_loop, GetSocket());
+        if(!_handler)
         {
             SET_LOGIC_ERROR(e, "New event handler failed.");
             return false;
@@ -169,7 +170,8 @@ bool AsyncTcpSocket::Close(Error* e) noexcept
     if(_handler != nullptr)
     {
         _handler->Detach(); // block until done
-        SAFE_DELETE(_handler);
+        delete _handler;
+        _handler = nullptr;
     }
     return TcpSocket::Close(e);
 }

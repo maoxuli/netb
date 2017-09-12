@@ -20,22 +20,28 @@
 
 #include "Config.hpp"
 #include "Error.hpp"
-#include <stdexcept>
+#include <exception>
 
 NETB_BEGIN
 
 //
-// Declare base exception
+// Base class for exceptions
 //
 class Exception : public std::exception
 {
 public: 
     Exception(const std::string& msg = "", int code = 0) noexcept
         : std::exception(), _message(msg), _code(code) { }
+    
+    // Get
     virtual const char* what() const noexcept { return _message.c_str(); }
     virtual std::string Message() const noexcept { return _message; }
     virtual int Code() const noexcept { return _code; }
+
+    // Bridge to an Error object
     virtual const class ErrorClass& Class() const noexcept;
+
+    // To string for log or display
     virtual std::string ToString() const noexcept;
 private:
     std::string _message;
@@ -43,7 +49,7 @@ private:
 };
 
 //
-// Macros to declare and implement other exceptions
+// Declare and implement other exceptions
 //
 #define DECLARE_EXCEPTION(CLS, BASE)                                        \
     class CLS : public BASE                                                 \
@@ -61,17 +67,21 @@ private:
     }                                      
 
 
+// Declare a new exception and associated error classification
 // System error, errors that occurred in system calling, always with an error code
-// Marcros to declare exception, declare error class, and set error object 
+// Declare exception, error classification, and macro to set error object given by a pointer
 DECLARE_EXCEPTION(SystemException, Exception)
 DECLARE_ERROR_CLASS(SystemError, ErrorClass)
-#define SET_SYSTEM_ERROR(e, msg) do{ if(e) e->Set(SystemError(), (Error::StringStream() << msg), ErrorCode::Current()); } while(0) // no trailing ;
+#define SET_SYSTEM_ERROR(e, msg) do{ if(e) e->Set(SystemError(), \
+                        (Error::MessageStream() << msg), ErrorCode::Current()); } while(0) // no trailing ;
 
+// Declare a new exception and associated error classification
 // Logic error, errors of logic that produce unexcepcted results
-// Marcros to declare exception, declare error class, and set error object
+// Declare exception, error classification, and macro to set error object given by a pointer
 DECLARE_EXCEPTION(LogicException, Exception)
 DECLARE_ERROR_CLASS(LogicError, ErrorClass)
-#define SET_LOGIC_ERROR(e, msg) do{ if(e) e->Set(LogicError(), (Error::StringStream() << msg)); } while(0) // no trailing ;
+#define SET_LOGIC_ERROR(e, msg) do{ if(e) e->Set(LogicError(), \
+                       (Error::MessageStream() << msg)); } while(0) // no trailing ;
 
 NETB_END
 

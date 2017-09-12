@@ -32,6 +32,7 @@ SocketSelector::SocketSelector(SOCKET s, int events) noexcept
     FD_ZERO(&_read_set);
     FD_ZERO(&_write_set);
     FD_ZERO(&_except_set);
+
     SetupEvents(s, events);
 }
 SocketSelector::SocketSelector(const std::vector<SocketEvents>& sockets) noexcept
@@ -39,17 +40,19 @@ SocketSelector::SocketSelector(const std::vector<SocketEvents>& sockets) noexcep
     FD_ZERO(&_read_set);
     FD_ZERO(&_write_set);
     FD_ZERO(&_except_set);
+
     assert(false);
 }
 
 SocketSelector::SocketSelector(const fd_set* read, const fd_set* write, const fd_set* except) noexcept
 {
-    assert(!read);
-    FD_COPY(read, &_read_set);
-    assert(!write);
-    FD_COPY(write, &_write_set);
-    assert(!except);
-    FD_COPY(except, &_except_set);
+    FD_ZERO(&_read_set);
+    FD_ZERO(&_write_set);
+    FD_ZERO(&_except_set);
+
+    if(read) FD_COPY(read, &_read_set);
+    if(write) FD_COPY(write, &_write_set);
+    if(except) FD_COPY(except, &_except_set);
 }
 
 SocketSelector::~SocketSelector() noexcept
@@ -81,7 +84,6 @@ void SocketSelector::SetupEvents(SOCKET s, int events) noexcept
         if(events & SOCKET_EVENT_READ)
         {
             FD_SET(s, &_read_set);
-            std::cout << "Setup read socket: " << s << "\n";
         }
         else
         {
@@ -128,7 +130,7 @@ void SocketSelector::Remove(SOCKET s) noexcept
 }
 
 // Select sockets with active events
-// timeout seconds, -1 for block
+// timeout in miliseconds, -1 for block
 void SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout)
 {
    Error e;
@@ -139,9 +141,9 @@ void SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout)
 }
 
 // Select sockets with active events
-// timeout of miliseconds, -1 for block
-// Return false for errors
-bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Error* e) noexcept
+// timeout in miliseconds, -1 for block
+// Return -1 on errors, 0 on timeout, number of active sockets on success
+int SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Error* e) noexcept
 {
     ssize_t ret = 0;
     while(true)
@@ -152,20 +154,15 @@ bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Err
 
         if(timeout < 0)
         {
-            std::cout << "select socket max: " << _sockets.front() << "\n";
-            ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, nullptr); 
-            std::cout << "Select.\n";
+            ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, 0); 
         }
         else
         {
             struct timeval tv;
-            tv.tv_sec = timeout;
-            tv.tv_usec = 0;
-            std::cout << "select socket max: " << _sockets.front() << "\n";
+            tv.tv_sec = timeout / 1000;
+            tv.tv_usec = (timeout - tv.tv_sec * 1000) * 1000;
             ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, &tv); 
-            std::cout << "Select.\n";
         }
-        std::cout << "select return: " << ret << "\n";
         if(ret < 0) // errors
         {
             // only try again on system interruption
@@ -174,13 +171,12 @@ bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Err
                 continue;
             }
             // otherwise return with errors
-            SET_SYSTEM_ERROR(e, "Socket select failed.");
-            return false;
+            SET_SYSTEM_ERROR(e, "Socket select failed [" << ret << "]");
+            return ret;;
         }
-        // success, proceed
+        // success or timeout, proceed
         break;
     }
-
     // Check active sockets if not timeout
     sockets.clear();
     if(ret > 0)
@@ -191,7 +187,6 @@ bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Err
             int events = SOCKET_EVENT_NONE;
             if(FD_ISSET(fd, &_active_read_set))
             {
-                std::cout << "select socket read: " << fd << "\n";
                 events |= SOCKET_EVENT_READ;
             }
             if(FD_ISSET(fd, &_active_write_set))
@@ -202,14 +197,17 @@ bool SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Err
             {
                 events |= SOCKET_EVENT_EXCEPT;
             }
-
             if(events != SOCKET_EVENT_NONE)
             {
                 sockets.push_back(SocketEvents(fd, events));
             }
         }
     }
-    return true;
+    if(ret == 0)
+    {
+        SET_LOGIC_ERROR(e, "Socket select timeout.");
+    }
+    return ret;
 }
 
 NETB_END

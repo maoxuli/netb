@@ -18,11 +18,10 @@
 #ifndef NETB_CONFIG_HPP
 #define NETB_CONFIG_HPP
 
-//
-// Namespace may be changed to adapt to project
-//
+// Comment this line to not use name space
 #define NETB_NAMESPACE
 
+// Project may enforece another name space
 #ifdef NETB_NAMESPACE
 #   define NETB_BEGIN   namespace netb {
 #   define NETB_END     }
@@ -31,12 +30,7 @@
 #   define NETB_END
 #endif
 
-#define SAFE_NEW(ptr, ctor) do{ try{ ptr = new ctor; } catch(std::bad_alloc&){ ptr = nullptr; } } while(0) 
-#define SAFE_DELETE(ptr) do{ if(ptr) { delete ptr; ptr = nullptr; } } while(0)
-
-//
-// Header files that used everywhere
-// 
+// Include standard headers may be used everywhere
 #include <iostream>
 #include <sstream>
 #include <cassert>

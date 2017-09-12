@@ -28,7 +28,7 @@ AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop) noexcept
 , _loop(loop)
 , _handler(nullptr)
 {
-    assert(_loop != nullptr);
+    assert(_loop);
 }
 
 // Fixed family with any or dynamic address
@@ -37,7 +37,7 @@ AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop, sa_family_t family) noexcept
 , _loop(loop)
 , _handler(nullptr)
 {
-    assert(_loop != nullptr);
+    assert(_loop);
 }
 
 // Fixed address
@@ -46,24 +46,25 @@ AsyncTcpAcceptor::AsyncTcpAcceptor(EventLoop* loop, const SocketAddress& addr, b
 , _loop(loop)
 , _handler(nullptr)
 {
-    assert(_loop != nullptr);
+    assert(_loop);
 }
 
 // Destructor
 AsyncTcpAcceptor::~AsyncTcpAcceptor() noexcept
 {
     // Isolate from event loop before destroyed
-    if(_handler != nullptr)
+    if(_handler)
     {
         _handler->Detach(); // block until done
-        SAFE_DELETE(_handler);
+        delete _handler;
+        _handler = nullptr;
     }
 }
 
 // Register I/O events to enable async reading
 bool AsyncTcpAcceptor::EnableReading(Error* e)
 {
-    if(_loop == nullptr)
+    if(!_loop)
     {
         SET_LOGIC_ERROR(e, "Event loop is not set.");
         return false;
@@ -84,17 +85,17 @@ bool AsyncTcpAcceptor::EnableReading(Error* e)
     {
         return false;
     }
-    if(_handler == nullptr)
+    if(!_handler)
     {
-        SAFE_NEW(_handler, EventHandler(_loop, GetSocket()));
-        if(_handler == nullptr)
+        _handler = new (std::nothrow) EventHandler(_loop, GetSocket());
+        if(!_handler)
         {
             SET_LOGIC_ERROR(e, "New EventHandler failed.");
             return false;
         }
         _handler->SetReadCallback(std::bind(&AsyncTcpAcceptor::OnRead, this, _1));
     }
-    assert(_handler != nullptr);
+    assert(_handler);
     _handler->EnableReading();
     return true;
 }
@@ -119,7 +120,8 @@ bool AsyncTcpAcceptor::Close(Error* e) noexcept
     if(_handler != nullptr)
     { 
         _handler->Detach(); // block until done
-        SAFE_DELETE(_handler);
+        delete _handler;
+        _handler = nullptr;
     }
     return TcpAcceptor::Close(e);
 }

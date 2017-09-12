@@ -28,8 +28,9 @@ NETB_BEGIN
 // Wrapper function for closing socket
 // return false on errors
 // but the socket is closed anyway, even on errors
+// see close()/closesocket() of socket API for details
 //
-bool CloseSocket(SOCKET s, Error* e = nullptr) noexcept; 
+bool CloseSocket(SOCKET& s, Error* e = nullptr) noexcept; 
 
 //
 // Socket is a wrapper class for socket API related to a socket. It holds 
@@ -45,8 +46,8 @@ bool CloseSocket(SOCKET s, Error* e = nullptr) noexcept;
 // Socket is a lower level (ant very thin) wrapper of socket API with the 
 // major purpose of cross-platform programming. It provides an interface 
 // that is very similar to the original socket API. But working together 
-// with classes of SocketAddress, SockeSelector, StreamBuffer, as well as 
-// Error and Exception, socket programming is more easy and more safe. 
+// with classes of SocketAddress and SockeSelector, as well as Error and 
+// Exception, socket programming is more easy and more safe. 
 // 
 // In general, Socket maintains a ownership semantic. If a Socket object 
 // has a valid, opened socket descriptor, then it owns the socket and is 
@@ -56,23 +57,22 @@ bool CloseSocket(SOCKET s, Error* e = nullptr) noexcept;
 class Socket : private Uncopyable
 {
 public: 
-    // Construct an object with no bound socket 
-    // Call Create() or Attach() later if necessary
+    // Empty socket, initialized by following operations
     Socket() noexcept;
 
-    // Construct an object with an open socket
+    // Initialized with given domain, type, and protocol
     // No socket is opened if errors ocurred
     Socket(int domain, int type, int protocol); // throw on errors
     Socket(int domian, int type, int protocol, Error* e) noexcept; 
 
-    // Constuct an object and attch an externally opened socket
+    // Initialized with an externally opened socket
     explicit Socket(SOCKET s) noexcept;
 
     // Destructor, close opened socket
     // failure on closing is ignored
     virtual ~Socket() noexcept;
 
-    // Open socket
+    // Initialized with domain, type, and protocol
     // Close current socket firstly
     // No socket is opened if errors occurred
     void Create(int domain, int type, int protocol); // throw on error
@@ -88,8 +88,7 @@ public:
 
     // Close current socket
     // Return false if error occurred
-    // but the socke is closed anyway, even on errors
-    // see close()/closesocket() of socket API for details
+    // but the socke is closed anyway even on errors
     bool Close(Error* e = nullptr) noexcept;
 
     // Shutdwon the socket
@@ -103,8 +102,8 @@ public:
 
     // Get descriptor of the socket
     // the ownership of the socket is not affected
-    operator SOCKET() const noexcept { return _fd; }
     SOCKET Descriptor() const noexcept { return _fd; }
+    operator SOCKET() const noexcept { return _fd; }
 
     // Get some features of the socket
     sa_family_t Family(Error* e = nullptr) const noexcept; // AF_XXX
@@ -113,7 +112,7 @@ public:
     int Protocol(Error* e = nullptr) const noexcept; // IPPROTO_TCP, IPPROTO_UDP, ...
 
 public: 
-    // Explicitly bind the socket to a local address
+    // Explicitly bind to a local address
     void Bind(const SocketAddress& addr); // throw on error
     bool Bind(const SocketAddress& addr, Error* e) noexcept;
 
@@ -132,7 +131,7 @@ public:
     SOCKET Accept(SocketAddress* addr, Error* e) noexcept;
 
     // Connect to remote address to establish outgoing connection (for TCP socket)
-    // or bind a remote address for I/O (for UDP socket), remove binding with empty address
+    // Associate a remote address for I/O (for UDP socket), remove association with empty address
     void Connect(const SocketAddress& addr); // throw on error
     bool Connect(const SocketAddress& addr, Error* e) noexcept;
 
@@ -167,28 +166,27 @@ public:
     ssize_t ReceiveMessage(struct msghdr* msg, int flags = 0, Error* e = nullptr) noexcept;
 
 public: 
-    // Control flag of IO mode: block or non-block
+    // Set IO mode: block or non-block
     void Block(bool block); // default is block
     bool Block(bool block, Error* e) noexcept;
 
-    // Socket option of reuse address
+    // Set socket option of reuse address
     void ReuseAddress(bool reuse); // default is false
     bool ReuseAddress(bool reuse, Error* e) noexcept;
 
-    // Socket option of reuse port
+    // Set socket option of reuse port
     void ReusePort(bool reuse); // default is false
     bool ReusePort(bool reuse, Error* e) noexcept;
 
-    // Set and get options of socket
+    // Set and Get socket options
     bool SetOption(int level, int name, const void* val, socklen_t len, Error* e) noexcept;
     bool GetOption(int level, int name, void* val, socklen_t* len, Error* e) const noexcept;
 
 private:
-    // Internal socket descriptor (file descriptor)
+    // Socket descriptor (file descriptor)
     SOCKET _fd; 
 
-    // Initialize socket
-    // return false on errors
+    // Initialize socket, return false on errors
     bool InitSocket(int domain, int type, int protocol, Error* e) noexcept;
 };
 

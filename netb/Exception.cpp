@@ -19,19 +19,17 @@
 
 NETB_BEGIN
 
-// Implement base error exception
+// Base class of exception
 const class ErrorClass& Exception::Class() const noexcept 
 {
     return ErrorClass();
 }
 
-// System error
-// Implement exception and error class
+// Exception subclass and ErrorClass subclass for system error
 IMPLEMENT_EXCEPTION(SystemException, SystemError)
 IMPLEMENT_ERROR_CLASS(SystemError, "SystemError", SystemException)
 
-// Logic error
-// Implement exception and error class
+// Exception subclass and ErrorClass subclass for logic error
 IMPLEMENT_EXCEPTION(LogicException, LogicError)
 IMPLEMENT_ERROR_CLASS(LogicError, "LogicError", LogicException)
 

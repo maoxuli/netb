@@ -20,7 +20,7 @@
 
 NETB_BEGIN
 
-// Last error code for just occurred error
+// Get system last-error
 int ErrorCode::Current()
 {
 #ifdef _WIN32
@@ -30,6 +30,7 @@ int ErrorCode::Current()
 #endif
 }
 
+// Set system last error
 void ErrorCode::SetCurrent(int code)
 {
 #ifdef _WIN32
@@ -39,18 +40,19 @@ void ErrorCode::SetCurrent(int code)
 #endif    
 }
 
-// Text description of error code
+// Text description of last-error
 std::string ErrorCode::Description()
 {
     return Description(Current());
 }
 
+// Text description of given error code
 std::string ErrorCode::Description(int code)
 {
     return "";
 }
 
-// System interruption in block mode
+// Interrupted error in block mode
 int ErrorCode::Interrupted()
 {
 #ifdef _WIN32
@@ -60,11 +62,13 @@ int ErrorCode::Interrupted()
 #endif
 }
 
+// Is last-error an interrupted error?
 bool ErrorCode::IsInterrupted()
 {
     return IsInterrupted(Current());
 }
 
+// Is given code an interrupted error?
 bool ErrorCode::IsInterrupted(int code)
 {
 #ifdef _WIN32
@@ -74,8 +78,7 @@ bool ErrorCode::IsInterrupted(int code)
 #endif
 }
 
-// Connect is in progress in non-block mode
-// EINPROGRESS/WSAWOULDBLOCK
+// In progress error in non-block mode
 int ErrorCode::InProgress()
 {
 #ifdef _WIN32
@@ -85,11 +88,13 @@ int ErrorCode::InProgress()
 #endif
 }
 
+// Is last-error an in progress error?
 bool ErrorCode::IsInProgress()
 {
     return IsInProgress(Current());
 }
 
+// I given error code an in progress error?
 bool ErrorCode::IsInProgress(int code)
 {
 #ifdef _WIN32
@@ -99,8 +104,8 @@ bool ErrorCode::IsInProgress(int code)
 #endif
 }
 
-// I/O is not ready in non-block mode
-// EWOULDBLOCK/EAGAIN/ASAWOULDBLOCK
+// Would block error in non-block mode
+// I/O is not ready yet. 
 int ErrorCode::WouldBlock()
 {
 #ifdef _WIN32
@@ -110,11 +115,13 @@ int ErrorCode::WouldBlock()
 #endif    
 }
 
+// Is last-error a would block error?
 bool ErrorCode::IsWouldBlock()
 {
     return IsWouldBlock(Current());
 }
 
+// Is given error code a would block error?
 bool ErrorCode::IsWouldBlock(int code)
 {
 #ifdef _WIN32

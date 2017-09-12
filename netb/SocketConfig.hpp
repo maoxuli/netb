@@ -18,13 +18,14 @@
 #ifndef NETB_SOCKET_CONFIG_HPP
 #define NETB_SOCKET_CONFIG_HPP
 
+// Include headers for some basic classes
 #include "Config.hpp"
 #include "Uncopyable.hpp"
 #include "ErrorCode.hpp"
 #include "Error.hpp"
 #include "Exception.hpp"
 
-// Headers for socket
+// Include headers for socket API
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
@@ -37,10 +38,13 @@
 
 NETB_BEGIN
 
-// Socket type and const values
+// Socket type 
+// and associated const values used in socke API
 typedef int SOCKET;
 const int INVALID_SOCKET = -1;
 const int SOCKET_ERROR = -1;
+
+const int RECEIVE_BUFFER_SIZE = 2048;
 
 // Socket events
 enum {
@@ -50,9 +54,8 @@ enum {
     SOCKET_EVENT_EXCEPT = 4
 };
 
-const int RECEIVE_BUFFER_SIZE = 2048;
-
-// Socket initializer for Winsock
+// Socket initializer
+// Necessary for Windows and do nothing on linux or so
 struct SocketInitializer
 {
 	SocketInitializer() 

@@ -35,18 +35,17 @@ class EventSelector : private Uncopyable
 public:
     // Wait for active events, 
     // Return as a list of EventHandlers that hadle those active events
-    // timeout seconds, -1 for block 
-    void WaitForEvents(std::vector<EventHandler*>& handlers, int timeout = -1); // throw on errors
-    bool WaitForEvents(std::vector<EventHandler*>& handlers, int timeout, Error* e) noexcept;
+    // timeout in miliseconds, -1 for block 
+    int WaitForEvents(std::vector<EventHandler*>& handlers, int timeout = -1);
     
     // Update the interested I/O events of an EventHandler.
     // This establish a connection between event selector and event handler.
     // Selector will get and set information from/to handler
-    void SetupHandler(EventHandler* handler) noexcept;
+    void SetupHandler(EventHandler* handler);
     
     // Remove an EventHandler
     // This cut the connection between event selector and event handler.
-    void RemoveHandler(EventHandler* handler) noexcept;
+    void RemoveHandler(EventHandler* handler);
     
 protected:
     // SocketSelector as events pump

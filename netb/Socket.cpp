@@ -16,15 +16,15 @@
  */
 
 #include "Socket.hpp"
-#include <sstream>
-#include <cassert>
 
 NETB_BEGIN
 
 // Wrapper function for closing socket
-// return false on errors
-// but socket is closed anyway, even with errors
-bool CloseSocket(SOCKET s, Error* e) noexcept
+// See close()/closesocket() of socket API
+// Even errors returned, the socket is usually closed anyway, the return 
+// value are used for diagnose only. For EINTR error, the socket is 
+// closed on most platform, but with exceptions, e.g. HP-UX.
+bool CloseSocket(SOCKET& s, Error* e) noexcept
 {
     if(s == INVALID_SOCKET) return true;
 #ifdef _WIN32
@@ -41,15 +41,14 @@ bool CloseSocket(SOCKET s, Error* e) noexcept
     return true;
 }
 
-// Construct an object with no bound socket 
-// Call Create() or Attach() later if necessary
+// Empty socket, initialized by following operations
 Socket::Socket() noexcept
 : _fd(INVALID_SOCKET)
 {
 
 }
 
-// Open socket for given domain, type, and protocol
+// Initialized with given domain, type, and protocol
 // No socket is opened if errors ocurred
 Socket::Socket(int domain, int type, int protocol)
 : _fd(INVALID_SOCKET)
@@ -61,7 +60,7 @@ Socket::Socket(int domain, int type, int protocol)
     }
 }
 
-// Open socket for given domain, type, and protocol
+// Initialized with given domain, type, and protocol
 // No socket is opened if errors ocurred
 Socket::Socket(int domain, int type, int protocol, Error* e) noexcept
 : _fd(INVALID_SOCKET)
@@ -85,7 +84,8 @@ Socket::~Socket() noexcept
     }
 }
 
-// Open socket for given domain, type, protocol
+// Initialize with given domain, type, protocol
+// Make sure current socket is closed before calling this function
 bool Socket::InitSocket(int domain, int type, int protocol, Error* e) noexcept
 {
     assert(_fd == INVALID_SOCKET);
@@ -98,8 +98,7 @@ bool Socket::InitSocket(int domain, int type, int protocol, Error* e) noexcept
     return true;
 }
 
-// Open socket for given domain, type, and protocol
-// Close currently opened socket firstly, failure is ignored
+// Initialize with given domain, type, and protocol
 // No socket is opened if errors occurred
 void Socket::Create(int domain, int type, int protocol)
 {
@@ -110,7 +109,7 @@ void Socket::Create(int domain, int type, int protocol)
     }
 }
 
-// Open socket for given domain, type, and protocol
+// Initialize with given domain, type, and protocol
 // Close currently opened socket firstly, failure is ignored
 // No socket is opened if errors occurred
 bool Socket::Create(int domain, int type, int protocol, Error* e) noexcept
@@ -142,13 +141,10 @@ SOCKET Socket::Detach() noexcept
     return s;
 }
 
-// Close opened socket, see close()/closesocket() of socket API
-// Event errors returned, the socket is usually closed, the return 
-// value are used for diagnose only. For EINTR error, the socket is 
-// closed on most platform, but with exceptions, e.g. HP-UX.
-// Error is return for diagnose only
+// Close current socket
 bool Socket::Close(Error* e) noexcept
 {
+    if(_fd == INVALID_SOCKET) return true;
     return CloseSocket(_fd, e);
 }
 
@@ -165,21 +161,33 @@ bool Socket::Shutdown(int how, Error* e) noexcept
     return true;
 }
 
-// Get some features of the socket
+// Get family of the socket
+// family of bound address
 sa_family_t Socket::Family(Error* e) const noexcept
 {
+    if(_fd == INVALID_SOCKET) 
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return AF_UNSPEC;
+    }
     SocketAddress addr = Address(e);
     return addr.Family();
 }
 
-// Get domain of the socket, by family of its local address
+// Get domain of the socket, by family of its bound address
 int Socket::Domain(Error* e) const noexcept
 {
     return Family(e);
 }
 
+// Get type of the socket
 int Socket::Type(Error* e) const noexcept
 {
+    if(_fd == INVALID_SOCKET) 
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return -1;
+    }
     int type;
     socklen_t len = sizeof(int);
     if(!GetOption(SOL_SOCKET, SO_TYPE, &type, &len, e))
@@ -189,6 +197,7 @@ int Socket::Type(Error* e) const noexcept
     return type;
 }
 
+// Get protocol of the socket
 int Socket::Protocol(Error* e) const noexcept
 {
     if(_fd == INVALID_SOCKET) 
@@ -197,13 +206,13 @@ int Socket::Protocol(Error* e) const noexcept
         return -1;
     }
     assert(false);
-    return 0;
+    SET_LOGIC_ERROR(e, "Calling of unimplemented function.");
+    return -1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 // Explicitly bind to a local address
-// throw on errors
 void Socket::Bind(const SocketAddress& addr)
 {
     Error e;
@@ -213,16 +222,14 @@ void Socket::Bind(const SocketAddress& addr)
     }
 }
 
-// bind to local address
+// Explicitly bind to local address
 bool Socket::Bind(const SocketAddress& addr, Error* e) noexcept
 {
-    // Open socket implicitly if necessary
-    if(_fd == INVALID_SOCKET
-       && !InitSocket(addr.Family(), SOCK_STREAM, IPPROTO_TCP, e))
+    if(_fd == INVALID_SOCKET)
     {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return false;
     }
-    assert(_fd != INVALID_SOCKET);
     if(::bind(_fd, addr.Addr(), addr.Length()) < 0)
     {
         SET_SYSTEM_ERROR(e, "Bind address to socket failed [" << _fd << "][" << addr.ToString() << "]");
@@ -264,13 +271,9 @@ bool Socket::Listen(int backlog, Error* e) noexcept
 {
     if(_fd == INVALID_SOCKET)
     {
-        SocketAddress addr(0, AF_INET); // default any address
-        if(!Bind(addr, e)) // Bind will init socket by default
-        {
-            return false;
-        }
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return false;
     }
-    assert(_fd != INVALID_SOCKET);
     if(::listen(_fd, backlog) < 0)
     {
         SET_SYSTEM_ERROR(e, "Socket lsiten failed [" << _fd << "]");
@@ -332,11 +335,12 @@ void Socket::Connect(const SocketAddress& addr)
 // status need to be checked with select() and getsockopt()
 bool Socket::Connect(const SocketAddress& addr, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET
-       && !InitSocket(addr.Family(), SOCK_STREAM, IPPROTO_TCP, e))
+    if(_fd == INVALID_SOCKET)
     {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return false;
     }
+    assert(!addr.Empty()); // need to check details about UDP socket 
     while(::connect(_fd, addr.Addr(), addr.Length()) < 0)
     {
         if(!ErrorCode::IsInterrupted())
@@ -377,7 +381,7 @@ bool Socket::WaitForRead(int timeout, Error* e) noexcept
     }
     SocketSelector selector(_fd, SOCKET_EVENT_READ);
     std::vector<SocketSelector::SocketEvents> sockets;
-    if(!selector.Select(sockets, timeout, e) || sockets.empty())
+    if(selector.Select(sockets, timeout, e) <= 0)
     {
         return false;
     }
@@ -396,7 +400,7 @@ bool Socket::WaitForWrite(int timeout, Error* e) noexcept
     }
     SocketSelector selector(_fd, SOCKET_EVENT_WRITE);
     std::vector<SocketSelector::SocketEvents> sockets;
-    if(!selector.Select(sockets, timeout, e) || sockets.empty())
+    if(selector.Select(sockets, timeout, e) <= 0)
     {
         return false;
     }
@@ -416,7 +420,7 @@ int Socket::WaitForReady(int timeout, Error* e) noexcept
     }
     SocketSelector selector(_fd, SOCKET_EVENT_READ | SOCKET_EVENT_WRITE | SOCKET_EVENT_EXCEPT);
     std::vector<SocketSelector::SocketEvents> sockets;
-    if(!selector.Select(sockets, timeout, e))
+    if(selector.Select(sockets, timeout, e) < 0)
     {
         return -1;
     }
@@ -430,9 +434,8 @@ int Socket::WaitForReady(int timeout, Error* e) noexcept
     return sockets[0].events;
 } 
 
-// Return > 0 denotes the number of bytes has been sent
-// Return = 0 denotes not ready, try later
-// Return < 0 denotes errors ocurred
+// Send data over a connected socket
+// Return value varied on block or non-block mode
 ssize_t Socket::Send(const void* p, size_t n, int flags, Error* e) noexcept
 { 
     if(_fd == INVALID_SOCKET)
@@ -440,7 +443,7 @@ ssize_t Socket::Send(const void* p, size_t n, int flags, Error* e) noexcept
         SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return -1;
     }
-    assert(p != nullptr);
+    assert(p);
     ssize_t ret;
     while((ret = ::send(_fd, p, n, flags)) < 0)
     {
@@ -453,9 +456,8 @@ ssize_t Socket::Send(const void* p, size_t n, int flags, Error* e) noexcept
     return ret;
 }
 
-// Return > 0 denotes the number of bytes has been sent
-// Return = 0 denotes not ready, try later
-// Return < 0 denotes errors ocurred
+// Receive data from a connected socket
+// Return value varied on block or non-block mode
 ssize_t Socket::Receive(void* p, size_t n, int flags, Error* e) noexcept
 {
     if(_fd == INVALID_SOCKET)
@@ -463,7 +465,7 @@ ssize_t Socket::Receive(void* p, size_t n, int flags, Error* e) noexcept
         SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return -1;
     }
-    assert(p != nullptr);
+    assert(p);
     ssize_t ret;
     while((ret = ::recv(_fd, p, n, flags)) < 0)
     {
@@ -479,16 +481,14 @@ ssize_t Socket::Receive(void* p, size_t n, int flags, Error* e) noexcept
 // Send and receive data through non-connected socket
 // If the socket is connected and addr is given by nullptr, equivalent to Send and Receive
 // If the socket is connected and valid addr is given, addr must be equal to connected address
-// Return > 0 denotes the number of bytes has been sent
-// Return = 0 denotes not ready, try later
-// Return < 0 denotes errors ocurred
+// Return value varied on block or non-block mode
 // Todo: check the address is equal to remote address when connected
 ssize_t Socket::SendTo(const void* p, size_t n, const SocketAddress* addr, int flags, Error* e) noexcept
 {
     if(!addr) return Send(p, n, flags, e);
-    if(_fd == INVALID_SOCKET
-       && !InitSocket(addr->Family(), SOCK_STREAM, IPPROTO_TCP, e))
+    if(_fd == INVALID_SOCKET)
     {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return -1;
     }
     assert(p);
@@ -511,6 +511,11 @@ ssize_t Socket::SendTo(const void* p, size_t n, const SocketAddress* addr, int f
 ssize_t Socket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags, Error* e) noexcept
 {
     if(!addr) return Receive(p, n, flags, e);
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return -1;
+    }
     assert(p);
     ssize_t ret;
     socklen_t addrlen = addr->Length();
@@ -533,6 +538,7 @@ ssize_t Socket::SendMessage(const struct msghdr* msg, int flags, Error* e) noexc
         return -1;
     }
     assert(false);
+    SET_LOGIC_ERROR(e, "Calling of unimplemented function.");
     return -1;
 }
 
@@ -544,12 +550,13 @@ ssize_t Socket::ReceiveMessage(struct msghdr* msg, int flags, Error* e) noexcept
         return -1;
     }
     assert(false);
+    SET_LOGIC_ERROR(e, "Calling of unimplemented function.");
     return -1;
 }
 
 //////////////////////////////////////////////////////////////////////////////////
 
-// socket IO control, block mode or non-block mode
+// I/O mode, block mode or non-block mode
 void Socket::Block(bool block)
 {
     Error e;

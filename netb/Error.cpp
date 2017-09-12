@@ -20,7 +20,7 @@
 
 NETB_BEGIN
 
-// No error, dummy error class
+// No error
 Error::Error() noexcept
 : _class(nullptr)
 , _message("")
@@ -29,7 +29,7 @@ Error::Error() noexcept
 
 }
 
-// Unclassified error, base error class
+// Unclassified error
 Error::Error(const std::string& msg, int code) noexcept
 : _class(&ErrorClass())
 , _message(msg)
@@ -39,6 +39,7 @@ Error::Error(const std::string& msg, int code) noexcept
 
 }
 
+// Error classification, message, and code
 Error::Error(const class ErrorClass& cls, const std::string& msg, int code) noexcept
 : _class(&cls)
 , _message(msg)
@@ -54,7 +55,7 @@ Error::~Error() noexcept
 
 const class ErrorClass& Error::Class() const noexcept 
 {
-    if(_class != nullptr) 
+    if(_class) 
     {
         return *_class;
     }
@@ -73,7 +74,7 @@ void Error::Set(const std::string& msg, int code) noexcept
 {
     _message = msg;
     _code = code; 
-    if(_class == nullptr) _class = &ErrorClass();
+    if(!_class) _class = &ErrorClass();
 }
 
 void Error::Set(const class ErrorClass& cls, const std::string& msg, int code) noexcept
@@ -91,17 +92,18 @@ void Error::SetClass(const class ErrorClass& cls) noexcept
 void Error::SetMessage(const std::string& msg) noexcept
 {
     _message = msg;
-    if(_class == nullptr) _class = &ErrorClass();
+    if(!_class) _class = &ErrorClass();
 }
 
 void Error::SetCode(int code) noexcept
 {
     _code = code;
-    if(_class == nullptr) _class = &ErrorClass();
+    if(!_class) _class = &ErrorClass();
 }
 
 ////////////////////////////////////////////////////////////////////////
 
+// Base class of error classifications
 const char* ErrorClass::Name() const noexcept
 {
     return "Error";
@@ -120,7 +122,8 @@ const class ErrorClass& ErrorClass() noexcept
 
 ///////////////////////////////////////////////////////////////////////
 
-// Implement dummy error class
+// Dummy class of error classifications
+// Indicate no error
 const char* NoError::Name() const noexcept
 {
     return "";

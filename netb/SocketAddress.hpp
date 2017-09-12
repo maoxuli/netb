@@ -40,8 +40,7 @@ NETB_BEGIN
 class SocketAddress : public sockaddr_storage
 {
 public: 
-	// Empty, to be initialized later
-	// no throw
+	// Empty address, usually used to accept address info
 	SocketAddress() noexcept;
 
 	// Given port and protocol family
@@ -55,7 +54,7 @@ public:
 	// Given host, port, and protocol family
 	// Usually used for client to set service address
 	// If host is not given (be empty), set to localhost (INADDR_LOOPBACK) by default
-	// Geven host:
+	// Geven host may be:
 	// "" or "localhost": INADDR_LOOPBACK
 	// "loopback": INADDR_LOOPBACK
 	// "wildcard" or "any": INADDR_ANY

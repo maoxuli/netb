@@ -20,38 +20,28 @@
 
 NETB_BEGIN
 
-void EventSelector::WaitForEvents(std::vector<EventHandler*>& handlers, int timeout)
+int EventSelector::WaitForEvents(std::vector<EventHandler*>& handlers, int timeout)
 {
-    Error e;
-    if(!WaitForEvents(handlers, timeout, &e))
-    {
-        THROW_ERROR(e);
-    }
-}
-
-bool EventSelector::WaitForEvents(std::vector<EventHandler*>& handlers, int timeout, Error* e) noexcept
-{
-    std::vector<struct SocketSelector::SocketEvents> sockets;
-    if(!_selector.Select(sockets, timeout, e))
-    {
-        return false;
-    }
     handlers.clear();
-    for(std::vector<struct SocketSelector::SocketEvents>::const_iterator it = sockets.begin(), 
-        end = sockets.end(); it != end; ++it)
+    std::vector<struct SocketSelector::SocketEvents> sockets;
+    int ret = _selector.Select(sockets, timeout, nullptr);
+    if(ret > 0)
     {
-        EventHandler* handler = _handlers[it->fd];
-        assert(handler != nullptr);
-        handler->SetActiveEvents(it->events);
-        handlers.push_back(handler);
+        for(auto it = sockets.begin(), end = sockets.end(); it != end; ++it)
+        {
+            EventHandler* handler = _handlers[it->fd];
+            assert(handler);
+            handler->SetActiveEvents(it->events);
+            handlers.push_back(handler);
+        }
     }
-    return true;
+    return ret;
 }
 
 // Update the interested I/O events of a EventHandler.
 // This calling indicates that the handler is active and 
 // can be access for further information
-void EventSelector::SetupHandler(EventHandler* handler) noexcept
+void EventSelector::SetupHandler(EventHandler* handler)
 {
     SOCKET fd = handler->GetSocket();
     unsigned int events = handler->GetEvents();
@@ -71,7 +61,7 @@ void EventSelector::SetupHandler(EventHandler* handler) noexcept
 
 // Remove a EventHandler, this calling indicate that a handler
 // may be dead and further information may not accessed
-void EventSelector::RemoveHandler(EventHandler* handler) noexcept
+void EventSelector::RemoveHandler(EventHandler* handler)
 {
     std::map<SOCKET, EventHandler*>::iterator it = _handlers.begin();
     while(it != _handlers.end() && it->second != handler)

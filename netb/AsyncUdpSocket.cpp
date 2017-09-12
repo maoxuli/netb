@@ -57,7 +57,8 @@ AsyncUdpSocket::~AsyncUdpSocket() noexcept
     if(_handler)
     {
         _handler->Detach(); // block until done
-        SAFE_DELETE(_handler);
+        delete _handler;
+        _handler = nullptr;
     }
     // Clear sending buffers
     while(!_out_buffers.empty())
@@ -87,7 +88,7 @@ bool AsyncUdpSocket::InitHandler(Error* e)
     }
     if(!_handler)
     {
-        SAFE_NEW(_handler, EventHandler(_loop, GetSocket()));
+        _handler = new (std::nothrow) EventHandler(_loop, GetSocket());
         if(!_handler)
         {
             SET_LOGIC_ERROR(e, "New event handler failed.");
@@ -136,7 +137,8 @@ bool AsyncUdpSocket::Close(Error* e) noexcept
     if(_handler)
     {
         _handler->Detach(); // block until done
-        SAFE_DELETE(_handler);
+        delete _handler;
+        _handler = nullptr;
     }
     return UdpSocket::Close(e);
 }

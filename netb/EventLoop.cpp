@@ -49,7 +49,7 @@ void EventLoop::Run()
     {
         // Block to wait for active events
         _active_handlers.clear();
-        if(_selector.WaitForEvents(_active_handlers, -1, nullptr) && !_active_handlers.empty()) 
+        if(_selector.WaitForEvents(_active_handlers, -1) > 0) 
         {
             // Events handling
             _event_handling = true;
