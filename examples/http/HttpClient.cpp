@@ -43,7 +43,6 @@ int main(const int argc, char* argv[])
     }
 
     netb::TcpSocket client;
-    client.Block(10000); // block with 10s timeout
     if(!client.Connect(netb::SocketAddress(host, port), nullptr))
     {
         std::cout << "HTTP client failed to connect: " << host << ":" << port << "\n";

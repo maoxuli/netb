@@ -25,6 +25,17 @@ const class ErrorClass& Exception::Class() const noexcept
     return ErrorClass();
 }
 
+// To string for log
+std::string Exception::ToString() const noexcept 
+{
+    std::ostringstream oss;
+    oss << Class().Name();
+    if(_code > 0) oss << ":" << _code;
+    if(!_message.empty()) oss << ":" << _message;
+    oss << ".";
+    return oss.str();
+}
+
 // Exception subclass and ErrorClass subclass for system error
 IMPLEMENT_EXCEPTION(SystemException, SystemError)
 IMPLEMENT_ERROR_CLASS(SystemError, "SystemError", SystemException)

@@ -47,6 +47,7 @@ public:
 
     // The actual open process
     // Enable async facility on success to accept incomming connections
+    using TcpAcceptor::Open;
     virtual bool Open(const SocketAddress& addr, bool reuse_addr, bool reuse_port, Error* e) noexcept;
 
     // Close

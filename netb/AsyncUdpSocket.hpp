@@ -48,6 +48,7 @@ public:
     
     // Open to receive data
     // Override to enable async I/O facility
+    using UdpSocket::Open;
     virtual bool Open(const SocketAddress& addr, bool reuse_addr = true, bool reuse_port = true, Error* e = nullptr) noexcept;
 
     // Close
@@ -56,11 +57,13 @@ public:
 
     // Send data to given address
     // Async I/O, return immediately and data may be buffered for sending
+    using UdpSocket::SendTo;
     virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, Error* e = nullptr) noexcept;
     //virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, Error* e = nullptr) noexcept;
 
     // Send data to connected address
     // Async I/O, return immediately and data may be buffered for sending
+    using UdpSocket::Send;
     virtual ssize_t Send(const void* p, size_t n, Error* e = nullptr) noexcept;
     //virtual ssize_t Send(StreamBuffer* buf, Error* e = nullptr) noexcept;
 

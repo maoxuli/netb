@@ -101,6 +101,17 @@ void Error::SetCode(int code) noexcept
     if(!_class) _class = &ErrorClass();
 }
 
+std::string Error::ToString() const noexcept
+{
+    if(!_class) return "No error.";
+    std::ostringstream oss;
+    oss << _class->Name();
+    if(_code > 0) oss << ":" << _code;
+    if(!_message.empty()) oss << ":" << _message;
+    oss << ".";
+    return oss.str();
+}
+
 ////////////////////////////////////////////////////////////////////////
 
 // Base class of error classifications

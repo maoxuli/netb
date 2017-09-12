@@ -90,7 +90,6 @@ int main(const int argc, char* argv[])
         std::ostringstream oss;
         oss << "This is a test text for echo, " << n << "\n";
         std::string s = oss.str();
-        client.Block(3000);
         client.SendText(s);
         s = client.ReceiveText();
         std::cout << s << "\n";

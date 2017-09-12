@@ -52,10 +52,12 @@ public:
 
     // Set status for externally established connection
     // Enable async facility
+    using TcpSocket::Connected;
     virtual bool Connected(Error* e) noexcept;
 
     // Actively connect to remote address, in block mode
     // Enable async facility on success
+    using TcpSocket::Connect;
     virtual bool Connect(const SocketAddress& addr, Error* e) noexcept;
 
     // Actively connect to remote address, in non-block mode with timeout
@@ -69,6 +71,7 @@ public:
 
     // Send data over the connection
     // in async mode, send always return immediately and data is buffered
+    using TcpSocket::Send;
     virtual ssize_t Send(const void* p, size_t n, Error* e = nullptr) noexcept;
 
     // Notification of connected status

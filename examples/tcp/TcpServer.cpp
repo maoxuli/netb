@@ -37,31 +37,31 @@ int main(const int argc, char* argv[])
     netb::Socket s(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e);
     if(!s.Valid() && e)
     {
-        std::cout << "Create socket failed. " << e.Info() << "[" << e.Code() << "]\n";
+        std::cout << "Create socket failed: " << e.ToString() << "\n"; 
         return -1;
     }
     // Bind to local port
     s.ReuseAddress(true);
     s.ReusePort(true);
-    if(!s.Bind(netb::SocketAddress(port, AF_INET), &e))
+    if(!s.Bind(netb::SocketAddress(port), &e))
     {
-        std::cout << "Bind faild. " << e.Info() << "[" << e.Code() << "]\n";
+        std::cout << "Bind faild: " << e.ToString() << "\n";
         return -1;
     }
     // Listen
     if(!s.Listen(netb::Socket::DEFAULT_BACKLOG, &e))
     {
-        std::cout << "Listen failed. " << e.Info() << "[" << e.Code() << "]\n";
+        std::cout << "Listen failed: " << e.ToString() << "\n";
         return -1;
     }
     std::cout << "Listen at " << s.Address().ToString() << "\n";
     // Accept incomming connections
     while(true)
     {
-        netb::SOCKET in = s.Accept(&e);
+        netb::SOCKET in = s.Accept(nullptr, &e);
         if(in == netb::INVALID_SOCKET && e)
         {
-            std::cout << "Accept failed. " << e.Info() << "[" << e.Code() << "]\n";
+            std::cout << "Accept failed: " << e.ToString() << "\n";
         }
         std::cout << "Accept socket: " << in << "\n";
     }

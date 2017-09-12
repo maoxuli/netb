@@ -41,14 +41,11 @@ int main(const int argc, char* argv[])
             port  = n;
         }
     }
-    // Check return error
     netb::Error e;
-    // TCP socket
     netb::TcpSocket sock;
-    // Connect
     if(!sock.Connect(netb::SocketAddress(host, port), &e))
     {
-        std::cout << "Connect faild. " << e.Info() << "[" << e.Code() << "]\n";
+        std::cout << "Connect faild: " << e.ToString() << "\n";
     }
     return 0;
 }

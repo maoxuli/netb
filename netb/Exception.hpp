@@ -43,6 +43,7 @@ public:
 
     // To string for log or display
     virtual std::string ToString() const noexcept;
+    
 private:
     std::string _message;
     int _code;

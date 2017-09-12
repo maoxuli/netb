@@ -138,7 +138,7 @@ int main(const int argc, char* argv[])
     std::cout << "UDP server opened. [" << udps.Address().ToString() << "]\n";*/
     if(!tcps.Open(&e))
     {
-        std::cout << "TCP server open failed. [" << e.Info() << "][" << e.Code() << "]\n";
+        std::cout << "TCP server open failed. [" << e.Message() << "][" << e.Code() << "]\n";
         return -1;
     }
     std::cout << "TCP server opened. [" << tcps.Address().ToString() << "]\n";

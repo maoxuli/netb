@@ -31,23 +31,22 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
-    // Check return error, no exception
     netb::Error e;
     // Open a TCP socket
-    netb::TcpAcceptor acceptor(netb::SocketAddress(port, AF_INET));
+    netb::TcpAcceptor acceptor(netb::SocketAddress(port, AF_INET, NULL));
     if(!acceptor.Open(&e))
     {
-        std::cout << "Acceptor open failed. " << e.Info() << "[" << e.Code() << "]\n";
+        std::cout << "Acceptor open failed: " << e.ToString() << "\n";
         return -1;
     }
-    std::cout << "Open at " << acceptor.Address().ToString() << "\n";
+    std::cout << "Open at: " << acceptor.Address().ToString() << "\n";
     // Accept incomming connections
     while(true)
     {
-        netb::SOCKET in = acceptor.Accept(&e);
+        netb::SOCKET in = acceptor.Accept(nullptr, &e);
         if(in == netb::INVALID_SOCKET && e)
         {
-            std::cout << "Accept failed. " << e.Info() << "[" << e.Code() << "]\n";
+            std::cout << "Accept failed. " << e.ToString() << "]\n";
         }
         std::cout << "Accept socket: " << in << "\n";
     }

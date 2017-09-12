@@ -47,13 +47,13 @@ int main(const int argc, char* argv[])
     netb::Socket s(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e);
     if(!s.Valid() && e)
     {
-        std::cout << "Open socket failed. " << e.Info() << "[" << e.Code() << "]\n";
+        std::cout << "Open socket failed: " << e.ToString() << "\n";
         return -1;
     }
     // Connect
     if(!s.Connect(netb::SocketAddress(host, port), &e))
     {
-        std::cout << "Connect faild. " << e.Info() << "[" << e.Code() << "]\n";
+        std::cout << "Connect faild: " << e.ToString() << "\n";
     }
     return 0;
 }
