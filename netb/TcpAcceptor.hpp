@@ -67,13 +67,22 @@ public:
     SocketAddress Address(Error* e = nullptr) const noexcept;
 
     // Accept a connection, in block mode
-    virtual SOCKET Accept(SocketAddress* addr = nullptr); // thow on errors
-    virtual SOCKET Accept(SocketAddress* addr, Error* e) noexcept;
+    virtual SOCKET Accept(); // thow on errors
+    virtual SOCKET Accept(Error* e) noexcept;
 
     // Accept a connection, int non-block mode with timeout (miliseconds)
     // timeout of -1 for block mode 
-    virtual SOCKET Accept(SocketAddress* addr, int timeout); // throw on errors
-    virtual SOCKET Accept(SocketAddress* addr, int timeout, Error* e) noexcept;
+    virtual SOCKET Accept(int timeout); // throw on errors
+    virtual SOCKET Accept(int timeout, Error* e) noexcept;
+
+    // Accept a connection, in block mode
+    virtual SOCKET AcceptFrom(SocketAddress* addr); // thow on errors
+    virtual SOCKET AcceptFrom(SocketAddress* addr, Error* e) noexcept;
+    
+    // Accept a connection, int non-block mode with timeout (miliseconds)
+    // timeout of -1 for block mode 
+    virtual SOCKET AcceptFrom(SocketAddress* addr, int timeout); // throw on errors
+    virtual SOCKET AcceptFrom(SocketAddress* addr, int timeout, Error* e) noexcept;
 
 protected: 
     // Initial address: empty, fixed family, or fixed address

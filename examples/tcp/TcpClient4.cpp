@@ -15,50 +15,56 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Socket.hpp"
+#include "TcpSocket.hpp"
 
 using namespace netb;
 
-// TCP echo server
+// TCP echo client
 int main(const int argc, char* argv[])
 {
-    // Service port, default 9000
-    // Given port: tcps 9001
+    // Service host and port, by default local and 9000
+    // Given by: tcpc 127.0.0.1 9000
+    std::string host;
     unsigned short port = 9000;
-    if(argc == 2)
+    if(argc == 2) // tcpc 9001
     {
         int n = atoi(argv[1]);
         if(n > 0 && n <= 65535)
         {
-            port = (unsigned short)n;
+            port  = n;
         }
     }
-    // TCP echo server
+    else if(argc == 3) // tcpc 192.168.1.1 9001
+    {
+        host = argv[1];
+        int n = atoi(argv[2]);
+        if(n > 0 && n <= 65535)
+        {
+            port  = n;
+        }
+    }
+    // TCP echo client
     // Error handling with return values and error object
     Error e;
-    Socket tcps;
-    if(!tcps.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e) || 
-       !tcps.Bind(SocketAddress(port, AF_INET, nullptr), &e) || 
-       !tcps.Listen(-1, &e))
+    TcpSocket tcpc;
+    if(!tcpc.Connect(SocketAddress(host, port, AF_INET, nullptr), &e))
     {
         std::cout << "Error: " << e.Report() << std::endl;
         return 0;
     }
 
-    Socket conn;
+    std::string msg = "Hello";
     char* buf = new char[2048];
-    while(conn.Attach(tcps.Accept(&e)))
+    ssize_t ret = 0;
+    if((ret = tcpc.Send(msg.data(), msg.length(), &e)) <= 0 ||
+       (ret = tcpc.Receive(buf, 2048, &e)) <= 0)
     {
-        ssize_t ret;
-        while((ret = conn.Receive(buf, 2048)) > 0)
-        {
-            if(conn.Send(buf, ret) > 0)
-            {
-                std::cout << "Receive and send back " << ret << " bytes.\n";
-            }
-        }
+        std::cout << "Error: " << e.Report() << std::endl;
+    }
+    else
+    {
+        std::cout << "Received: " << std::string(buf, ret) << std::endl;
     }
     delete [] buf;
-    std::cout << "Error: " << e.Report() << std::endl;
     return 0;
 }

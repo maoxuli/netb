@@ -123,13 +123,14 @@ bool Socket::Create(int domain, int type, int protocol, Error* e) noexcept
 
 // Attach an externally opened socket
 // Close currently opened socket firstly, failure is ignored
-void Socket::Attach(SOCKET s) noexcept
+bool Socket::Attach(SOCKET s) noexcept
 {
     if(_fd != INVALID_SOCKET && _fd != s)
     {
         Close(); // errors on closing is ignored
     }
     _fd = s;
+    return _fd != INVALID_SOCKET;
 }
 
 // Separate the socket form the object
@@ -257,6 +258,16 @@ SocketAddress Socket::Address(Error* e) const noexcept
 }
 
 // TCP socket listen to start waiting for incomming connections
+void Socket::Listen()
+{
+    return Listen(SOMAXCONN);
+}
+
+bool Socket::Listen(Error* e) noexcept
+{
+    return Listen(SOMAXCONN, e);
+}
+
 // Throw on errors
 void Socket::Listen(int backlog)
 {

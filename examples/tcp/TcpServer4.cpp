@@ -15,9 +15,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Socket.hpp"
+#include "TcpAcceptor.hpp"
+#include "TcpSocket.hpp"
 
-// TCP server
+using namespace netb;
+
+// TCP echo server
 int main(const int argc, char* argv[])
 {
     // Service port, default 9000
@@ -31,39 +34,30 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
-    // Check return error, no exception
-    netb::Error e;
-    // Open a TCP socket
-    netb::Socket s(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e);
-    if(!s.Valid() && e)
+    // TCP echo server
+    // Error handling with return values and error object
+    Error e;
+    TcpAcceptor tcps(SocketAddress(port, AF_INET, nullptr));
+    if(!tcps.Open(&e))
     {
-        std::cout << "Create socket failed: " << e.ToString() << "\n"; 
-        return -1;
+        std::cout << "Error: " << e.Report() << std::endl;
+        return 0;
     }
-    // Bind to local port
-    s.ReuseAddress(true);
-    s.ReusePort(true);
-    if(!s.Bind(netb::SocketAddress(port), &e))
+
+    TcpSocket conn;
+    char* buf = new char[2048];
+    while(conn.Connected(tcps.Accept(&e), nullptr, &e))
     {
-        std::cout << "Bind faild: " << e.ToString() << "\n";
-        return -1;
-    }
-    // Listen
-    if(!s.Listen(netb::Socket::DEFAULT_BACKLOG, &e))
-    {
-        std::cout << "Listen failed: " << e.ToString() << "\n";
-        return -1;
-    }
-    std::cout << "Listen at " << s.Address().ToString() << "\n";
-    // Accept incomming connections
-    while(true)
-    {
-        netb::SOCKET in = s.Accept(nullptr, &e);
-        if(in == netb::INVALID_SOCKET && e)
+        int ret;
+        while((ret = conn.Receive(buf, 2048)) > 0)
         {
-            std::cout << "Accept failed: " << e.ToString() << "\n";
+            if(conn.Send(buf, ret) > 0)
+            {
+                std::cout << "Receive and send back: " << ret << " bytes.\n";
+            }
         }
-        std::cout << "Accept socket: " << in << "\n";
     }
+    delete [] buf;
+    std::cout << "Error: " << e.Report() << std::endl;
     return 0;
 }

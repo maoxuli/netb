@@ -15,9 +15,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "TcpSocket.hpp"
+#include "Socket.hpp"
 
-// TCP client
+using namespace netb;
+
+// TCP echo client
 int main(const int argc, char* argv[])
 {
     // Service host and port, by default local and 9000
@@ -41,11 +43,29 @@ int main(const int argc, char* argv[])
             port  = n;
         }
     }
-    netb::Error e;
-    netb::TcpSocket sock;
-    if(!sock.Connect(netb::SocketAddress(host, port), &e))
+    // TCP echo client
+    // Error handling with return values and error object
+    Error e;
+    Socket tcpc;
+    if(!tcpc.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e) ||  
+       !tcpc.Connect(SocketAddress(host, port, AF_INET, nullptr), &e))
     {
-        std::cout << "Connect faild: " << e.ToString() << "\n";
+        std::cout << "Error: " << e.Report() << std::endl;
+        return 0;
     }
+
+    std::string msg = "Hello";
+    char* buf = new char[2048];
+    ssize_t ret = 0;
+    if((ret = tcpc.Send(msg.data(), msg.length(),0,  &e)) <= 0 ||
+       (ret = tcpc.Receive(buf, 2048, 0, &e)) <= 0)
+    {
+        std::cout << "Error: " << e.Report() << std::endl;
+    }
+    else
+    {
+        std::cout << "Received: " << std::string(buf, ret) << std::endl;
+    }
+    delete [] buf;
     return 0;
 }

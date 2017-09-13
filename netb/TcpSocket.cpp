@@ -72,13 +72,15 @@ TcpSocket::~TcpSocket() noexcept
 }
 
 // Set connected status for externally established connection
-void TcpSocket::Connected()
+bool TcpSocket::Connected()
 {
     Error e;
-    if(!Connected(&e)) 
+    bool ret = Connected(&e);
+    if(!ret)
     {
         THROW_ERROR(e);
     }
+    return ret;
 }
 
 // Set connected status for externally established connection
@@ -111,20 +113,23 @@ bool TcpSocket::Connected(Error* e) noexcept
 }
 
 // Set connected status for externally established connection
-void TcpSocket::Connected(SOCKET s, const SocketAddress* addr)
+bool TcpSocket::Connected(SOCKET s, const SocketAddress* addr)
 {
     Error e;
-    if(!Connected(s, addr, &e))
+    bool ret = Connected(s, addr, &e);
+    if(!ret)
     {
         THROW_ERROR(e);
     }
+    return ret;
 }
 
 // Set connected status for externally established connection
 bool TcpSocket::Connected(SOCKET s, const SocketAddress* addr, Error* e) noexcept
 {
+    Socket::Attach(s);
     _connected_address = addr;
-    return Socket::Attach(s, e) && Connected(e);
+    return Connected(e);
 }
 
 // Do connect in block or non-block mode

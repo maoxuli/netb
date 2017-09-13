@@ -143,11 +143,11 @@ SocketAddress TcpAcceptor::Address(Error* e) const noexcept
 }
 
 // Accept a connection, in block mode
-SOCKET TcpAcceptor::Accept(SocketAddress* addr)
+SOCKET TcpAcceptor::Accept()
 {
     Error e;
     SOCKET s;
-    if((s = Accept(addr, &e)) == INVALID_SOCKET)
+    if((s = Accept(&e)) == INVALID_SOCKET)
     {
         THROW_ERROR(e);
     }
@@ -155,21 +155,21 @@ SOCKET TcpAcceptor::Accept(SocketAddress* addr)
 }
 
 // Accept a connection, in block mode
-SOCKET TcpAcceptor::Accept(SocketAddress* addr, Error* e) noexcept
+SOCKET TcpAcceptor::Accept(Error* e) noexcept
 {
     if(!Socket::Block(true, e)) // set to block mode
     {
         return INVALID_SOCKET;
     }
-    return Socket::Accept(addr, e); // block mode
+    return Socket::Accept(e); // block mode
 }
 
 // Accept a connection, in non-block mode with timeout
-SOCKET TcpAcceptor::Accept(SocketAddress* addr, int timeout)
+SOCKET TcpAcceptor::Accept(int timeout)
 {
     Error e;
     SOCKET s;
-    if((s = Accept(addr, timeout, &e)) == INVALID_SOCKET)
+    if((s = Accept(timeout, &e)) == INVALID_SOCKET)
     {
         THROW_ERROR(e);
     }
@@ -177,11 +177,11 @@ SOCKET TcpAcceptor::Accept(SocketAddress* addr, int timeout)
 }
 
 // Accept a connection, in non-block mode with timeout
-SOCKET TcpAcceptor::Accept(SocketAddress* addr, int timeout, Error* e) noexcept
+SOCKET TcpAcceptor::Accept(int timeout, Error* e) noexcept
 {
     if(timeout < 0) // block mode
     {
-        return Accept(addr, e);
+        return Accept(e);
     }
     if(!Socket::Block(false, e)) // set to non-block mode
     {
@@ -195,7 +195,63 @@ SOCKET TcpAcceptor::Accept(SocketAddress* addr, int timeout, Error* e) noexcept
     {
         return INVALID_SOCKET;
     }
-    return Socket::Accept(addr, e); // non-block mode
+    return Socket::Accept(e); // non-block mode
+}
+
+// Accept a connection, in block mode
+SOCKET TcpAcceptor::AcceptFrom(SocketAddress* addr)
+{
+    Error e;
+    SOCKET s;
+    if((s = AcceptFrom(addr, &e)) == INVALID_SOCKET)
+    {
+        THROW_ERROR(e);
+    }
+    return s;
+}
+
+// Accept a connection, in block mode
+SOCKET TcpAcceptor::AcceptFrom(SocketAddress* addr, Error* e) noexcept
+{
+    if(!Socket::Block(true, e)) // set to block mode
+    {
+        return INVALID_SOCKET;
+    }
+    return Socket::AcceptFrom(addr, e); // block mode
+}
+
+// Accept a connection, in non-block mode with timeout
+SOCKET TcpAcceptor::AcceptFrom(SocketAddress* addr, int timeout)
+{
+    Error e;
+    SOCKET s;
+    if((s = AcceptFrom(addr, timeout, &e)) == INVALID_SOCKET)
+    {
+        THROW_ERROR(e);
+    }
+    return s;
+}
+
+// Accept a connection, in non-block mode with timeout
+SOCKET TcpAcceptor::AcceptFrom(SocketAddress* addr, int timeout, Error* e) noexcept
+{
+    if(timeout < 0) // block mode
+    {
+        return AcceptFrom(addr, e);
+    }
+    if(!Socket::Block(false, e)) // set to non-block mode
+    {
+        return INVALID_SOCKET;
+    }
+    // Here we check ready status first and then accept in non-block mode. 
+    // A more official flow is accept in non-block mode first, and then 
+    // check the status, if it is EWOULDBLOCK or EAGIN, then check ready 
+    // in timeout time, and accept again on ready event. 
+    if(timeout > 0 && !Socket::WaitForRead(timeout, e)) // timout
+    {
+        return INVALID_SOCKET;
+    }
+    return Socket::AcceptFrom(addr, e); // non-block mode
 }
 
 NETB_END

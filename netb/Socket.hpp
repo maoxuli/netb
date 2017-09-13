@@ -80,7 +80,7 @@ public:
 
     // Attach an externally opened socket
     // Close current socket firstly
-    void Attach(SOCKET s) noexcept;
+    bool Attach(SOCKET s) noexcept;
 
     // Separate the socket form the object
     // The ownership of the socket is taken over by caller
@@ -122,7 +122,10 @@ public:
 
     // Listen to start waiting for incomming connections (for TCP socket only)
     enum { DEFAULT_BACKLOG = SOMAXCONN };
-    void Listen(int backlog = DEFAULT_BACKLOG); // Throw on errors
+    void Listen(); // Throw on errors
+    bool Listen(Error* e) noexcept;
+
+    void Listen(int backlog); // Throw on errors
     bool Listen(int backlog, Error* e) noexcept;
 
     // Accept an incomming connection (for TCP socket only)

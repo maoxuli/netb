@@ -34,31 +34,31 @@ int main(const int argc, char* argv[])
         }
     }
     // TCP echo server
-    // Error handling with return values and error object
-    Error e;
-    Socket tcps;
-    if(!tcps.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e) || 
-       !tcps.Bind(SocketAddress(port, AF_INET, nullptr), &e) || 
-       !tcps.Listen(-1, &e))
+    // Error handling with exceptions
+    try
     {
-        std::cout << "Error: " << e.Report() << std::endl;
-        return 0;
-    }
+        Socket tcps(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        tcps.Bind(SocketAddress(port, AF_INET));
+        tcps.Listen();
 
-    Socket conn;
-    char* buf = new char[2048];
-    while(conn.Attach(tcps.Accept(&e)))
-    {
-        ssize_t ret;
-        while((ret = conn.Receive(buf, 2048)) > 0)
+        Socket conn;
+        char* buf = new char[2048];
+        while(conn.Attach(tcps.Accept()))
         {
-            if(conn.Send(buf, ret) > 0)
+            ssize_t ret;
+            while((ret = conn.Receive(buf, 2048)) > 0)
             {
-                std::cout << "Receive and send back " << ret << " bytes.\n";
+                if(conn.Send(buf, ret) > 0)
+                {
+                    std::cout << "Receive and send back " << ret << " bytes.\n";
+                }
             }
         }
+        delete [] buf;
     }
-    delete [] buf;
-    std::cout << "Error: " << e.Report() << std::endl;
+    catch(const Exception& ex)
+    {
+        std::cout << "Exception: " << ex.Report() << std::endl;
+    }
     return 0;
 }

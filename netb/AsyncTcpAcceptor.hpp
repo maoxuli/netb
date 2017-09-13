@@ -63,18 +63,39 @@ public:
 public:
     // In async mode, incomming connections are accetpted internally 
     // and notify the application by AcceptedCallback
-    virtual SOCKET Accept(SocketAddress* addr = nullptr) // thow on errors
+    virtual SOCKET Accept() // thow on errors
     {
         throw LogicException("Function not work in this mode.");
     }
 
-    virtual SOCKET Accept(SocketAddress* addr, Error* e) noexcept
+    virtual SOCKET Accept(Error* e) noexcept
     {
         SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return INVALID_SOCKET;
     }
 
-    virtual SOCKET Accept(SocketAddress* addr, int timeout) // throw on errors
+    virtual SOCKET Accept(int timeout) // throw on errors
+    {
+       throw LogicException("Function not work in this mode.");
+    }
+    
+    virtual SOCKET Accept(int timeout, Error* e) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return INVALID_SOCKET;
+    }
+    virtual SOCKET AcceptFrom(SocketAddress* addr) // thow on errors
+    {
+        throw LogicException("Function not work in this mode.");
+    }
+
+    virtual SOCKET AcceptFrom(SocketAddress* addr, Error* e) noexcept
+    {
+        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        return INVALID_SOCKET;
+    }
+
+    virtual SOCKET AcceptFrom(SocketAddress* addr, int timeout) // throw on errors
     {
        throw LogicException("Function not work in this mode.");
     }

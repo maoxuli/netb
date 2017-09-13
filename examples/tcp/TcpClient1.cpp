@@ -17,7 +17,9 @@
 
 #include "Socket.hpp"
 
-// TCP client
+using namespace netb;
+
+// TCP echo client
 int main(const int argc, char* argv[])
 {
     // Service host and port, by default local and 9000
@@ -41,19 +43,33 @@ int main(const int argc, char* argv[])
             port  = n;
         }
     }
-    // Check return error
-    netb::Error e;
-    // Open TCP socket
-    netb::Socket s(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e);
-    if(!s.Valid() && e)
+    // TCP echo client
+    // Error handling with exceptions
+    Socket tcpc;
+    try
     {
-        std::cout << "Open socket failed: " << e.ToString() << "\n";
-        return -1;
+        tcpc.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP); 
+        tcpc.Connect(SocketAddress(host, port, AF_INET));
     }
-    // Connect
-    if(!s.Connect(netb::SocketAddress(host, port), &e))
+    catch(SystemException& ex)
     {
-        std::cout << "Connect faild: " << e.ToString() << "\n";
+        std::cout << "Exception: " << ex.Report() << std::endl;
+        return 0;
     }
+
+    std::string msg = "Hello";
+    char* buf = new char[2048];
+    ssize_t ret = 0;
+    Error e;
+    if((ret = tcpc.Send(msg.data(), msg.length(), 0, &e)) <= 0 ||
+       (ret = tcpc.Receive(buf, 2048, 0, &e)) <= 0)
+    {
+        std::cout << "Error: " << e.Report() << std::endl;
+    }
+    else
+    {
+        std::cout << "Received: " << std::string(buf, ret) << std::endl;
+    }
+    delete [] buf;
     return 0;
 }
