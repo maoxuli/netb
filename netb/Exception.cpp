@@ -26,7 +26,7 @@ const class ErrorClass& Exception::Class() const noexcept
 }
 
 // To string for log
-std::string Exception::ToString() const noexcept 
+std::string Exception::Report() const noexcept 
 {
     std::ostringstream oss;
     oss << Class().Name();

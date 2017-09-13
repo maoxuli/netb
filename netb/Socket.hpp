@@ -127,8 +127,13 @@ public:
 
     // Accept an incomming connection (for TCP socket only)
     // return INVALID_SOCKET on errors
-    SOCKET Accept(SocketAddress* addr = NULL); // throw on error
-    SOCKET Accept(SocketAddress* addr, Error* e) noexcept;
+    SOCKET Accept(); // throw on error
+    SOCKET Accept(Error* e) noexcept;
+
+    // Accept an incomming connection (for TCP socket only)
+    // return INVALID_SOCKET on errors
+    SOCKET AcceptFrom(SocketAddress* addr); // throw on error
+    SOCKET AcceptFrom(SocketAddress* addr, Error* e) noexcept;
 
     // Connect to remote address to establish outgoing connection (for TCP socket)
     // Associate a remote address for I/O (for UDP socket), remove association with empty address

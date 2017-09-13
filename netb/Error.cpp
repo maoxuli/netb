@@ -101,7 +101,7 @@ void Error::SetCode(int code) noexcept
     if(!_class) _class = &ErrorClass();
 }
 
-std::string Error::ToString() const noexcept
+std::string Error::Report() const noexcept
 {
     if(!_class) return "No error.";
     std::ostringstream oss;

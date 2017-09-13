@@ -84,10 +84,15 @@ void TcpSocket::Connected()
 // Set connected status for externally established connection
 bool TcpSocket::Connected(Error* e) noexcept
 {
+    if(!Socket::Valid())
+    {
+        SET_LOGIC_ERROR(e, "Socket connection is not established.");
+        return false;
+    }
     // Check given socket type
     if(Socket::Type() != SOCK_STREAM)
     {
-        SET_LOGIC_ERROR(e, "Attached is not a TCP socket.");
+        SET_LOGIC_ERROR(e, "Not a TCP socket connection.");
         return false;
     }
     // Check connectd address, will indicate connected status
@@ -99,10 +104,27 @@ bool TcpSocket::Connected(Error* e) noexcept
     // Check given conneced address
     if(!_connected_address.Empty() && _connected_address != addr)
     {
-        SET_LOGIC_ERROR(e, "Attached connected address is wrong.");
+        SET_LOGIC_ERROR(e, "Connected address is incorrect.");
         return false;
     }
     return true;
+}
+
+// Set connected status for externally established connection
+void TcpSocket::Connected(SOCKET s, const SocketAddress* addr)
+{
+    Error e;
+    if(!Connected(s, addr, &e))
+    {
+        THROW_ERROR(e);
+    }
+}
+
+// Set connected status for externally established connection
+bool TcpSocket::Connected(SOCKET s, const SocketAddress* addr, Error* e) noexcept
+{
+    _connected_address = addr;
+    return Socket::Attach(s, e) && Connected(e);
 }
 
 // Do connect in block or non-block mode

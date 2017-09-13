@@ -284,11 +284,11 @@ bool Socket::Listen(int backlog, Error* e) noexcept
 
 // TCP socket accepts an incomming connection
 // Note: ::accept is not a I/O function
-SOCKET Socket::Accept(SocketAddress* addr)
+SOCKET Socket::Accept()
 {
     Error e;
     SOCKET s;
-    if((s = Accept(addr, &e)) == INVALID_SOCKET)
+    if((s = Accept(&e)) == INVALID_SOCKET)
     {
         THROW_ERROR(e);
     }
@@ -296,7 +296,7 @@ SOCKET Socket::Accept(SocketAddress* addr)
 }
 
 // TCP socket accepts an incomming connection
-SOCKET Socket::Accept(SocketAddress* addr, Error* e) noexcept
+SOCKET Socket::Accept(Error* e) noexcept
 {
     if(_fd == INVALID_SOCKET)
     {
@@ -304,9 +304,7 @@ SOCKET Socket::Accept(SocketAddress* addr, Error* e) noexcept
         return -1;
     }
     SOCKET s;
-    SocketAddress sa;
-    socklen_t addrlen = sa.Length();
-    while((s = ::accept(_fd, (sockaddr*)&sa, &addrlen)) == INVALID_SOCKET)
+    while((s = ::accept(_fd, 0, 0)) == INVALID_SOCKET)
     {
         if(!ErrorCode::IsInterrupted())
         {
@@ -314,7 +312,42 @@ SOCKET Socket::Accept(SocketAddress* addr, Error* e) noexcept
             return INVALID_SOCKET;
         }
     }
-    if(addr != NULL) *addr = sa;
+    return s;
+}
+
+// TCP socket accepts an incomming connection
+// Note: ::accept is not a I/O function
+SOCKET Socket::AcceptFrom(SocketAddress* addr)
+{
+    Error e;
+    SOCKET s;
+    if((s = AcceptFrom(addr, &e)) == INVALID_SOCKET)
+    {
+        THROW_ERROR(e);
+    }
+    return s;
+}
+
+// TCP socket accepts an incomming connection
+SOCKET Socket::AcceptFrom(SocketAddress* addr, Error* e) noexcept
+{
+    if(!addr) return Accept(e);
+    if(_fd == INVALID_SOCKET)
+    {
+        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
+        return -1;
+    }
+    SOCKET s;
+    addr->Reset();
+    socklen_t addrlen = addr->Length();
+    while((s = ::accept(_fd, (sockaddr*)addr, &addrlen)) == INVALID_SOCKET)
+    {
+        if(!ErrorCode::IsInterrupted())
+        {
+            SET_SYSTEM_ERROR(e, "Socket accept failed [" <<  _fd << "]");
+            return INVALID_SOCKET;
+        }
+    }
     return s;
 }
 
@@ -518,6 +551,7 @@ ssize_t Socket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags, E
     }
     assert(p);
     ssize_t ret;
+    addr->Reset();
     socklen_t addrlen = addr->Length();
     while((ret = ::recvfrom(_fd, p, n, flags, addr->Addr(), &addrlen)) < 0)
     {

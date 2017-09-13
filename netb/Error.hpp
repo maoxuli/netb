@@ -65,7 +65,7 @@ public:
     void SetCode(int code) noexcept;
 
     // To string for log or display
-    std::string ToString() const noexcept;
+    std::string Report() const noexcept;
 
 private:
     const class ErrorClass* _class; // classification, ErrorClass or its subclass

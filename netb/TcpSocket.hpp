@@ -53,6 +53,10 @@ public:
     virtual void Connected(); // throw on errors
     virtual bool Connected(Error* e) noexcept; 
 
+    // Set connected status for externally established connection
+    virtual void Connected(SOCKET s, const SocketAddress* addr = nullptr); // throw on errors
+    virtual bool Connected(SOCKET s, const SocketAddress* addr, Error* e) noexcept; 
+
     // Actively connect to remote address, in block mode
     virtual void Connect(const SocketAddress& addr); // throw on errors
     virtual bool Connect(const SocketAddress& addr, Error* e) noexcept;

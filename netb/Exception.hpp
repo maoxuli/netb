@@ -42,7 +42,7 @@ public:
     virtual const class ErrorClass& Class() const noexcept;
 
     // To string for log or display
-    virtual std::string ToString() const noexcept;
+    virtual std::string Report() const noexcept;
     
 private:
     std::string _message;
