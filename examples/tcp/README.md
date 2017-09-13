@@ -97,7 +97,7 @@ std::cout << "Received: " << std::string(buf, ret) << std::endl;
 return;
 ```
 
-The complete source code of above TCP server and TCP client can be found with links below: 
+Please find the complete source code of above TCP server and TCP client in:  
 
 TcpServer1.cpp
 TcpServer2.cpp
@@ -175,6 +175,13 @@ return;
 
 Apparently, The TCP server and TCP client based on TcpAcceptor and TcpSocket are still working in single thread, block mode, and synchronous I/O. 
 
+Please find the complete source code of above TCP server and TCP client in:  
+
+TcpServer3.cpp
+TcpServer4.cpp
+TcpClient3.cpp
+TcpClient4.cpp 
+
 ## Asynchronous I/O with AsyncTcpAcceptor and AsyncTcpSocket
 
 Concurrent I/O is a important feature for high performance network applications. It involves socket I/O multiplexing and multithreading. AsyncTcpAcceptor and AsyncTcpSocket implement a callback style asynchronous I/O mechanism, which accept incomming connections and perform I/O asynchronously. The source code below is only for the purpose of showing the work flow of asynchronous I/O, thus omitted some details and error handling. 
@@ -212,3 +219,10 @@ AsyncTcpAcceptor tcps(SocketAddress(8080));
 tcps.SetAcceptedCallback(OnAccepted); // set async connection callback
 tcps.Open();
 ```
+
+Please find the complete source code of above TCP server and TCP client in:  
+
+TcpServer5.cpp
+TcpServer6.cpp
+TcpClient5.cpp
+TcpClient6.cpp 
