@@ -23,7 +23,7 @@ try
 
     Socket conn;
     char* buf = new char[2048];
-    while(conn.Attach(tcps.Accept()).Valid())
+    while(conn.Attach(tcps.Accept()))
     {
         ssize_t ret;
         while((ret = conn.Receive(buf, 2048)) > 0)
@@ -31,7 +31,7 @@ try
             conn.Send(buf, ret);
         }
     }
-    delete buf;
+    delete [] buf;
 }
 catch(const Exception& ex)
 {
@@ -45,16 +45,16 @@ catch(const Exception& ex)
 Error e;
 Socket tcps;
 if(!tcps.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e) || 
-   !tcps.Bind(SocketAddress(8080, AF_INET, &e) || 
+   !tcps.Bind(SocketAddress(8080, AF_INET), &e) || 
    !tcps.Listen(-1, &e))
 {
     std::cout << "Error: " << e.Report() << std::endl;
     return;
 }
 
-Sokcet conn;
+Socket conn;
 char* buf = new char[2048];
-while(conn.Attach(Accept(nullptr, &e)).Valid())
+while(conn.Attach(tcps.Accept(&e)))
 {
     ssize_t ret;
     while((ret = conn.Receive(buf, 2048)) > 0)
@@ -62,7 +62,7 @@ while(conn.Attach(Accept(nullptr, &e)).Valid())
         conn.Send(buf, ret);
     }
 }
-delete buf;
+delete [] buf;
 std::cout << "Error: " << e.Report() << std::endl;
 ```
 
@@ -79,8 +79,8 @@ Now let's take a look at the source code of corresponding TCP client based on al
 // Error handling with return values and error object
 Error e;
 Socket tcpc;
-if(!tcpc.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP) ||  
-   !tcpc.Connect(SocketAddress("", 8080, AF_INET, &e), &e))
+if(!tcpc.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e) ||  
+   !tcpc.Connect(SocketAddress("", 8080, AF_INET), &e))
 {
     std::cout << "Error: " << e.Report() << std::endl;
     return;
@@ -89,21 +89,23 @@ if(!tcpc.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP) ||
 std::string msg = "Hello";
 char* buf = new char[2048];
 ssize_t ret = 0;
-if((ret = tcps.Send(msg.data(), msg.length(), &e)) <= 0 ||
-   (ret = tcps.Receive(buf, 2048, &e)) <= 0)
+if((ret = tcpc.Send(msg.data(), msg.length(),0,  &e)) <= 0 ||
+   (ret = tcpc.Receive(buf, 2048, 0, &e)) <= 0)
 {
     std::cout << "Error: " << e.Report() << std::endl;
-    return;
 }
-std::cout << "Received: " << std::string(buf, ret) << std::endl;
-delete buf;
+else
+{
+    std::cout << "Received: " << std::string(buf, ret) << std::endl;
+}
+delete [] buf;
 ```
 
 Please find the complete source code of above TCP server and TCP client in:  
 
 TcpServer1.cpp  
-TcpServer2.cpp  
 TcpClient1.cpp  
+TcpServer2.cpp  
 TcpClient2.cpp  
 
 ## Simplify TCP programming with TcpAcceptor and TcpSocket    
@@ -128,7 +130,7 @@ try
             conn.Send(buf, ret);
         }
     }
-    delete buf;
+    delete [] buf;
 }
 catch(const Exception& ex)
 {
@@ -140,25 +142,25 @@ catch(const Exception& ex)
 // TCP echo server
 // Error handling with return values and error object
 Error e;
-TcpAcceptor tcps(SocketAddress(8080, AF_INET, nullptr));
+TcpAcceptor tcps(SocketAddress(8080, AF_INET));
 if(!tcps.Open(&e))
 {
-    std::cout << "Error: " << e.Reprot() << std::endl;
+    std::cout << "Error: " << e.Report() << std::endl;
     return;
 }
 
 TcpSocket conn;
 char* buf = new char[2048];
-while(conn.Connected(tcps.Accept(&e), nullptr, &e))
+while(conn.Connected(tcps.Accept(&e), 0, &e))
 {
     int ret;
     while((ret = conn.Receive(buf, 2048)) > 0)
     {
-        conn.Send(buf, ret); // ignore I/O errors
+        conn.Send(buf, ret);
     }
 }
-delete buf;
-std::cout << "Error: " << e.Reprot() << std::endl;
+delete [] buf;
+std::cout << "Error: " << e.Report() << std::endl;
 ```
 
 Accordingly, the source code for TCP client is shown as below:  
@@ -168,7 +170,7 @@ Accordingly, the source code for TCP client is shown as below:
 // Error handling with return values and error object
 Error e;
 TcpSocket tcpc;
-if(!tcps.Connect(SocketAddress("", 8080, AF_INET, &e), &e))
+if(!tcpc.Connect(SocketAddress("", 8080, AF_INET), &e))
 {
     std::cout << "Error: " << e.Report() << std::endl;
     return;
@@ -177,14 +179,17 @@ if(!tcps.Connect(SocketAddress("", 8080, AF_INET, &e), &e))
 std::string msg = "Hello";
 char* buf = new char[2048];
 ssize_t ret = 0;
-if((ret = tcps.Send(msg.data(), msg.length(), &e)) <= 0 ||
-   (ret = tcps.Receive(buf, 2048, &e)) <= 0)
+if((ret = tcpc.Send(msg.data(), msg.length(), &e)) <= 0 ||
+   (ret = tcpc.Receive(buf, 2048, &e)) <= 0)
 {
     std::cout << "Error: " << e.Report() << std::endl;
-    return;
 }
-std::cout << "Received: " << std::string(buf, ret) << std::endl;
-delete buf;
+else
+{
+    std::cout << "Received: " << std::string(buf, ret) << std::endl;
+}
+delete [] buf;
+return 0;
 ```
 
 Apparently, The TCP server and TCP client based on TcpAcceptor and TcpSocket are still working in single thread, block mode, and synchronous I/O.   
@@ -192,8 +197,8 @@ Apparently, The TCP server and TCP client based on TcpAcceptor and TcpSocket are
 Please find the complete source code of above TCP server and TCP client in:  
 
 TcpServer3.cpp  
-TcpServer4.cpp  
 TcpClient3.cpp  
+TcpServer4.cpp  
 TcpClient4.cpp  
 
 ## Asynchronous I/O with AsyncTcpAcceptor and AsyncTcpSocket  
@@ -239,6 +244,6 @@ tcps.Open();
 Please find the complete source code of above TCP server and TCP client in:   
 
 TcpServer5.cpp  
-TcpServer6.cpp  
 TcpClient5.cpp  
+TcpServer6.cpp  
 TcpClient6.cpp   
