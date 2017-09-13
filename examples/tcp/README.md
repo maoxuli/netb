@@ -42,7 +42,7 @@ catch(const Exception& ex)
 }
 ```
 
-````C++
+```C++
 Error e;
 Socket tcps;
 if(!tcps.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e) || 
