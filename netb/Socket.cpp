@@ -233,9 +233,10 @@ bool Socket::Bind(const SocketAddress& addr, Error* e) noexcept
     }
     if(::bind(_fd, addr.Addr(), addr.Length()) < 0)
     {
-        SET_SYSTEM_ERROR(e, "Bind address to socket failed [" << _fd << "][" << addr.ToString() << "]");
+        SET_SYSTEM_ERROR(e, "Bind address to socket failed [" << _fd << "][" << addr.String() << "]");
         return false;
     }
+    std::cout << "bind to: " << addr.String() << std::endl;
     return true;
 }
 
@@ -258,16 +259,6 @@ SocketAddress Socket::Address(Error* e) const noexcept
 }
 
 // TCP socket listen to start waiting for incomming connections
-void Socket::Listen()
-{
-    return Listen(SOMAXCONN);
-}
-
-bool Socket::Listen(Error* e) noexcept
-{
-    return Listen(SOMAXCONN, e);
-}
-
 // Throw on errors
 void Socket::Listen(int backlog)
 {
@@ -285,11 +276,13 @@ bool Socket::Listen(int backlog, Error* e) noexcept
         SET_LOGIC_ERROR(e, "Socket is not opened yet.");
         return false;
     }
+    if(backlog < 0) backlog = SOMAXCONN;
     if(::listen(_fd, backlog) < 0)
     {
         SET_SYSTEM_ERROR(e, "Socket lsiten failed [" << _fd << "]");
         return false;
     }
+    std::cout << "Listen : " << backlog << std::endl;
     return true;
 }
 
@@ -389,7 +382,7 @@ bool Socket::Connect(const SocketAddress& addr, Error* e) noexcept
     {
         if(!ErrorCode::IsInterrupted())
         {
-            SET_SYSTEM_ERROR(e, "Socket connect failed [" << _fd << "][" << addr.ToString() << "]");
+            SET_SYSTEM_ERROR(e, "Socket connect failed [" << _fd << "][" << addr.String() << "]");
             return false;
         }
     }

@@ -37,7 +37,7 @@ int main(const int argc, char* argv[])
     // TCP echo server
     // Error handling with return values and error object
     Error e;
-    TcpAcceptor tcps(SocketAddress(port, AF_INET, nullptr));
+    TcpAcceptor tcps(SocketAddress(port, AF_INET));
     if(!tcps.Open(&e))
     {
         std::cout << "Error: " << e.Report() << std::endl;
@@ -46,7 +46,7 @@ int main(const int argc, char* argv[])
 
     TcpSocket conn;
     char* buf = new char[2048];
-    while(conn.Connected(tcps.Accept(&e), nullptr, &e))
+    while(conn.Connected(tcps.Accept(&e), 0, &e))
     {
         int ret;
         while((ret = conn.Receive(buf, 2048)) > 0)

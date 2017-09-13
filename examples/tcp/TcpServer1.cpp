@@ -38,6 +38,8 @@ int main(const int argc, char* argv[])
     try
     {
         Socket tcps(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        tcps.ReuseAddress(true);
+        tcps.ReusePort(true);
         tcps.Bind(SocketAddress(port, AF_INET));
         tcps.Listen();
 

@@ -26,7 +26,7 @@ TcpAcceptor::TcpAcceptor() noexcept
 : _address() // empty address
 , _reuse_addr(false)
 , _reuse_port(false)
-, _backlog(SOMAXCONN)
+, _backlog(-1)
 {
 
 }
@@ -36,7 +36,7 @@ TcpAcceptor::TcpAcceptor(sa_family_t family) noexcept
 : _address() // empty address
 , _reuse_addr(false)
 , _reuse_port(false)
-, _backlog(SOMAXCONN)
+, _backlog(-1)
 {
     // fixed family with any address
     _address.Reset(family);
@@ -47,7 +47,7 @@ TcpAcceptor::TcpAcceptor(const SocketAddress& addr, bool reuse_addr, bool reuse_
 : _address(addr)
 , _reuse_addr(reuse_addr)
 , _reuse_port(reuse_port)
-, _backlog(SOMAXCONN)
+, _backlog(-1)
 {
 
 }
@@ -60,7 +60,7 @@ TcpAcceptor::~TcpAcceptor() noexcept
 // Backlog for listen, -1 for default
 void TcpAcceptor::SetBacklog(int backlog) noexcept
 {
-    _backlog = backlog < 0 ? SOMAXCONN : backlog;
+    _backlog = backlog;
 }
 
 // Open with fix address or fix family with any address

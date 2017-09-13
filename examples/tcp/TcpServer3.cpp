@@ -38,7 +38,7 @@ int main(const int argc, char* argv[])
     // Error handling with exceptions
     try
     {
-        TcpAcceptor acceptor(SocketAddress(8080, AF_INET));
+        TcpAcceptor acceptor(SocketAddress(port, AF_INET));
         acceptor.Open();
 
         TcpSocket conn;

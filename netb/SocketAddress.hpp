@@ -41,15 +41,13 @@ class SocketAddress : public sockaddr_storage
 {
 public: 
 	// Empty address, usually used to accept address info
-	SocketAddress() noexcept;
+	SocketAddress();
 
 	// Given port and protocol family
 	// Usually used for service address
 	// Host is not given, set to local wildcard host (INADDR_ANY) by default
 	// If given port is 0, indicate any port
-	// If given family is not supported, throw UnsupportedFamilyException
-	SocketAddress(unsigned short port, sa_family_t family = AF_INET); // throw on errors
-	SocketAddress(unsigned short port, sa_family_t family, Error* e) noexcept;
+	explicit SocketAddress(unsigned short port, sa_family_t family = AF_INET);
 
 	// Given host, port, and protocol family
 	// Usually used for client to set service address
@@ -62,21 +60,27 @@ public:
 	// "x.x.x.x" or "x:x:x:...": IPv4 or IPv6 address
 	// Given port: 0 for any port
 	// Given family: by default AF_INET
-	// If given family is not supported, throw UnsupportedFamilyException
-	// If given host is not a valid format, throw InvalidAddressException
-	// If given host is not in the family, throw FamilyMismatchException
-	SocketAddress(const std::string& host, unsigned short port, sa_family_t family = AF_INET); // throw on erros
-	SocketAddress(const std::string& host, unsigned short port, sa_family_t family, Error* e) noexcept;
+	SocketAddress(const std::string& host, unsigned short port, sa_family_t family = AF_INET);
 
 	// Copy constructor
-	SocketAddress(const SocketAddress& sa) noexcept { memcpy(this, &sa,sizeof(struct sockaddr_storage)); }
-	SocketAddress(const SocketAddress* sa) noexcept { memcpy(this, sa,sizeof(struct sockaddr_storage)); }
+	SocketAddress(const SocketAddress& sa) 
+	{
+		 memcpy(this, &sa,sizeof(struct sockaddr_storage)); 
+	
+	}
+
+	// Copy from a pointer
+	explicit SocketAddress(const SocketAddress* sa) 
+	{
+		if(!sa) memset(this, 0, sizeof(struct sockaddr_storage));
+		else memcpy(this, sa,sizeof(struct sockaddr_storage));
+	}
 
 	// Destructor
-	~SocketAddress() noexcept;
+	~SocketAddress();
 
 	// Assignment operator
-	inline SocketAddress& operator=(const SocketAddress& sa) noexcept
+	inline SocketAddress& operator=(const SocketAddress& sa)
 	{
 		if(this != &sa) 
 			memcpy(this, &sa, sizeof(struct sockaddr_storage));
@@ -85,13 +89,11 @@ public:
 
 public:
 	// Family of the address
-	sa_family_t Family() const noexcept { return this->ss_family; }
+	sa_family_t Family() const { return this->ss_family; }
 
 	// ss_len in sockaddr_storage is ignore in this implementation for compatibility
 	// The length of the address is determined by address family
-	// If current family is not supported, throw UnsupportedFamilyException
 	socklen_t Length() const;
-	socklen_t Length(Error* e) const noexcept;
 
 	// SocketAddress is sockaddr_storage so below casting is allowed: 
 	// SocketAddress addr;
@@ -110,8 +112,7 @@ public:
 	}
 
 	// Reset the object with given family, by default AF_UNSPEC, i.e., empty
-	// no throw
-	SocketAddress& Reset(sa_family_t family = AF_UNSPEC) noexcept
+	SocketAddress& Reset(sa_family_t family = AF_UNSPEC)
 	{ 
 		memset(this, 0, sizeof(struct sockaddr_storage)); 
 		ss_family = family; 
@@ -119,58 +120,58 @@ public:
 	}
 
 	// return true if the address is empty now
-	bool Empty() const noexcept { return ss_family == AF_UNSPEC; }
+	bool Empty() const { return ss_family == AF_UNSPEC; }
 
-	// Set host
-	// If given host is not a valid format, throw InvalidAddressException
-	// If given host is not in the family, throw FamilyMismatchException
-	// If given host is in family unsupported, throw UnsupportedFamilyException
-	SocketAddress& Host(const std::string& host);
-	bool Host(const std::string& host, Error* e) noexcept;
-
-	// Set port, 0 for any port
-	// If current address family is not supported, throw UnsupportedFamilyException
-	SocketAddress& Port(unsigned short port);
-	bool Port(unsigned short port, Error* e) noexcept;
-
-	// Get host of current address
-	// If address family is not supported, throw UnsupportedFamilyException
+	// Set host and get host in string format
+	bool Host(const std::string& host);
 	std::string Host() const;
-	std::string Host(Error* e) const noexcept;
 
-	// Get port of current address
-	// If address family is not supported, throw UnsupportedFamilyException
+	// Set port and get port, 0 for any port
+	bool Port(unsigned short port);
 	unsigned short Port() const;
-	unsigned short Port(Error* e) const noexcept;
+
+	// String format of the address
+	std::string String() const;
 
 	// Check special address
-	// If address family is not supported, throw UnsupportedFamilyException
-	bool Wildcard(Error* e = nullptr) const noexcept; // INADDR_ANY:0
-	bool Any(Error* e = nullptr) const noexcept; // INADDR_ANY:0
-	bool AnyPort(Error* e = nullptr) const noexcept; // 0
-	bool AnyHost(Error* e = nullptr) const noexcept; // INADDR_ANY
-	bool Localhost(Error* e = nullptr) const noexcept; // "localhost"
-	bool Loopback(Error* e = nullptr) const noexcept; // INADDR_LOOPBACK
-	bool Broadcast(Error* e = nullptr) const noexcept; // INADDR_NONE
-	bool Multicast(Error* e = nullptr) const noexcept; // 224.0.0.0 to 239.255.255.255
-
-	// Output the address to string
-	std::string ToString(Error* e = nullptr) const noexcept;
+	bool Wildcard() const; // INADDR_ANY:0
+	bool Any() const; // INADDR_ANY:0
+	bool AnyPort() const; // 0
+	bool AnyHost() const; // INADDR_ANY
+	bool Localhost() const; // "localhost"
+	bool Loopback() const; // INADDR_LOOPBACK
+	bool Broadcast() const; // INADDR_NONE
+	bool Multicast() const; // 224.0.0.0 to 239.255.255.255
 
 public: 
 	// Copy counstructor, from data structures used in socket address
-	// Throw UnsupportedFamilyException if the family is not supported
-	SocketAddress(const struct sockaddr& sa) noexcept { *this = sa; }
-	explicit SocketAddress(const struct sockaddr* sa) noexcept { *this = *sa; }
+	SocketAddress(const struct sockaddr& sa) { *this = sa; }
+	explicit SocketAddress(const struct sockaddr* sa) 
+	{ 
+		if(!sa) memset(this, 0, sizeof(struct sockaddr_storage)); 
+		else *this = *sa; 
+	}
 
-	SocketAddress(const struct sockaddr_in& sa) noexcept { *this = sa; }
-	explicit SocketAddress(const struct sockaddr_in* sa) noexcept { *this = *sa; }
+	SocketAddress(const struct sockaddr_in& sa) { *this = sa; }
+	explicit SocketAddress(const struct sockaddr_in* sa) 
+	{ 
+		if(!sa) memset(this, 0, sizeof(struct sockaddr_storage));
+		else *this = *sa; 
+	}
 
-	SocketAddress(const struct sockaddr_in6& sa) noexcept { *this = sa; }
-	explicit SocketAddress(const struct sockaddr_in6* sa) noexcept { *this = *sa; }
-	
-	SocketAddress(const struct sockaddr_storage& sa) noexcept { *this = sa; }
-	explicit SocketAddress(const struct sockaddr_storage* sa) noexcept { *this = *sa; }
+	SocketAddress(const struct sockaddr_in6& sa) { *this = sa; }
+	explicit SocketAddress(const struct sockaddr_in6* sa) 
+	{ 
+		if(!sa) memset(this, 0, sizeof(struct sockaddr_storage));
+		else *this = *sa; 
+	}
+
+	SocketAddress(const struct sockaddr_storage& sa) { *this = sa; }
+	explicit SocketAddress(const struct sockaddr_storage* sa) 
+	{ 
+		if(!sa) memset(this, 0, sizeof(struct sockaddr_storage));
+		else *this = *sa; 
+	}
 
 	// Assignment operator, from data structures used in socket address
 	// Throw UnsupportedFamilyException if the family is not supported

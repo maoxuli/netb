@@ -93,6 +93,7 @@ protected:
     bool _reuse_port;
     
     // Backlog for TCP listen, default is SOMAXCONN
+    // -1 for default
     int _backlog; 
 };
 

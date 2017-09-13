@@ -48,7 +48,7 @@ int main(const int argc, char* argv[])
     Error e;
     Socket tcpc;
     if(!tcpc.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e) ||  
-       !tcpc.Connect(SocketAddress(host, port, AF_INET, nullptr), &e))
+       !tcpc.Connect(SocketAddress(host, port, AF_INET), &e))
     {
         std::cout << "Error: " << e.Report() << std::endl;
         return 0;

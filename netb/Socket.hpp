@@ -121,11 +121,9 @@ public:
     SocketAddress Address(Error* e = nullptr) const noexcept;
 
     // Listen to start waiting for incomming connections (for TCP socket only)
+    // -1 for default 
     enum { DEFAULT_BACKLOG = SOMAXCONN };
-    void Listen(); // Throw on errors
-    bool Listen(Error* e) noexcept;
-
-    void Listen(int backlog); // Throw on errors
+    void Listen(int backlog = -1); // Throw on errors
     bool Listen(int backlog, Error* e) noexcept;
 
     // Accept an incomming connection (for TCP socket only)

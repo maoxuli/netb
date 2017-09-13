@@ -149,7 +149,7 @@ private:
     // message and peer address
     struct BufferAddress
     {
-        BufferAddress(StreamBuffer* b, SocketAddress sa)
+        BufferAddress(StreamBuffer* b, const SocketAddress* sa)
         : buf(b), addr(sa) { }
         StreamBuffer* buf;
         SocketAddress addr;

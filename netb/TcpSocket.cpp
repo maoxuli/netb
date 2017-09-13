@@ -128,7 +128,7 @@ bool TcpSocket::Connected(SOCKET s, const SocketAddress* addr)
 bool TcpSocket::Connected(SOCKET s, const SocketAddress* addr, Error* e) noexcept
 {
     Socket::Attach(s);
-    _connected_address = addr;
+    if(addr != NULL) _connected_address = *addr;
     return Connected(e);
 }
 

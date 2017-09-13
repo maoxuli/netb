@@ -38,7 +38,9 @@ int main(const int argc, char* argv[])
     Error e;
     Socket tcps;
     if(!tcps.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e) || 
-       !tcps.Bind(SocketAddress(port, AF_INET, nullptr), &e) || 
+       !tcps.ReuseAddress(true, &e) ||
+       !tcps.ReusePort(true, &e) ||
+       !tcps.Bind(SocketAddress(port, AF_INET), &e) || 
        !tcps.Listen(-1, &e))
     {
         std::cout << "Error: " << e.Report() << std::endl;
