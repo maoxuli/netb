@@ -38,19 +38,20 @@ int main(const int argc, char* argv[])
     // Error handling with exceptions
     try
     {
-        TcpAcceptor acceptor(SocketAddress(port, AF_INET));
-        acceptor.Open();
+        TcpAcceptor tcps(SocketAddress(port, AF_INET));
+        tcps.Open();
+        std::cout << "Opened on: " << tcps.Address().String() << std::endl;
 
         TcpSocket conn;
         char* buf = new char[2048];
-        while(conn.Connected(acceptor.Accept()))
+        while(conn.Connected(tcps.Accept()))
         { 
             int ret;
             while((ret = conn.Receive(buf, 2048)) > 0)
             {
                 if(conn.Send(buf, ret) > 0)
                 {
-                    std::cout << "Receive and send back: " << ret << " bytes.\n";
+                    std::cout << "Receive and send back: " << ret << " bytes." << std::endl;;
                 }
             }
         }

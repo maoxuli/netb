@@ -222,7 +222,7 @@ void AsyncTcpSocket::OnRead(SOCKET s)
     ssize_t n = 0;
     if(_in_buffer.Writable(2048))
     {
-        n = TcpSocket::Receive(_in_buffer.Write(), _in_buffer.Writable());
+        n = Socket::Receive(_in_buffer.Write(), _in_buffer.Writable());
     }
     if(n > 0)
     {
@@ -234,8 +234,8 @@ void AsyncTcpSocket::OnRead(SOCKET s)
     }
     else // Error
     {
-        std::cout << "AsyncTcpSocket::OnRead: " << n << " [" << ErrorCode::Current() << "]\n";
-        Close();
+        assert(_handler);
+        _handler->Detach();
         if(_connected_callback)
         {
             _connected_callback(this, false);
@@ -249,7 +249,7 @@ void AsyncTcpSocket::OnWrite(SOCKET s)
 {
     if(_out_buffer.Readable() > 0)
     {
-        ssize_t sent = TcpSocket::Send(&_out_buffer, 0);
+        ssize_t sent = Socket::Send(_out_buffer.Read(), _out_buffer.Readable());
         if(sent > 0) _out_buffer.Read(sent);
     }
     if(_out_buffer.Readable() == 0)

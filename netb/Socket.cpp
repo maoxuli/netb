@@ -236,7 +236,6 @@ bool Socket::Bind(const SocketAddress& addr, Error* e) noexcept
         SET_SYSTEM_ERROR(e, "Bind address to socket failed [" << _fd << "][" << addr.String() << "]");
         return false;
     }
-    std::cout << "bind to: " << addr.String() << std::endl;
     return true;
 }
 
@@ -282,7 +281,6 @@ bool Socket::Listen(int backlog, Error* e) noexcept
         SET_SYSTEM_ERROR(e, "Socket lsiten failed [" << _fd << "]");
         return false;
     }
-    std::cout << "Listen : " << backlog << std::endl;
     return true;
 }
 

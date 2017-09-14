@@ -124,7 +124,6 @@ void SocketSelector::Remove(SOCKET s) noexcept
     }
     std::make_heap(_sockets.begin(), _sockets.end());
     FD_CLR(s, &_read_set);
-    std::cout << "Remove socket read: " << s << "\n";
     FD_CLR(s, &_write_set);
     FD_CLR(s, &_except_set);
 }

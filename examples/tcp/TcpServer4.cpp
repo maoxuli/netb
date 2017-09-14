@@ -43,6 +43,7 @@ int main(const int argc, char* argv[])
         std::cout << "Error: " << e.Report() << std::endl;
         return 0;
     }
+    std::cout << "Opened on: " << tcps.Address().String() << std::endl;
 
     TcpSocket conn;
     char* buf = new char[2048];
@@ -53,7 +54,7 @@ int main(const int argc, char* argv[])
         {
             if(conn.Send(buf, ret) > 0)
             {
-                std::cout << "Receive and send back: " << ret << " bytes.\n";
+                std::cout << "Receive and send back: " << ret << " bytes" << std::endl;
             }
         }
     }

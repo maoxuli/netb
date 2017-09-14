@@ -84,6 +84,7 @@ public:
         SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return INVALID_SOCKET;
     }
+    
     virtual SOCKET AcceptFrom(SocketAddress* addr) // thow on errors
     {
         throw LogicException("Function not work in this mode.");

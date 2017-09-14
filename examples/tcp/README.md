@@ -240,10 +240,3 @@ AsyncTcpAcceptor tcps(SocketAddress(8080, AF_INET));
 tcps.SetAcceptedCallback(OnAccepted); // set async connection callback
 tcps.Open();
 ```
-
-Please find the complete source code of above TCP server and TCP client in:   
-
-TcpServer5.cpp  
-TcpClient5.cpp  
-TcpServer6.cpp  
-TcpClient6.cpp   

@@ -133,7 +133,7 @@ void AsyncTcpAcceptor::OnRead(SOCKET s)
     assert(_accepted_callback);
     assert(s == GetSocket());
     SocketAddress in_addr;
-    SOCKET in_s = TcpAcceptor::AcceptFrom(&in_addr, 0); // non-block and ignore errors
+    SOCKET in_s = Socket::AcceptFrom(&in_addr); // non-block and ignore errors
     if(in_s != INVALID_SOCKET)
     { 
         if(!_accepted_callback || !_accepted_callback(this, in_s, &in_addr))
