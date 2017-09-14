@@ -120,7 +120,7 @@ const char* ErrorClass::Name() const noexcept
     return "Error";
 }
 
-void ErrorClass::Throw(const Error& e) const noexcept
+void ErrorClass::Throw(const Error& e) const
 {
     if(e) throw Exception(e.Message(), e.Code());
 }

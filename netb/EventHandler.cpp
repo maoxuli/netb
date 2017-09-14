@@ -28,7 +28,7 @@ EventHandler::EventHandler(EventLoop* loop, SOCKET s)
 , _active_events(SOCKET_EVENT_NONE) 
 , _detached(true)
 {
-    assert(_loop != nullptr);
+    assert(_loop);
 }
 
 EventHandler::~EventHandler()
@@ -41,7 +41,7 @@ EventHandler::~EventHandler()
 void EventHandler::Detach()
 {
     if(_detached) return;
-    assert(_loop != nullptr);
+    assert(_loop);
     if(_loop->IsInLoopThread())
     {
         DetachInLoop();
@@ -62,7 +62,7 @@ void EventHandler::Detach()
 // Isolate from event loop
 void EventHandler::DetachInLoop()
 {
-    assert(_loop != nullptr);
+    assert(_loop);
     _loop->AssertInLoopThread();
     _loop->RemoveHandler(this);
     std::unique_lock<std::mutex> lock(_detach_mutex);
@@ -110,7 +110,7 @@ void EventHandler::DisableWriting()
 // Notify event loop to update
 void EventHandler::Update()
 {
-    assert(_loop != nullptr);
+    assert(_loop);
     if(_loop->IsInLoopThread())
     {
         UpdateInLoop();
@@ -124,7 +124,7 @@ void EventHandler::Update()
 // Notify event loop to update interested events
 void EventHandler::UpdateInLoop()
 {
-    assert(_loop != nullptr);
+    assert(_loop);
     assert(_loop->IsInLoopThread());
     _loop->SetupHandler(this);
     _detached = false;

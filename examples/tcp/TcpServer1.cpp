@@ -19,6 +19,7 @@
 
 using namespace netb;
 
+
 // TCP echo server
 int main(const int argc, char* argv[])
 {
@@ -33,6 +34,7 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
+
     // TCP echo server
     // Error handling with exceptions
     try

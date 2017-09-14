@@ -24,7 +24,7 @@ int EventSelector::WaitForEvents(std::vector<EventHandler*>& handlers, int timeo
 {
     handlers.clear();
     std::vector<struct SocketSelector::SocketEvents> sockets;
-    int ret = _selector.Select(sockets, timeout, nullptr);
+    int ret = _selector.Select(sockets, timeout, nullptr); // ignore errors
     if(ret > 0)
     {
         for(auto it = sockets.begin(), end = sockets.end(); it != end; ++it)

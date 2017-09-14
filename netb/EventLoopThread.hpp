@@ -42,7 +42,7 @@ private:
     // Thread control
     std::thread _thread;
     std::mutex _mutex;
-    std::condition_variable _condition;
+    std::condition_variable _cond;
 
     // Thread function
     void ThreadFunc();

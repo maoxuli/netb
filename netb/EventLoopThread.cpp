@@ -28,7 +28,7 @@ EventLoopThread::EventLoopThread()
 // Todo: thread safe
 EventLoopThread::~EventLoopThread()
 {
-    if(_loop != nullptr)
+    if(_loop)
     {
         _loop->Stop();
         _thread.join();
@@ -40,9 +40,9 @@ EventLoop* EventLoopThread::Start()
     _thread = std::thread(&EventLoopThread::ThreadFunc, this);
     {
         std::unique_lock<std::mutex> lock(_mutex);
-        while(_loop == nullptr)
+        while(!_loop)
         {
-            _condition.wait(lock);
+            _cond.wait(lock);
         }
     }
     return _loop;
@@ -54,7 +54,7 @@ void EventLoopThread::ThreadFunc()
     {
         std::unique_lock<std::mutex> lock(_mutex);
         _loop = &loop;
-        _condition.notify_one();
+        _cond.notify_one();
     }
     loop.Run();
 }

@@ -203,40 +203,7 @@ TcpClient4.cpp
 
 ## Asynchronous I/O with AsyncTcpAcceptor and AsyncTcpSocket  
 
-Concurrent I/O is a important feature for high performance network applications. It involves socket I/O multiplexing and multithreading. AsyncTcpAcceptor and AsyncTcpSocket implement a callback style asynchronous I/O mechanism, which accept incomming connections and perform I/O asynchronously. The source code below is only for the purpose of showing the work flow of asynchronous I/O, thus omitted some details and error handling.  
+Concurrent I/O is a important feature for high performance network applications. It involves socket I/O multiplexing and multithreading. AsyncTcpAcceptor and AsyncTcpSocket implement a callback style asynchronous I/O mechanism, which accept incomming connections and perform I/O asynchronously. Please refer the examples in echo foler for more details. 
 
-```C++
-// Demo for work flow only
-// TCP server need to manage the list of connections
-AsyncTcpSocketList connections;
+## Synchronous I/O with timeout  
 
-// Accepted callback
-bool OnAccepted(SOCKET s, const SocketAddress* addr)
-{
-    AsyncTcpSocket* conn = AsyncTcpSocket(s, addr);
-    conn.SetReceivedCallback(OnReceived); // set async I/O callback
-    conn.Connected();
-    connections.Add(conn); // add connection to the list
-    return true;
-}
-
-// Connected callback
-void OnConnected(AsyncTcpSocket* conn, bool connected)
-{
-    if(!connected)
-    {
-        connections.Remove(conn); // remove closed connection
-    }
-}
-
-// Received callback
-void OnReceived(AsyncTcpSocket* conn, StreamBuffer* buf)
-{
-    conn->Send(buf); // send back data
-}
-
-// Open TCP server
-AsyncTcpAcceptor tcps(SocketAddress(8080, AF_INET));
-tcps.SetAcceptedCallback(OnAccepted); // set async connection callback
-tcps.Open();
-```

@@ -112,7 +112,7 @@ class ErrorClass
 {
 public:
     virtual const char* Name() const noexcept;
-    virtual void Throw(const class Error& e) const noexcept;
+    virtual void Throw(const class Error& e) const;
 };
 const class ErrorClass& ErrorClass() noexcept;
 
@@ -138,7 +138,7 @@ const class NoError& NoError() noexcept;
     {                                                               \
     public:                                                         \
         const char* Name() const noexcept;                          \
-        void Throw(const Error& e) const noexcept;                  \
+        void Throw(const Error& e) const;                           \
     };                                                              \
     const class CLS& CLS() noexcept;
 
@@ -147,7 +147,7 @@ const class NoError& NoError() noexcept;
     {                                                               \
         return NAME;                                                \
     }                                                               \
-    void CLS::Throw(const Error& e) const noexcept                  \
+    void CLS::Throw(const Error& e) const                           \
     {                                                               \
         if(e) throw EXCEPTION(e.Message(), e.Code());               \
     }                                                               \

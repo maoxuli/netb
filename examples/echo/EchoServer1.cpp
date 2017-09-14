@@ -15,95 +15,94 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "AsyncUdpSocket.hpp"
 #include "AsyncTcpAcceptor.hpp"
 #include "AsyncTcpSocket.hpp"
 #include "StreamBuffer.hpp"
 #include "StreamPeeker.hpp"
-#include "StreamReader.hpp"
-#include "StreamWriter.hpp"
-#include <string>
-#include <map>
 
 NETB_BEGIN
 
+// std::placeholders::_1, _2, ...
 using namespace std::placeholders;
 
-// UDP Echo Server, RFC 862
-class UdpEchoServer : public AsyncUdpSocket
-{
-public:
-    UdpEchoServer(EventLoop* loop, unsigned short port = 9007)
-    : AsyncUdpSocket(loop, SocketAddress(port))
-    {
-        SetReceivedCallback(std::bind(&UdpEchoServer::OnReceived, this, _1, _2, _3));
-    }
-
-private:
-    void OnReceived(AsyncUdpSocket* sock, StreamBuffer* buf, const SocketAddress* addr)
-    {
-        assert(buf != nullptr);
-        std::string s;
-        if(StreamPeeker(buf).String(s))
-        {
-            std::cout << "Received: " << s << "\n";
-        }
-        assert(sock != nullptr);
-        assert(addr != nullptr);
-        sock->SendTo(buf, addr);
-    }
-};
-
-// TCP Echo Server, RFC 862
+// TCP Echo Server
 class TcpEchoServer : public AsyncTcpAcceptor
 {
 public:
+    // Given service port
     TcpEchoServer(EventLoop* loop, unsigned short port = 9007)
     : AsyncTcpAcceptor(loop, SocketAddress(port, AF_INET))
     {
         SetAcceptedCallback(std::bind(&TcpEchoServer::OnAccepted, this, _1, _2, _3));
     }
 
-private:
-    std::map<SOCKET, AsyncTcpSocket*> _connections;
-
-    bool OnAccepted(AsyncTcpAcceptor* acceptor, SOCKET s, const SocketAddress* addr)
+    ~TcpEchoServer()
     {
-        assert(s != INVALID_SOCKET);
-        assert(_connections.find(s) == _connections.end());
-        std::cout << "Connected [" << s << "]\n";
-        if(addr != nullptr) std::cout << "From [" << addr->ToString() << "]\n";
-        AsyncTcpSocket* conn = new AsyncTcpSocket(GetLoop(), s, addr);
-        assert(conn != nullptr);
-        conn->SetConnectedCallback(std::bind(&TcpEchoServer::OnConnected, this, _1, _2)); // for disconnected
-        conn->SetReceivedCallback(std::bind(&TcpEchoServer::OnReceived, this, _1, _2)); // for received
-        conn->Connected();
-        _connections[s] = conn;
-        return true; // accept the connection
-    }
-
-    void OnConnected(AsyncTcpSocket* conn, bool connected)
-    {
-        assert(conn != nullptr);
-        if(!connected)
+        for(auto it = _connections.begin(); it != _connections.end(); ++it)
         {
-            std::cout << "Disconnected [" << conn->GetSocket() << "]\n";
-            auto it = _connections.find(conn->GetSocket());
-            assert(it != _connections.end());
-            delete it->second;
-            _connections.erase(it);
+            delete *it;
         }
     }
 
+private:
+    // Established connection
+    std::vector<AsyncTcpSocket*> _connections;
+
+    // Accepted callback
+    bool OnAccepted(AsyncTcpAcceptor* acceptor, SOCKET s, const SocketAddress* addr)
+    {
+        try
+        {
+            assert(s != INVALID_SOCKET);
+            AsyncTcpSocket* conn = new AsyncTcpSocket(GetLoop(), s, addr);
+            std::cout << "Connected [" << s << "][" << conn << "]";
+            if(addr) std::cout << "[" << addr->String() << "]";
+            std::cout << "\n";
+            conn->SetConnectedCallback(std::bind(&TcpEchoServer::OnConnected, this, _1, _2)); // for disconnected
+            conn->SetReceivedCallback(std::bind(&TcpEchoServer::OnReceived, this, _1, _2)); // for received
+            _connections.push_back(conn);
+            conn->Connected();
+        }
+        catch(Exception& ex)
+        {
+            std::cout << "Exception: " << ex.Report() << std::endl;
+        }
+        return true;
+    }
+
+    // Connected callback
+    void OnConnected(AsyncTcpSocket* conn, bool connected)
+    {
+        assert(conn);
+        if(!connected)
+        {
+            // There is no guarantee that the socket of this connection is still 
+            // valid, so the best way is finding the object pointer, rather than 
+            // the socket.
+            std::cout << "Disconnected [" << conn << "]" << "\n";
+            for(auto it = _connections.begin(); it != _connections.end(); ++it)
+            {
+                if(*it == conn)
+                {
+                    _connections.erase(it);
+                    delete conn;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Received callback
     void OnReceived(AsyncTcpSocket* conn, StreamBuffer* buf)
     {
-        assert(conn != nullptr);
+        assert(conn);
+        assert(buf);
         std::string s;
         if(StreamPeeker(buf).String(s))
         {
-            std::cout << "Received: " << s << "\n";
+            std::cout << "Received [" << s << "]" << "\n";
         }
-        conn->Send(buf);
+        conn->Send(buf); // ignore errors in sending
     }
 };
 
@@ -111,7 +110,7 @@ NETB_END
 
 /////////////////////////////////////////////////////////////////////////////
 
-// Server
+// Echo server
 // Todo: exit singals
 int main(const int argc, char* argv[])
 {
@@ -125,23 +124,19 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
-    // Open both TCP server and UDP server
-    // running on single thread (current thread)
-    netb::EventLoop loop;
-    //netb::UdpEchoServer udps(&loop, port);
-    netb::TcpEchoServer tcps(&loop, port);
-    netb::Error e;
-    /*if(!udps.Open(&e))
+    
+    // Error handling with exceptions
+    try
     {
-        std::cout << "UDP server open failed. [" << e.Info() << "][" << e.Code() << "]\n";
+        netb::EventLoop loop; // running on single thread (current thread)
+        netb::TcpEchoServer echos(&loop, port);
+        echos.Open();
+        std::cout << "Opened [" << echos.Address().String() << "]" << "\n";
+        loop.Run();
     }
-    std::cout << "UDP server opened. [" << udps.Address().ToString() << "]\n";*/
-    if(!tcps.Open(&e))
+    catch(netb::Exception& ex)
     {
-        std::cout << "TCP server open failed. [" << e.Message() << "][" << e.Code() << "]\n";
-        return -1;
+        std::cout << "Exception: " << ex.Report() << std::endl;
     }
-    std::cout << "TCP server opened. [" << tcps.Address().ToString() << "]\n";
-    loop.Run();
     return 0;
 }
