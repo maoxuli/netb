@@ -15,41 +15,47 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "TcpSocket.hpp"
-#include "StreamBuffer.hpp"
-#include "StreamWriter.hpp"
+#include "EventLoopThread.hpp"
+#include "AsyncUdpSocket.hpp"
 #include "StreamReader.hpp"
-#include "StreamPeeker.hpp"
-#include <string>
-#include <cstdlib>
 
 NETB_BEGIN
 
-// TCP Echo Client, RFC 862
-class EchoClient : public TcpSocket
+using namespace std::placeholders;
+
+// UDP Echo Client
+class EchoClient : public AsyncUdpSocket
 {
 public:
-    EchoClient() : TcpSocket() { }
-    ~EchoClient() { }
-
-    bool SendText(const std::string& s)
-    {
-        StreamBuffer buf;
-        StreamWriter(buf).String(s);
-        return Send(&buf) > 0;
+    // Given service host and port
+    EchoClient(EventLoop* loop, const std::string& host, unsigned short port) 
+    : AsyncUdpSocket(loop) 
+    { 
+        Connect(SocketAddress(host, port, AF_INET));
+        SetReceivedCallback(std::bind(&EchoClient::OnReceived, this, _1, _2, _3));
     }
 
-    std::string ReceiveText()
+    void SendMessage(const std::string& s)
     {
-        std::string s;
-        StreamBuffer buf;
-        Block(1000);
-        Receive(&buf);
-        if(buf.Readable() > 0)
+        Error e;
+        if(Send(s.data(), s.length(), &e) < 0) 
         {
-            StreamReader(buf).String(s);
+            std::cout << e.Report() << std::endl;
         }
-        return s;
+    }
+
+private:
+    // Received callback
+    void OnReceived(AsyncUdpSocket* conn, StreamBuffer* buf, const SocketAddress* addr)
+    {
+        assert(buf != NULL);
+        std::cout << "Received [" << buf->Readable() << "]";
+        std::string s;
+        if(StreamReader(buf).String(s))
+        {
+            std::cout << "[" << s << "]";
+        }
+        std::cout << std::endl;
     }
 };
 
@@ -61,7 +67,7 @@ int main(const int argc, char* argv[])
 {
     std::string host;
     unsigned short port = 9007; // By default, port is 7
-    if(argc == 2) // echoclient 9007
+    if(argc == 2) // echoc 9007
     {
         int n = atoi(argv[1]);
         if(n > 0 && n <= 65535)
@@ -69,7 +75,7 @@ int main(const int argc, char* argv[])
             port  = n;
         }
     }
-    else if(argc == 3) // echoclient 192.168.1.1 9007
+    else if(argc == 3) // echoc 192.168.1.1 9007
     {
         host = argv[1];
         int n = atoi(argv[2]);
@@ -78,21 +84,23 @@ int main(const int argc, char* argv[])
             port  = n;
         }
     }
-    netb::EchoClient client;
-    if(!client.Connect(netb::SocketAddress(host, port), nullptr))
+    // Echo client running on a separate thread 
+    // Current thread is used for user input 
+    netb::EventLoopThread io_thread;
+    netb::EventLoop* loop = io_thread.Start();
+    netb::EchoClient echoc(loop, host, port);
+
+    // User input 
+    std::cout << "Please input message, q to exit.\n";
+    std::string line;
+    while(true)
     {
-        std::cout << "Echo client failed to connect: " << host << ":" << port << ".\n";
-        return -1;
-    }
-    int n = 0;
-    while(++n < 1000)
-    {
-        std::ostringstream oss;
-        oss << "This is a test text for echo, " << n << "\n";
-        std::string s = oss.str();
-        client.SendText(s);
-        s = client.ReceiveText();
-        std::cout << s << "\n";
+        std::cin >> line;
+        if(line == "q" || line == "Q")
+        {
+            break;
+        }
+        echoc.SendMessage(line);
     }
     return 0;
 }

@@ -49,22 +49,21 @@ int main(const int argc, char* argv[])
     TcpSocket tcpc;
     if(!tcpc.Connect(SocketAddress(host, port, AF_INET), &e))
     {
-        std::cout << "Error: " << e.Report() << std::endl;
+        std::cout << e.Report() << std::endl;
         return 0;
     }
-
+    // I/O
     std::string msg = "Hello";
-    char* buf = new char[2048];
+    StreamBuffer buf(msg.data(), msg.length());
     ssize_t ret = 0;
-    if((ret = tcpc.Send(msg.data(), msg.length(), &e)) <= 0 ||
-       (ret = tcpc.Receive(buf, 2048, &e)) <= 0)
+    if((ret = tcpc.Send(&buf, &e)) <= 0 ||
+       (ret = tcpc.Receive(&buf, &e)) <= 0)
     {
-        std::cout << "Error: " << e.Report() << std::endl;
+        std::cout << e.Report() << std::endl;
     }
     else
     {
-        std::cout << "Received: " << std::string(buf, ret) << std::endl;
+        std::cout << "Received [" << ret << "][" << std::string((const char*)buf.Read(), buf.Readable()) << "]" << std::endl;
     }
-    delete [] buf;
     return 0;
 }

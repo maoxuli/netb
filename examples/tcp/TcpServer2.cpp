@@ -43,11 +43,11 @@ int main(const int argc, char* argv[])
        !tcps.Bind(SocketAddress(port, AF_INET), &e) || 
        !tcps.Listen(-1, &e))
     {
-        std::cout << "Error: " << e.Report() << std::endl;
+        std::cout << e.Report() << std::endl;
         return 0;
     }
     std::cout << "Opened on: " << tcps.Address().String() << std::endl;
-
+    // I/O
     Socket conn;
     char* buf = new char[2048];
     while(conn.Attach(tcps.Accept(&e)))
@@ -55,13 +55,13 @@ int main(const int argc, char* argv[])
         ssize_t ret;
         while((ret = conn.Receive(buf, 2048)) > 0)
         {
-            if(conn.Send(buf, ret) > 0)
+            if((ret = conn.Send(buf, ret)) > 0)
             {
-                std::cout << "Receive and send back " << ret << " bytes" << std::endl;;
+                std::cout << "Echo [" << ret << "][" << std::string(buf, ret) << "]" << std::endl;;
             }
         }
     }
     delete [] buf;
-    std::cout << "Error: " << e.Report() << std::endl;
+    std::cout << e.Report() << std::endl;
     return 0;
 }

@@ -51,24 +51,24 @@ int main(const int argc, char* argv[])
         tcpc.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP); 
         tcpc.Connect(SocketAddress(host, port, AF_INET));
     }
-    catch(SystemException& ex)
+    catch(const Exception& ex)
     {
-        std::cout << "Exception: " << ex.Report() << std::endl;
+        std::cout << ex.Report() << std::endl;
         return 0;
     }
-
+    // I/O
+    Error e;
     std::string msg = "Hello";
     char* buf = new char[2048];
     ssize_t ret = 0;
-    Error e;
     if((ret = tcpc.Send(msg.data(), msg.length(), 0, &e)) <= 0 ||
        (ret = tcpc.Receive(buf, 2048, 0, &e)) <= 0)
     {
-        std::cout << "Error: " << e.Report() << std::endl;
+        std::cout << e.Report() << std::endl;
     }
     else
     {
-        std::cout << "Received: " << std::string(buf, ret) << std::endl;
+        std::cout << "Received [" << ret << "][" << std::string(buf, ret) << "]" << std::endl;
     }
     delete [] buf;
     return 0;

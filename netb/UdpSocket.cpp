@@ -167,11 +167,7 @@ bool UdpSocket::Connect(const SocketAddress& addr, Error* e) noexcept
     {
         return false;
     }
-    if(addr.Empty())
-    {
-        return Socket::Connect(addr, e);
-    }
-    if(addr.Family() != _address.Family())
+    if(!_address.Empty() && !addr.Empty() && addr.Family() != _address.Family())
     {
         SET_LOGIC_ERROR(e, "Mismatched address family.");
         return false;
@@ -226,7 +222,7 @@ ssize_t UdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int time
 // Send data to connected address, block mode
 ssize_t UdpSocket::Send(const void* p, size_t n, Error* e) noexcept
 {
-    if(Socket::Block(true, e)) return -1;
+    if(!Socket::Block(true, e)) return -1;
     return Socket::Send(p, n, 0, e);
 }
 

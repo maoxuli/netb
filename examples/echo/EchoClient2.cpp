@@ -17,8 +17,6 @@
 
 #include "EventLoopThread.hpp"
 #include "AsyncTcpSocket.hpp"
-#include "StreamBuffer.hpp"
-#include "StreamWriter.hpp"
 #include "StreamReader.hpp"
 
 NETB_BEGIN
@@ -41,7 +39,7 @@ public:
         Error e;
         if(Send(s.data(), s.length(), &e) < 0)
         {
-            std::cout << "Send failed [" << e.Report() << "]" << "\n";
+            std::cout << e.Report() << "\n";
         }
     }
 
@@ -56,7 +54,7 @@ private:
         {
             std::cout << "[" << s << "]";
         }
-        std::cout << "\n";
+        std::cout << std::endl;
     }
 };
 
@@ -69,7 +67,7 @@ int main(const int argc, char* argv[])
 {
     std::string host;
     unsigned short port = 9007; // By default, port is 9007
-    if(argc == 2) // echoclient 9007
+    if(argc == 2) // echoc 9007
     {
         int n = atoi(argv[1]);
         if(n > 0 && n <= 65535)
@@ -77,7 +75,7 @@ int main(const int argc, char* argv[])
             port  = n;
         }
     }
-    else if(argc == 3) // echoclient 192.168.1.1 9007
+    else if(argc == 3) // echoc 192.168.1.1 9007
     {
         host = argv[1];
         int n = atoi(argv[2]);
@@ -89,13 +87,13 @@ int main(const int argc, char* argv[])
 
     // Echo client running on a separate thread 
     // Current thread is used for user input 
+    netb::Error e;
     netb::EventLoopThread io_thread;
     netb::EventLoop* loop = io_thread.Start();
     netb::EchoClient echoc(loop);
-    netb::Error e;
     if(!echoc.Connect(netb::SocketAddress(host, port, AF_INET), &e))
     {
-        std::cout << "Error: " << e.Report() << std::endl;
+        std::cout << e.Report() << std::endl;
         return 0;
     }
     

@@ -149,10 +149,10 @@ private:
     // message and peer address
     struct BufferAddress
     {
-        BufferAddress(StreamBuffer* b, const SocketAddress* sa)
+        BufferAddress(const StreamBuffer* b, const SocketAddress* sa)
         : buf(b), addr(sa) { }
-        StreamBuffer* buf;
-        SocketAddress addr;
+        const StreamBuffer* buf;
+        const SocketAddress* addr;
     };
     std::queue<BufferAddress> _out_buffers;
     std::mutex _out_buffers_mutex;

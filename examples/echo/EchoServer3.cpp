@@ -16,20 +16,13 @@
  */
 
 #include "AsyncUdpSocket.hpp"
-#include "AsyncTcpAcceptor.hpp"
-#include "AsyncTcpSocket.hpp"
-#include "StreamBuffer.hpp"
 #include "StreamPeeker.hpp"
-#include "StreamReader.hpp"
-#include "StreamWriter.hpp"
-#include <string>
-#include <map>
 
 NETB_BEGIN
 
 using namespace std::placeholders;
 
-// UDP Echo Server, RFC 862
+// UDP Echo Server
 class UdpEchoServer : public AsyncUdpSocket
 {
 public:
@@ -42,68 +35,15 @@ public:
 private:
     void OnReceived(AsyncUdpSocket* sock, StreamBuffer* buf, const SocketAddress* addr)
     {
-        assert(buf != nullptr);
+        assert(buf);
+        assert(addr);
         std::string s;
         if(StreamPeeker(buf).String(s))
         {
-            std::cout << "Received: " << s << "\n";
+            std::cout << "Received [" << buf->Readable() << "][" << addr->String() << "]" << std::endl;
         }
-        assert(sock != nullptr);
-        assert(addr != nullptr);
+        assert(sock);
         sock->SendTo(buf, addr);
-    }
-};
-
-// TCP Echo Server, RFC 862
-class TcpEchoServer : public AsyncTcpAcceptor
-{
-public:
-    TcpEchoServer(EventLoop* loop, unsigned short port = 9007)
-    : AsyncTcpAcceptor(loop, SocketAddress(port, AF_INET))
-    {
-        SetAcceptedCallback(std::bind(&TcpEchoServer::OnAccepted, this, _1, _2, _3));
-    }
-
-private:
-    std::map<SOCKET, AsyncTcpSocket*> _connections;
-
-    bool OnAccepted(AsyncTcpAcceptor* acceptor, SOCKET s, const SocketAddress* addr)
-    {
-        assert(s != INVALID_SOCKET);
-        assert(_connections.find(s) == _connections.end());
-        std::cout << "Connected [" << s << "]\n";
-        if(addr != nullptr) std::cout << "From [" << addr->ToString() << "]\n";
-        AsyncTcpSocket* conn = new AsyncTcpSocket(GetLoop(), s, addr);
-        assert(conn != nullptr);
-        conn->SetConnectedCallback(std::bind(&TcpEchoServer::OnConnected, this, _1, _2)); // for disconnected
-        conn->SetReceivedCallback(std::bind(&TcpEchoServer::OnReceived, this, _1, _2)); // for received
-        conn->Connected();
-        _connections[s] = conn;
-        return true; // accept the connection
-    }
-
-    void OnConnected(AsyncTcpSocket* conn, bool connected)
-    {
-        assert(conn != nullptr);
-        if(!connected)
-        {
-            std::cout << "Disconnected [" << conn->GetSocket() << "]\n";
-            auto it = _connections.find(conn->GetSocket());
-            assert(it != _connections.end());
-            delete it->second;
-            _connections.erase(it);
-        }
-    }
-
-    void OnReceived(AsyncTcpSocket* conn, StreamBuffer* buf)
-    {
-        assert(conn != nullptr);
-        std::string s;
-        if(StreamPeeker(buf).String(s))
-        {
-            std::cout << "Received: " << s << "\n";
-        }
-        conn->Send(buf);
     }
 };
 
@@ -111,13 +51,13 @@ NETB_END
 
 /////////////////////////////////////////////////////////////////////////////
 
-// Server
+// UDP Echo Server
 // Todo: exit singals
 int main(const int argc, char* argv[])
 {
     // Service port, by default 9007
     unsigned short port = 9007;
-    if(argc == 2) // echoserver 9017
+    if(argc == 2) // echos 9017
     {
         int n = atoi(argv[1]);
         if(n > 0 && n <= 65535)
@@ -125,23 +65,19 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
-    // Open both TCP server and UDP server
-    // running on single thread (current thread)
-    netb::EventLoop loop;
-    //netb::UdpEchoServer udps(&loop, port);
-    netb::TcpEchoServer tcps(&loop, port);
-    netb::Error e;
-    /*if(!udps.Open(&e))
+
+    // Erro handling with exceptions
+    try
     {
-        std::cout << "UDP server open failed. [" << e.Info() << "][" << e.Code() << "]\n";
+        netb::EventLoop loop;
+        netb::UdpEchoServer udps(&loop, port);
+        udps.Open();
+        std::cout << "Opened [" << udps.Address().String() << "]" << std::endl;
+        loop.Run();
     }
-    std::cout << "UDP server opened. [" << udps.Address().ToString() << "]\n";*/
-    if(!tcps.Open(&e))
+    catch(const netb::Exception& ex)
     {
-        std::cout << "TCP server open failed. [" << e.Message() << "][" << e.Code() << "]\n";
-        return -1;
+        std::cout << ex.Report() << std::endl;
     }
-    std::cout << "TCP server opened. [" << tcps.Address().ToString() << "]\n";
-    loop.Run();
     return 0;
 }

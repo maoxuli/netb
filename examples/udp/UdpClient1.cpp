@@ -19,14 +19,14 @@
 
 using namespace netb;
 
-// TCP echo client
+// UDP echo client
 int main(const int argc, char* argv[])
 {
     // Service host and port, by default local and 9000
-    // Given by: tcpc 127.0.0.1 9000
+    // Given by: udpc 127.0.0.1 9000
     std::string host;
     unsigned short port = 9000;
-    if(argc == 2) // tcpc 9001
+    if(argc == 2) // udpc 9001
     {
         int n = atoi(argv[1]);
         if(n > 0 && n <= 65535)
@@ -34,7 +34,7 @@ int main(const int argc, char* argv[])
             port  = n;
         }
     }
-    else if(argc == 3) // tcpc 192.168.1.1 9001
+    else if(argc == 3) // udpc 192.168.1.1 9001
     {
         host = argv[1];
         int n = atoi(argv[2]);
@@ -43,25 +43,28 @@ int main(const int argc, char* argv[])
             port  = n;
         }
     }
-    // TCP echo client
-    // Error handling with return values and error object
-    Error e;
-    Socket tcpc;
-    if(!tcpc.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e) ||  
-       !tcpc.Connect(SocketAddress(host, port, AF_INET), &e))
+    // UDP echo client
+    // Error handling with exceptions
+    Socket udpc;
+    try
     {
-        std::cout << e.Report() << std::endl;
+        udpc.Create(AF_INET, SOCK_DGRAM, IPPROTO_UDP); 
+    }
+    catch(const Exception& ex)
+    {
+        std::cout << "Exception: " << ex.Report() << std::endl;
         return 0;
     }
     // I/O
+    Error e;
+    SocketAddress addr(host, port, AF_INET);
     std::string msg = "Hello";
-    size_t len = msg.length() * 2;
-    char* buf = new char[len];
+    char* buf = new char[2048];
     ssize_t ret = 0;
-    if((ret = tcpc.Send(msg.data(), msg.length(), 0,  &e)) <= 0 ||
-       (ret = tcpc.Receive(buf, len, 0, &e)) <= 0)
+    if((ret = udpc.SendTo(msg.data(), msg.length(), &addr, 0, &e)) <= 0 ||
+       (ret = udpc.ReceiveFrom(buf, 2048, &addr, 0, &e)) <= 0)
     {
-        std::cout << e.Report() << std::endl;
+        std::cout << "Error: " << e.Report() << std::endl;
     }
     else
     {

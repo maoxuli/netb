@@ -19,7 +19,6 @@
 
 using namespace netb;
 
-
 // TCP echo server
 int main(const int argc, char* argv[])
 {
@@ -34,7 +33,6 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
-
     // TCP echo server
     // Error handling with exceptions
     try
@@ -45,7 +43,7 @@ int main(const int argc, char* argv[])
         tcps.Bind(SocketAddress(port, AF_INET));
         tcps.Listen();
         std::cout << "Opened on: " << tcps.Address().String() << std::endl;
-
+        // I/O
         Socket conn;
         char* buf = new char[2048];
         while(conn.Attach(tcps.Accept()))
@@ -53,9 +51,9 @@ int main(const int argc, char* argv[])
             ssize_t ret;
             while((ret = conn.Receive(buf, 2048)) > 0)
             {
-                if(conn.Send(buf, ret) > 0)
+                if((ret = conn.Send(buf, ret)) > 0)
                 {
-                    std::cout << "Receive and send back " << ret << " bytes" << std::endl;
+                    std::cout << "Echo [" << ret << "][" << std::string(buf, ret) << "]" << std::endl;
                 }
             }
         }
@@ -63,7 +61,7 @@ int main(const int argc, char* argv[])
     }
     catch(const Exception& ex)
     {
-        std::cout << "Exception: " << ex.Report() << std::endl;
+        std::cout << ex.Report() << std::endl;
     }
     return 0;
 }

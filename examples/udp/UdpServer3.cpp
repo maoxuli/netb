@@ -15,16 +15,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "TcpAcceptor.hpp"
-#include "TcpSocket.hpp"
+#include "UdpSocket.hpp"
 
 using namespace netb;
 
-// TCP echo server
+// UDP echo server
 int main(const int argc, char* argv[])
 {
     // Service port, default 9000
-    // Given port: tcps 9001
+    // Given port: udps 9001
     unsigned short port = 9000;
     if(argc == 2)
     {
@@ -34,31 +33,28 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
-    // TCP echo server
+    // UDP echo server
     // Error handling with exceptions
     try
     {
-        TcpAcceptor tcps(SocketAddress(port, AF_INET));
-        tcps.Open();
-        std::cout << "Opened on: " << tcps.Address().String() << std::endl;
+        UdpSocket udps(SocketAddress(port, AF_INET));
+        udps.Open();
+        std::cout << "Opened on: " << udps.Address().String() << std::endl;
         // I/O
-        TcpSocket conn;
+        SocketAddress addr;
         StreamBuffer buf(2048);
-        while(conn.Connected(tcps.Accept()))
-        { 
-            int ret;
-            while((ret = conn.Receive(&buf)) > 0)
+        ssize_t ret;
+        while((ret = udps.ReceiveFrom(&buf, &addr)) > 0)
+        {
+            if((ret = udps.SendTo(&buf, &addr)) > 0)
             {
-                if((ret = conn.Send(&buf)) > 0)
-                {
-                    std::cout << "Echo [" << ret << "]" << std::endl;;
-                }
+                std::cout << "Echo [" << ret << "][" << addr.String() << "]" << std::endl;
             }
         }
     }
     catch(const Exception& ex)
     {
-        std::cout << ex.Report() << std::endl;
+        std::cout << "Exception: " << ex.Report() << std::endl;
     }
     return 0;
 }

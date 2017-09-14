@@ -1,5 +1,3 @@
-# NetB
+# NetB Examples
 
-/examples/http/
-
-This is a mini framework for HTTP server and client.   
+Examples of HTTP server and HTTP client.

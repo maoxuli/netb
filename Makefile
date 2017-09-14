@@ -74,9 +74,11 @@ $(LIBDIR)/$(OUT): $(OBJ)
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(INC)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
-.PHONY: examples clean cleanall
+.PHONY: examples tcp udp echo http clean cleanall
 
-examples:
+examples: tcp udp echo http 
+
+tcp:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcps1 examples/tcp/TcpServer1.cpp 
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcpc1 examples/tcp/TcpClient1.cpp 
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcps2 examples/tcp/TcpServer2.cpp 
@@ -85,10 +87,26 @@ examples:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcpc3 examples/tcp/TcpClient3.cpp 
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcps4 examples/tcp/TcpServer4.cpp 
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcpc4 examples/tcp/TcpClient4.cpp 
+
+udp:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udps1 examples/udp/UdpServer1.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udpc1 examples/udp/UdpClient1.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udps2 examples/udp/UdpServer2.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udpc2 examples/udp/UdpClient2.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udps3 examples/udp/UdpServer3.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udpc3 examples/udp/UdpClient3.cpp 
+
+echo:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echos1 examples/echo/EchoServer1.cpp 
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoc1 examples/echo/EchoClient1.cpp 
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echos2 examples/echo/EchoServer2.cpp 
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoc2 examples/echo/EchoClient2.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echos3 examples/echo/EchoServer3.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoc3 examples/echo/EchoClient3.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echos4 examples/echo/EchoServer4.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoc4 examples/echo/EchoClient4.cpp 
+
+http:
 #	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/https examples/http/HttpServer.cpp 
 #	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/httpc examples/http/HttpClient.cpp 
 	
@@ -98,6 +116,7 @@ clean:
 cleanall: clean
 	rm -f $(LIBDIR)/$(OUT)
 	rm -r $(BINDIR)/*.dSYM
-	rm -f $(BINDIR)/http*
-	rm -f $(BINDIR)/echo*
 	rm -f $(BINDIR)/tcp*
+	rm -f $(BINDIR)/udp*
+	rm -f $(BINDIR)/echo*
+	rm -f $(BINDIR)/http*

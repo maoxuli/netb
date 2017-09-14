@@ -52,22 +52,23 @@ int main(const int argc, char* argv[])
     }
     catch(const Exception& ex)
     {
-        std::cout << "Exception: " << ex.Report() << std::endl;
+        std::cout << ex.Report() << std::endl;
         return 0;
     }
-
-    std::string msg = "Hello";
-    char* buf = new char[2048];
-    ssize_t ret = 0;
+    // I/O
     Error e;
+    std::string msg = "Hello";
+    size_t len = msg.length() * 2;
+    char* buf = new char[len];
+    ssize_t ret = 0;
     if((ret = tcpc.Send(msg.data(), msg.length(), &e)) <= 0 ||
-       (ret = tcpc.Receive(buf, 2048, &e)) <= 0)
+       (ret = tcpc.Receive(buf, len, &e)) <= 0)
     {
-        std::cout << "Error: " << e.Report() << std::endl;
+        std::cout << e.Report() << std::endl;
     }
     else
     {
-        std::cout << "Received: " << std::string(buf, ret) << std::endl;
+        std::cout << "Received [" << ret << "][" << std::string(buf, ret) << "]" << std::endl;
     }
     delete [] buf;
     return 0;

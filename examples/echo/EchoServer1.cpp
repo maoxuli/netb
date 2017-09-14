@@ -65,7 +65,8 @@ private:
         }
         catch(Exception& ex)
         {
-            std::cout << "Exception: " << ex.Report() << std::endl;
+            std::cout << ex.Report() << std::endl;
+            assert(false); // Need to clean up here
         }
         return true;
     }
@@ -100,7 +101,7 @@ private:
         std::string s;
         if(StreamPeeker(buf).String(s))
         {
-            std::cout << "Received [" << s << "]" << "\n";
+            std::cout << "Received [" << buf->Readable() << "][" << s << "]" << std::endl;
         }
         conn->Send(buf); // ignore errors in sending
     }
@@ -116,7 +117,7 @@ int main(const int argc, char* argv[])
 {
     // Service port, by default 9007
     unsigned short port = 9007;
-    if(argc == 2) // echoserver 9017
+    if(argc == 2) // echos 9017
     {
         int n = atoi(argv[1]);
         if(n > 0 && n <= 65535)
@@ -124,19 +125,19 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
-    
+
     // Error handling with exceptions
     try
     {
         netb::EventLoop loop; // running on single thread (current thread)
         netb::TcpEchoServer echos(&loop, port);
         echos.Open();
-        std::cout << "Opened [" << echos.Address().String() << "]" << "\n";
+        std::cout << "Opened [" << echos.Address().String() << "]" << std::endl;
         loop.Run();
     }
-    catch(netb::Exception& ex)
+    catch(const netb::Exception& ex)
     {
-        std::cout << "Exception: " << ex.Report() << std::endl;
+        std::cout << ex.Report() << std::endl;
     }
     return 0;
 }

@@ -3,6 +3,9 @@
 - tcp  
 Examples of TCP server and TCP client working in block or non-block mode. Good illustrations of using Socket, SocketAddress, TcpAcceptor, and TcpSocket, as well as error handling with exception and error object.  
 
+- udp  
+Examples of UDP server and UDP client working in block or non-block mode. Good illustrations of using Socket, SocketAddress, and UdpSocket, as well as error handling with exception and error object. 
+
 - echo    
 Examples of echo server and echo client working in asynchronous I/O mode. Good illustrations of using AsyncTcpAcceptor, AsyncTcpSocket, and AsyncUdpSocket, as well as the asynchronous facility including EventLoop and EventLoopThread. 
 

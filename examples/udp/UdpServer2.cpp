@@ -15,16 +15,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "TcpAcceptor.hpp"
-#include "TcpSocket.hpp"
+#include "Socket.hpp"
 
 using namespace netb;
 
-// TCP echo server
+// UDP echo server
 int main(const int argc, char* argv[])
 {
     // Service port, default 9000
-    // Given port: tcps 9001
+    // Given port: udps 9001
     unsigned short port = 9000;
     if(argc == 2)
     {
@@ -34,31 +33,28 @@ int main(const int argc, char* argv[])
             port = (unsigned short)n;
         }
     }
-    // TCP echo server
-    // Error handling with exceptions
-    try
+    // UDP echo server
+    // Error handling with return values and error object
+    Error e;
+    Socket udps;
+    if(!udps.Create(AF_INET, SOCK_DGRAM, IPPROTO_UDP, &e) || 
+       !udps.Bind(SocketAddress(port, AF_INET), &e))
     {
-        TcpAcceptor tcps(SocketAddress(port, AF_INET));
-        tcps.Open();
-        std::cout << "Opened on: " << tcps.Address().String() << std::endl;
-        // I/O
-        TcpSocket conn;
-        StreamBuffer buf(2048);
-        while(conn.Connected(tcps.Accept()))
-        { 
-            int ret;
-            while((ret = conn.Receive(&buf)) > 0)
-            {
-                if((ret = conn.Send(&buf)) > 0)
-                {
-                    std::cout << "Echo [" << ret << "]" << std::endl;;
-                }
-            }
+        std::cout << e.Report() << std::endl;
+        return 0;
+    }
+    std::cout << "Opened on: " << udps.Address().String() << std::endl;
+    // I/O
+    SocketAddress addr;
+    char* buf = new char[2048];
+    ssize_t ret;
+    while((ret = udps.ReceiveFrom(buf, 2048, &addr)) > 0)
+    {
+        if((ret = udps.SendTo(buf, ret, &addr)) > 0)
+        {
+            std::cout << "Echo [" << ret << "][" << addr.String() << "]" << std::endl;
         }
     }
-    catch(const Exception& ex)
-    {
-        std::cout << ex.Report() << std::endl;
-    }
+    delete [] buf;
     return 0;
 }

@@ -17,7 +17,6 @@
 
 #include "AsyncTcpAcceptor.hpp"
 #include "AsyncTcpSocket.hpp"
-#include "StreamBuffer.hpp"
 #include "StreamPeeker.hpp"
 
 NETB_BEGIN
@@ -38,22 +37,26 @@ public:
 
 private:
     // Established connection
-    std::map<SOCKET, AsyncTcpSocket*> _connections;
+    std::vector<AsyncTcpSocket*> _connections;
 
     // Accepted callback
     bool OnAccepted(AsyncTcpAcceptor* acceptor, SOCKET s, const SocketAddress* addr)
     {
         assert(s != INVALID_SOCKET);
-        assert(_connections.find(s) == _connections.end());
-        std::cout << "Connected [" << s << "]";
+        AsyncTcpSocket* conn = new (std::nothrow) AsyncTcpSocket(GetLoop(), s, addr);
+        if(!conn) return false;
+        std::cout << "Connected [" << s << "][" << conn << "]";
         if(addr) std::cout << "[" << addr->String() << "]";
         std::cout << "\n";
-        AsyncTcpSocket* conn = new (std::nothrow) AsyncTcpSocket(GetLoop(), s, addr);
-        assert(conn);
         conn->SetConnectedCallback(std::bind(&TcpEchoServer::OnConnected, this, _1, _2)); // for disconnected
         conn->SetReceivedCallback(std::bind(&TcpEchoServer::OnReceived, this, _1, _2)); // for received
-        _connections[s] = conn;
-        return conn->Connected();
+        _connections.push_back(conn);
+        Error e;
+        if(!conn->Connected(&e))
+        {
+            assert(false); // need to clean up here
+        }
+        return true;
     }
 
     // Connected callback
@@ -65,11 +68,16 @@ private:
             // There is no guarantee that the socket of this connection is still 
             // valid, so the best way is finding the object pointer, rather than 
             // the socket.
-            std::cout << "Disconnected [" << conn->GetSocket() << "]" << "\n";
-            auto it = _connections.find(conn->GetSocket());
-            assert(it != _connections.end());
-            delete it->second;
-            _connections.erase(it);
+            std::cout << "Disconnected [" << conn << "]" << "\n";
+            for(auto it = _connections.begin(); it != _connections.end(); ++it)
+            {
+                if(*it == conn)
+                {
+                    _connections.erase(it);
+                    delete conn;
+                    break;
+                }
+            }
         }
     }
 
@@ -77,10 +85,11 @@ private:
     void OnReceived(AsyncTcpSocket* conn, StreamBuffer* buf)
     {
         assert(conn);
+        assert(buf);
         std::string s;
         if(StreamPeeker(buf).String(s))
         {
-            std::cout << "Received [" << s << "]" << "\n";
+            std::cout << "Received [" << buf->Readable() << "][" << s << "]" << "\n";
         }
         conn->Send(buf);
     }
@@ -96,7 +105,7 @@ int main(const int argc, char* argv[])
 {
     // Service port, by default 9007
     unsigned short port = 9007;
-    if(argc == 2) // echoserver 9017
+    if(argc == 2) // echos 9017
     {
         int n = atoi(argv[1]);
         if(n > 0 && n <= 65535)
@@ -105,15 +114,16 @@ int main(const int argc, char* argv[])
         }
     }
     
+    // Error handling with return values and error object
+    netb::Error e;
     netb::EventLoop loop; // running on single thread (current thread)
     netb::TcpEchoServer echos(&loop, port);
-    netb::Error e;
     if(!echos.Open(&e))
     {
-        std::cout << "Open failed [" << e.Report() << "]" << "\n";
-        return -1;
+        std::cout << e.Report() << std::endl;
+        return 0;
     }
-    std::cout << "Opened [" << echos.Address().String() << "]" << "\n";
+    std::cout << "Opened [" << echos.Address().String() << "]" << std::endl;
     loop.Run();
     return 0;
 }

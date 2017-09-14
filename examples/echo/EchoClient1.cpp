@@ -15,11 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "EventLoop.hpp"
 #include "EventLoopThread.hpp"
 #include "AsyncTcpSocket.hpp"
-#include "StreamBuffer.hpp"
-#include "StreamWriter.hpp"
 #include "StreamReader.hpp"
 
 NETB_BEGIN
@@ -42,7 +39,7 @@ public:
         Error e;
         if(Send(s.data(), s.length(), &e) < 0) 
         {
-            std::cout << "Send failed [" << e.Report() << "]" << "\n";
+            std::cout << e.Report() << std::endl;
         }
     }
 
@@ -57,7 +54,7 @@ private:
         {
             std::cout << "[" << s << "]";
         }
-        std::cout << "\n";
+        std::cout << std::endl;
     }
 };
 
@@ -70,7 +67,7 @@ int main(const int argc, char* argv[])
 {
     std::string host;
     unsigned short port = 9007; // By default, port is 9007
-    if(argc == 2) // echoclient 9007
+    if(argc == 2) // echoc 9007
     {
         int n = atoi(argv[1]);
         if(n > 0 && n <= 65535)
@@ -78,7 +75,7 @@ int main(const int argc, char* argv[])
             port  = n;
         }
     }
-    else if(argc == 3) // echoclient 192.168.1.1 9007
+    else if(argc == 3) // echoc 192.168.1.1 9007
     {
         host = argv[1];
         int n = atoi(argv[2]);
@@ -111,13 +108,9 @@ int main(const int argc, char* argv[])
             echoc.SendMessage(line);
         }
     }
-    catch(netb::Exception& ex)
+    catch(const netb::Exception& ex)
     {
-        std::cout << "Exception: " << ex.Report() << std::endl;
-    }
-    catch(std::exception& ex)
-    {
-        std::cout << "std::exception: " << ex.what() << std::endl;
+        std::cout << ex.Report() << std::endl;
     }
     return 0;
 }

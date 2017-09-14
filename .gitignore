@@ -2,6 +2,7 @@
 build/*.o
 lib/*.a
 bin/*.dSYM
-bin/http*
-bin/echo*
 bin/tcp*
+bin/udp*
+bin/echo*
+bin/http*

@@ -5,7 +5,7 @@
 Socket is a simple but a complete wrapper class for socket descriptor and the associated operations,based on which we can implement a general TCP server that accepts incomming connections and perform data I/O on the connections. The work flow is almost same as the original socket API, as listed below:  
 
 1. Open a TCP socket  
-2. Bind a local address  
+2. Bind to a local address  
 3. Listen on incomming connections  
 4. Accept an incomming connection  
 5. Perform I/O on accepted connection  
@@ -18,9 +18,9 @@ Let's first take a look at the source code below. It includes two possible imple
 try
 {
     Socket tcps(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    tcps.Bind(SocketAddress(8080, AF_INET));
+    tcps.Bind(SocketAddress(8080, AF_INET)); 
     tcps.Listen();
-
+    
     Socket conn;
     char* buf = new char[2048];
     while(conn.Attach(tcps.Accept()))
@@ -35,9 +35,10 @@ try
 }
 catch(const Exception& ex)
 {
-    std::cout << "Exception: " << ex.Report() << std::endl;
+    std::cout << ex.Report() << std::endl;
 }
 ```
+*The complete version of this code in TcpServer1.cpp.*  
 
 ```C++
 // TCP echo server
@@ -48,7 +49,7 @@ if(!tcps.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e) ||
    !tcps.Bind(SocketAddress(8080, AF_INET), &e) || 
    !tcps.Listen(-1, &e))
 {
-    std::cout << "Error: " << e.Report() << std::endl;
+    std::cout << e.Report() << std::endl;
     return;
 }
 
@@ -63,8 +64,9 @@ while(conn.Attach(tcps.Accept(&e)))
     }
 }
 delete [] buf;
-std::cout << "Error: " << e.Report() << std::endl;
+std::cout << e.Report() << std::endl;
 ```
+*The complete version of this code in TcpServer2.cpp.* 
 
 As the comments pointed out, the essential difference between the two implementations is error handling style. The former is based on exceptions, while the latter is based on return values. Socket usually implements two overloading functions for an operation that may cause errors, one throws an exception on error while the other returns status value and an error object. This makes it easy to write code with or without exceptions. Actually, the design of exception object and error object support swithing of error handling style at any point by throwing an exception based on an returned error object, or return an error object based on an catched exception. Please refer the section of error handling for more details.   
 
@@ -82,31 +84,26 @@ Socket tcpc;
 if(!tcpc.Create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &e) ||  
    !tcpc.Connect(SocketAddress("", 8080, AF_INET), &e))
 {
-    std::cout << "Error: " << e.Report() << std::endl;
+    std::cout << e.Report() << std::endl;
     return;
 }
 
 std::string msg = "Hello";
 char* buf = new char[2048];
-ssize_t ret = 0;
+ssize_t ret;
 if((ret = tcpc.Send(msg.data(), msg.length(),0,  &e)) <= 0 ||
    (ret = tcpc.Receive(buf, 2048, 0, &e)) <= 0)
 {
-    std::cout << "Error: " << e.Report() << std::endl;
+    std::cout << e.Report() << std::endl;
 }
 else
 {
-    std::cout << "Received: " << std::string(buf, ret) << std::endl;
+    std::cout << "Received [" << ret << "][" << std::string(buf, ret) << "]" << std::endl;
 }
 delete [] buf;
 ```
-
-Please find the complete source code of above TCP server and TCP client in:  
-
-TcpServer1.cpp  
-TcpClient1.cpp  
-TcpServer2.cpp  
-TcpClient2.cpp  
+*The complete version of this code is in TcpClient2.cpp.*  
+*TcpClient1.cpp includes the version with exceptions.*  
 
 ## Simplify TCP programming with TcpAcceptor and TcpSocket    
 
@@ -134,9 +131,10 @@ try
 }
 catch(const Exception& ex)
 {
-    std::cout << "Exception: " << ex.Report() << std::endl;
+    std::cout << ex.Report() << std::endl;
 }
 ```
+*The complete version of this code is in TcpServer3.cpp.*  
 
 ```C++
 // TCP echo server
@@ -145,7 +143,7 @@ Error e;
 TcpAcceptor tcps(SocketAddress(8080, AF_INET));
 if(!tcps.Open(&e))
 {
-    std::cout << "Error: " << e.Report() << std::endl;
+    std::cout << e.Report() << std::endl;
     return;
 }
 
@@ -160,8 +158,9 @@ while(conn.Connected(tcps.Accept(&e), 0, &e))
     }
 }
 delete [] buf;
-std::cout << "Error: " << e.Report() << std::endl;
+std::cout << e.Report() << std::endl;
 ```
+*The complete version of this code is in TcpServer4.cpp.*    
 
 Accordingly, the source code for TCP client is shown as below:  
 
@@ -172,7 +171,7 @@ Error e;
 TcpSocket tcpc;
 if(!tcpc.Connect(SocketAddress("", 8080, AF_INET), &e))
 {
-    std::cout << "Error: " << e.Report() << std::endl;
+    std::cout << e.Report() << std::endl;
     return;
 }
 
@@ -182,28 +181,27 @@ ssize_t ret = 0;
 if((ret = tcpc.Send(msg.data(), msg.length(), &e)) <= 0 ||
    (ret = tcpc.Receive(buf, 2048, &e)) <= 0)
 {
-    std::cout << "Error: " << e.Report() << std::endl;
+    std::cout << e.Report() << std::endl;
 }
 else
 {
-    std::cout << "Received: " << std::string(buf, ret) << std::endl;
+    std::cout << "Received [" << ret << "][" << std::string(buf, ret) << "]" << std::endl;
 }
 delete [] buf;
-return 0;
 ```
+*The complete version of this code is in TcpClient4.cpp.*  
+*TcpClient3.cpp includes the version with exceptions.*  
 
 Apparently, The TCP server and TCP client based on TcpAcceptor and TcpSocket are still working in single thread, block mode, and synchronous I/O.   
 
-Please find the complete source code of above TCP server and TCP client in:  
+## Synchronous I/O with timeout  
 
-TcpServer3.cpp  
-TcpClient3.cpp  
-TcpServer4.cpp  
-TcpClient4.cpp  
+*TcpServer5.cpp*  
+*TcpServer6.cpp*  
+
+*TcpClient5.cpp*  
+*TcpClient6.cpp*  
 
 ## Asynchronous I/O with AsyncTcpAcceptor and AsyncTcpSocket  
 
-Concurrent I/O is a important feature for high performance network applications. It involves socket I/O multiplexing and multithreading. AsyncTcpAcceptor and AsyncTcpSocket implement a callback style asynchronous I/O mechanism, which accept incomming connections and perform I/O asynchronously. Please refer the examples in echo foler for more details. 
-
-## Synchronous I/O with timeout  
-
+Concurrent I/O is a important feature for high performance network applications. It involves socket I/O multiplexing and multithreading. AsyncTcpAcceptor and AsyncTcpSocket implement a callback style asynchronous I/O mechanism, which accept incomming connections and perform I/O asynchronously. Please refer the examples of echo for more details. 

@@ -65,6 +65,7 @@ AsyncUdpSocket::~AsyncUdpSocket() noexcept
     {
         BufferAddress& ba = _out_buffers.front();
         delete ba.buf;
+        delete ba.addr;
         _out_buffers.pop();
     }
 }
@@ -153,7 +154,7 @@ ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* add
     {
         {
             std::unique_lock<std::mutex> lock(_out_buffers_mutex);
-            _out_buffers.push(BufferAddress(new StreamBuffer(p, n), addr));
+            _out_buffers.push(BufferAddress(new StreamBuffer(p, n), new SocketAddress(addr)));
         }
         EnableWriting();
         return n;
@@ -162,11 +163,11 @@ ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* add
     ssize_t sent = 0;
     if(_out_buffers.empty())
     {
-        sent = UdpSocket::SendTo(p, n, addr, 0, e);
+        sent = Socket::SendTo(p, n, addr, 0, e);
     }
     if(sent < n)
     {
-        _out_buffers.push(BufferAddress(new StreamBuffer(p, n), addr));
+        _out_buffers.push(BufferAddress(new StreamBuffer(p, n), new SocketAddress(addr)));
         EnableWriting();
     }
     return sent;
@@ -175,8 +176,29 @@ ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* add
 // In async mode, data may be buffered for sending
 ssize_t AsyncUdpSocket::Send(const void* p, size_t n, Error* e) noexcept
 {
-    assert(false);
-    return -1;
+    // Out of thread sending, lock and buffer
+    assert(_loop);
+    if(!_loop->IsInLoopThread())
+    {
+        {
+            std::unique_lock<std::mutex> lock(_out_buffers_mutex);
+            _out_buffers.push(BufferAddress(new StreamBuffer(p, n), nullptr));
+        }
+        EnableWriting();
+        return n;
+    }
+    // In thread sending
+    ssize_t sent = 0;
+    if(_out_buffers.empty())
+    {
+        sent = Socket::Send(p, n, 0, e);
+    }
+    if(sent < n)
+    {
+        _out_buffers.push(BufferAddress(new StreamBuffer(p, n), nullptr));
+        EnableWriting();
+    }
+    return sent;
 }
 
 // EventHandler::EventCallback
@@ -188,7 +210,7 @@ void AsyncUdpSocket::OnRead(SOCKET s)
     SocketAddress addr;
     if(_in_buffer.Writable(RECEIVE_BUFFER_SIZE))
     {
-        n = UdpSocket::ReceiveFrom(_in_buffer.Write(), _in_buffer.Writable(), &addr, 0);
+        n = Socket::ReceiveFrom(_in_buffer.Write(), _in_buffer.Writable(), &addr);
     }
     if(n > 0)
     {
@@ -213,8 +235,8 @@ void AsyncUdpSocket::OnWrite(SOCKET s)
     while(!_out_buffers.empty())
     {
         BufferAddress& ba = _out_buffers.front();
-        UdpSocket::SendTo(ba.buf, &ba.addr, 0);
-        if(!ba.buf->Empty())
+        ssize_t ret = Socket::SendTo(ba.buf->Read(), ba.buf->Readable(), ba.addr);
+        if(ret <= 0) // Suppose either 0 or all data is sent
         {
             break;
         }
