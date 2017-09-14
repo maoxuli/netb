@@ -2,6 +2,7 @@
 
 Have you very imagined a C++ library for network programming has mixed features as below: 
 
+```shell
 1. A very thin C++ wrapper of socket API that only focused on cross-platform.
 2. An object-oriented wrapper of socket API that simplified socket programming.
 3. A socket I/O interface that supports block mode, non-block mode, and timeout mode. 
@@ -10,6 +11,7 @@ Have you very imagined a C++ library for network programming has mixed features 
 5. A C++ socket library that supports standard error handling with exceptions. 
 6. A C++ socket library that supports error handling without exception. 
 7. A lightweight library that does not depend on any third-party codes. 
+```
 
 NetB is building a such versatile while flexible network programming library. Please find more details in README files in source code folder and examples folder.  
 
