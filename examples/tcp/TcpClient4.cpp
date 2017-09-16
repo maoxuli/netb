@@ -56,7 +56,7 @@ int main(const int argc, char* argv[])
     std::string msg = "Hello";
     StreamBuffer buf(msg.data(), msg.length());
     ssize_t ret = 0;
-    if((ret = tcpc.Send(&buf, &e)) <= 0 ||
+    if((ret = tcpc.Send(buf, &e)) <= 0 ||
        (ret = tcpc.Receive(&buf, &e)) <= 0)
     {
         std::cout << e.Report() << std::endl;

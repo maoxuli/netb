@@ -58,14 +58,20 @@ public:
     // Send data to given address
     // Async I/O, return immediately and data may be buffered for sending
     using UdpSocket::SendTo;
-    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, Error* e = nullptr) noexcept;
-    //virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, Error* e = nullptr) noexcept;
+    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress& addr, Error* e = nullptr) noexcept;
+    //virtual ssize_t SendTo(StreamBuffer& buf, const SocketAddress& addr, Error* e = nullptr) noexcept;
+
+    // Overloading this function for send data from received callback
+    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, Error* e = nullptr) noexcept; 
 
     // Send data to connected address
     // Async I/O, return immediately and data may be buffered for sending
     using UdpSocket::Send;
     virtual ssize_t Send(const void* p, size_t n, Error* e = nullptr) noexcept;
-    //virtual ssize_t Send(StreamBuffer* buf, Error* e = nullptr) noexcept;
+    //virtual ssize_t Send(StreamBuffer& buf, Error* e = nullptr) noexcept;
+
+    // Overloading this function for send data from received callback
+    virtual ssize_t Send(StreamBuffer* buf, Error* e = nullptr) noexcept;
 
     // Async notification of data is sent
     typedef std::function<void (AsyncUdpSocket*, size_t, const SocketAddress*)> SentCallback;
@@ -78,14 +84,14 @@ public:
 public:
     // In async mode, send data with timeout is not necessary, data may be buffered for sending
     // to given address
-    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int timeout, Error* e = nullptr) noexcept
+    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress& addr, int timeout, Error* e = nullptr) noexcept
     {
         SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
     }
 
     // to given address
-    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int timeout, Error* e = nullptr) noexcept
+    virtual ssize_t SendTo(StreamBuffer& buf, const SocketAddress& addr, int timeout, Error* e = nullptr) noexcept
     {
         SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
@@ -99,7 +105,7 @@ public:
     }
 
     // to connected address
-    virtual ssize_t Send(StreamBuffer* buffer, int timeout, Error* e = nullptr) noexcept
+    virtual ssize_t Send(StreamBuffer& buffer, int timeout, Error* e = nullptr) noexcept
     {
         SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;
@@ -149,10 +155,12 @@ private:
     // message and peer address
     struct BufferAddress
     {
-        BufferAddress(const StreamBuffer* b, const SocketAddress* sa)
+        BufferAddress(const StreamBuffer* b, const SocketAddress& sa)
         : buf(b), addr(sa) { }
+        BufferAddress(const StreamBuffer* b)
+        : buf(b) { }
         const StreamBuffer* buf;
-        const SocketAddress* addr;
+        const SocketAddress addr;
     };
     std::queue<BufferAddress> _out_buffers;
     std::mutex _out_buffers_mutex;

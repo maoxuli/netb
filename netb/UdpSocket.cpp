@@ -21,17 +21,6 @@
 
 NETB_BEGIN
 
-// Prepare write buffer for socket receive
-#define PREPARE_BUFFER(buf) 											\
-		do{ 															\
-			assert(buf); 												\
-			if(!buf->Readable(DEFAULT_RECEIVE_BUFFER)) 					\
-			{															\
-				SET_LOGIC_ERROR(e, "No enough buffer for receiving.");	\
-				return -1;												\
-			}															\
-		} while(0) // no trailing ;
-
 // Any address determined by following operations
 UdpSocket::UdpSocket() noexcept
 : _address() // empty address
@@ -182,23 +171,22 @@ SocketAddress UdpSocket::ConnectedAddress(Error* e) const noexcept
 }
 
 // Send data to given address, in block mode
-ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, Error* e) noexcept
+ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress& addr, Error* e) noexcept
 {
     if(!Socket::Block(true, e)) return -1;
     return Socket::SendTo(p, n, addr, 0, e);
 }
 
 // Send data to given address, in block mode
-ssize_t UdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, Error* e) noexcept
+ssize_t UdpSocket::SendTo(StreamBuffer& buf, const SocketAddress& addr, Error* e) noexcept
 {
-    assert(buf != NULL);
-    ssize_t ret = SendTo(buf->Read(), buf->Readable(), addr, e);
-    if(ret > 0) buf->Read(ret);
+    ssize_t ret = SendTo(buf.Read(), buf.Readable(), addr, e);
+    if(ret > 0) buf.Read(ret);
     return ret;
 }
 
 // Send data to given address, in non-block mode with timeout
-ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, int timeout, Error* e) noexcept
+ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress& addr, int timeout, Error* e) noexcept
 {
     if(timeout < 0) return SendTo(p, n, addr, e);
     if(Socket::Block(false, e)) return -1;
@@ -211,11 +199,10 @@ ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, in
 }
 
 // Send data to given address, in non-block mode with timeout
-ssize_t UdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, int timeout, Error* e) noexcept
+ssize_t UdpSocket::SendTo(StreamBuffer& buf, const SocketAddress& addr, int timeout, Error* e) noexcept
 {
-    assert(buf != NULL);
-    ssize_t ret = SendTo(buf->Read(), buf->Readable(), addr, timeout, e);
-    if(ret > 0) buf->Read(ret);
+    ssize_t ret = SendTo(buf.Read(), buf.Readable(), addr, timeout, e);
+    if(ret > 0) buf.Read(ret);
     return ret;
 }
 
@@ -227,10 +214,10 @@ ssize_t UdpSocket::Send(const void* p, size_t n, Error* e) noexcept
 }
 
 // Send data to connected address, block mode
-ssize_t UdpSocket::Send(StreamBuffer* buf, Error* e) noexcept
+ssize_t UdpSocket::Send(StreamBuffer& buf, Error* e) noexcept
 {
-    ssize_t ret = Send(buf->Read(), buf->Readable(), e);
-    if(ret > 0) buf->Read(ret);
+    ssize_t ret = Send(buf.Read(), buf.Readable(), e);
+    if(ret > 0) buf.Read(ret);
     return ret;
 }
 
@@ -248,11 +235,10 @@ ssize_t UdpSocket::Send(const void* p, size_t n, int timeout, Error* e) noexcept
 }
 
 // Send data to connected address, non-block mode with timeout
-ssize_t UdpSocket::Send(StreamBuffer* buf, int timeout, Error* e) noexcept
+ssize_t UdpSocket::Send(StreamBuffer& buf, int timeout, Error* e) noexcept
 {
-    assert(buf != NULL);
-    ssize_t ret = Send(buf->Read(), buf->Readable(), timeout, e);
-    if(ret > 0) buf->Read(ret);
+    ssize_t ret = Send(buf.Read(), buf.Readable(), timeout, e);
+    if(ret > 0) buf.Read(ret);
     return ret;
 }
 

@@ -65,7 +65,6 @@ AsyncUdpSocket::~AsyncUdpSocket() noexcept
     {
         BufferAddress& ba = _out_buffers.front();
         delete ba.buf;
-        delete ba.addr;
         _out_buffers.pop();
     }
 }
@@ -146,7 +145,7 @@ bool AsyncUdpSocket::Close(Error* e) noexcept
 
 // In async mode, data may be buffered to sending
 // Todo: buffer limit, error handling
-ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* addr, Error* e) noexcept
+ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress& addr, Error* e) noexcept
 {
     // Out of thread sending, lock and buffer
     assert(_loop);
@@ -154,7 +153,7 @@ ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* add
     {
         {
             std::unique_lock<std::mutex> lock(_out_buffers_mutex);
-            _out_buffers.push(BufferAddress(new StreamBuffer(p, n), new SocketAddress(addr)));
+            _out_buffers.push(BufferAddress(new StreamBuffer(p, n), addr));
         }
         EnableWriting();
         return n;
@@ -167,10 +166,18 @@ ssize_t AsyncUdpSocket::SendTo(const void* p, size_t n, const SocketAddress* add
     }
     if(sent < n)
     {
-        _out_buffers.push(BufferAddress(new StreamBuffer(p, n), new SocketAddress(addr)));
+        _out_buffers.push(BufferAddress(new StreamBuffer(p, n), addr));
         EnableWriting();
     }
     return sent;
+}
+
+// Overloading this function for send data from received callback
+ssize_t AsyncUdpSocket::SendTo(StreamBuffer* buf, const SocketAddress* addr, Error* e) noexcept
+{
+    assert(buf);
+    assert(addr);
+    return SendTo(*buf, *addr, e);
 }
 
 // In async mode, data may be buffered for sending
@@ -182,7 +189,7 @@ ssize_t AsyncUdpSocket::Send(const void* p, size_t n, Error* e) noexcept
     {
         {
             std::unique_lock<std::mutex> lock(_out_buffers_mutex);
-            _out_buffers.push(BufferAddress(new StreamBuffer(p, n), nullptr));
+            _out_buffers.push(BufferAddress(new StreamBuffer(p, n)));
         }
         EnableWriting();
         return n;
@@ -195,10 +202,17 @@ ssize_t AsyncUdpSocket::Send(const void* p, size_t n, Error* e) noexcept
     }
     if(sent < n)
     {
-        _out_buffers.push(BufferAddress(new StreamBuffer(p, n), nullptr));
+        _out_buffers.push(BufferAddress(new StreamBuffer(p, n)));
         EnableWriting();
     }
     return sent;
+}
+
+// Overloading this function for send data from received callback
+ssize_t AsyncUdpSocket::Send(StreamBuffer* buf, Error* e) noexcept
+{
+    assert(buf);
+    return Send(*buf, e);
 }
 
 // EventHandler::EventCallback
@@ -234,8 +248,12 @@ void AsyncUdpSocket::OnWrite(SOCKET s)
     std::unique_lock<std::mutex> lock(_out_buffers_mutex);
     while(!_out_buffers.empty())
     {
+        ssize_t ret;
         BufferAddress& ba = _out_buffers.front();
-        ssize_t ret = Socket::SendTo(ba.buf->Read(), ba.buf->Readable(), ba.addr);
+        if(ba.addr.Empty())
+            ret = Socket::Send(ba.buf->Read(), ba.buf->Readable());
+        else
+            ret = Socket::SendTo(ba.buf->Read(), ba.buf->Readable(), ba.addr);
         if(ret <= 0) // Suppose either 0 or all data is sent
         {
             break;

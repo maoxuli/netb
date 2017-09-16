@@ -61,7 +61,7 @@ int main(const int argc, char* argv[])
     std::string msg = "Hello";
     char* buf = new char[2048];
     ssize_t ret = 0;
-    if((ret = udpc.SendTo(msg.data(), msg.length(), &addr, 0, &e)) <= 0 ||
+    if((ret = udpc.SendTo(msg.data(), msg.length(), addr, 0, &e)) <= 0 ||
        (ret = udpc.ReceiveFrom(buf, 2048, &addr, 0, &e)) <= 0)
     {
         std::cout << "Error: " << e.Report() << std::endl;

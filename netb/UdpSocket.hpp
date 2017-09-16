@@ -74,20 +74,20 @@ public:
 
 public:
     // Send data to given address, in block mode
-    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, Error* e = nullptr) noexcept;
-    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, Error* e = nullptr) noexcept;
+    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress& addr, Error* e = nullptr) noexcept;
+    virtual ssize_t SendTo(StreamBuffer& buf, const SocketAddress& addr, Error* e = nullptr) noexcept;
 
     // Send data to given address, in non-block mode with timeout
-    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int timeout, Error* e = nullptr) noexcept;
-    virtual ssize_t SendTo(StreamBuffer* buf, const SocketAddress* addr, int timeout, Error* e = nullptr) noexcept;
+    virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress& addr, int timeout, Error* e = nullptr) noexcept;
+    virtual ssize_t SendTo(StreamBuffer& buf, const SocketAddress& addr, int timeout, Error* e = nullptr) noexcept;
 
     // Send data to connected address, block mode
     virtual ssize_t Send(const void* p, size_t n, Error* e = nullptr) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, Error* e = nullptr) noexcept;
+    virtual ssize_t Send(StreamBuffer& buf, Error* e = nullptr) noexcept;
 
     // Send data to connected address, in non-block mode with timeout
     virtual ssize_t Send(const void* p, size_t n, int timeout, Error* e = nullptr) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, int timeout, Error* e = nullptr) noexcept;
+    virtual ssize_t Send(StreamBuffer& buf, int timeout, Error* e = nullptr) noexcept;
 
     // Receive data and get remote address, block mode
     virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, Error* e = nullptr) noexcept;

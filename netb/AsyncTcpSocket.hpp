@@ -74,6 +74,9 @@ public:
     using TcpSocket::Send;
     virtual ssize_t Send(const void* p, size_t n, Error* e = nullptr) noexcept;
 
+    // Overloading for send data from received callback
+    virtual ssize_t Send(StreamBuffer* buf, Error* e = nullptr) noexcept;
+
     // Notification of connected status
     typedef std::function<void (AsyncTcpSocket*, bool)> ConnectedCallback;
     void SetConnectedCallback(const ConnectedCallback& cb) noexcept { _connected_callback = cb; }
@@ -95,7 +98,7 @@ public:
         return -1;
     }
 
-    virtual ssize_t Send(StreamBuffer* buf, int timeout, Error* e = nullptr) noexcept
+    virtual ssize_t Send(StreamBuffer& buf, int timeout, Error* e = nullptr) noexcept
     {
         SET_LOGIC_ERROR(e, "Function not work in this mode.");
         return -1;

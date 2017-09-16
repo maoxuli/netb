@@ -17,7 +17,6 @@
 
 #include "AsyncTcpAcceptor.hpp"
 #include "AsyncTcpSocket.hpp"
-#include "StreamBuffer.hpp"
 #include "StreamPeeker.hpp"
 
 NETB_BEGIN
@@ -103,7 +102,7 @@ private:
         {
             std::cout << "Received [" << buf->Readable() << "][" << s << "]" << std::endl;
         }
-        conn->Send(buf); // ignore errors in sending
+        conn->Send(buf); // ignore errors in sending 
     }
 };
 

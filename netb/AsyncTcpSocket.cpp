@@ -215,6 +215,12 @@ ssize_t AsyncTcpSocket::Send(const void* p, size_t n, Error* e) noexcept
     return n;
 }
 
+// Overloading this function for send out the data from received callback
+ssize_t AsyncTcpSocket::Send(StreamBuffer* buf, Error* e) noexcept
+{
+    return Send(*buf, e);
+}
+
 // Ready to read
 // Read data into in buffer and notify
 void AsyncTcpSocket::OnRead(SOCKET s)

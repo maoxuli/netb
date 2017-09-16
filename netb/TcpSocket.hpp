@@ -78,12 +78,12 @@ public:
 
     // Send data over the connection, in block mode
     virtual ssize_t Send(const void* p, size_t n, Error* e = nullptr) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, Error* e = nullptr) noexcept;
+    virtual ssize_t Send(StreamBuffer& buf, Error* e = nullptr) noexcept;
 
     // Send data over the connection, in non-block mode with timeout
     // timeout of -1 for block mode
     virtual ssize_t Send(const void* p, size_t n, int timeout, Error* e = nullptr) noexcept;
-    virtual ssize_t Send(StreamBuffer* buf, int timeout, Error* e = nullptr) noexcept;
+    virtual ssize_t Send(StreamBuffer& buf, int timeout, Error* e = nullptr) noexcept;
 
     // Receive data from the connection, in block mode
     virtual ssize_t Receive(void* p, size_t n, Error* e = nullptr) noexcept;

@@ -247,10 +247,10 @@ ssize_t TcpSocket::Send(const void* p, size_t n, Error* e) noexcept
 }
 
 // Send data over connection, in block mode
-ssize_t TcpSocket::Send(StreamBuffer* buf, Error* e) noexcept
+ssize_t TcpSocket::Send(StreamBuffer& buf, Error* e) noexcept
 {
-    ssize_t ret = Send(buf->Read(), buf->Readable(), e);
-    if(ret > 0) buf->Read(ret);
+    ssize_t ret = Send(buf.Read(), buf.Readable(), e);
+    if(ret > 0) buf.Read(ret);
     return ret;
 }
 
@@ -272,10 +272,10 @@ ssize_t TcpSocket::Send(const void* p, size_t n, int timeout, Error* e) noexcept
 }
 
 // Send data over connection, in block mode
-ssize_t TcpSocket::Send(StreamBuffer* buf, int timeout, Error* e) noexcept
+ssize_t TcpSocket::Send(StreamBuffer& buf, int timeout, Error* e) noexcept
 {
-    ssize_t ret = Send(buf->Read(), buf->Readable(), timeout, e);
-    if(ret > 0) buf->Read(ret);
+    ssize_t ret = Send(buf.Read(), buf.Readable(), timeout, e);
+    if(ret > 0) buf.Read(ret);
     return ret;
 }
 

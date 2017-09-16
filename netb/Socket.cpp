@@ -518,9 +518,8 @@ ssize_t Socket::Receive(void* p, size_t n, int flags, Error* e) noexcept
 // If the socket is connected and valid addr is given, addr must be equal to connected address
 // Return value varied on block or non-block mode
 // Todo: check the address is equal to remote address when connected
-ssize_t Socket::SendTo(const void* p, size_t n, const SocketAddress* addr, int flags, Error* e) noexcept
+ssize_t Socket::SendTo(const void* p, size_t n, const SocketAddress& addr, int flags, Error* e) noexcept
 {
-    if(!addr) return Send(p, n, flags, e);
     if(_fd == INVALID_SOCKET)
     {
         SET_LOGIC_ERROR(e, "Socket is not opened yet.");
@@ -528,7 +527,7 @@ ssize_t Socket::SendTo(const void* p, size_t n, const SocketAddress* addr, int f
     }
     assert(p);
     ssize_t ret;
-    while((ret = ::sendto(_fd, p, n, flags, addr->Addr(), addr->Length())) < 0)
+    while((ret = ::sendto(_fd, p, n, flags, addr.Addr(), addr.Length())) < 0)
     {
         if(!ErrorCode::IsInterrupted())
         {

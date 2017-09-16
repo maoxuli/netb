@@ -163,7 +163,7 @@ public:
     // Send and receive data through non-connected socket
     // If the socket is connected and no addr is given, equivalent to Send() and Receive()
     // If the socket is connected and addr is given, addr must be equal to connected address
-    ssize_t SendTo(const void* p, size_t n, const SocketAddress* addr, int flags = 0, Error* e = nullptr) noexcept;
+    ssize_t SendTo(const void* p, size_t n, const SocketAddress& addr, int flags = 0, Error* e = nullptr) noexcept;
     ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0, Error* e = nullptr) noexcept;
 
     // Send and recieve data hold in struct msghdr

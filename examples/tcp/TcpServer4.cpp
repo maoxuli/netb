@@ -52,7 +52,7 @@ int main(const int argc, char* argv[])
         int ret;
         while((ret = conn.Receive(&buf)) > 0)
         {
-            if((ret = conn.Send(&buf)) > 0)
+            if((ret = conn.Send(buf)) > 0)
             {
                 std::cout << "Echo [" << ret << "]" << std::endl;
             }

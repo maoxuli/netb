@@ -50,7 +50,7 @@ int main(const int argc, char* argv[])
     ssize_t ret;
     while((ret = udps.ReceiveFrom(buf, 2048, &addr)) > 0)
     {
-        if((ret = udps.SendTo(buf, ret, &addr)) > 0)
+        if((ret = udps.SendTo(buf, ret, addr)) > 0)
         {
             std::cout << "Echo [" << ret << "][" << addr.String() << "]" << std::endl;
         }
