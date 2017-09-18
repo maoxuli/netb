@@ -37,9 +37,10 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/AsyncTcpAcceptor.hpp \
 	   $(INCDIR)/AsyncTcpSocket.hpp \
 	   $(INCDIR)/AsyncUdpSocket.hpp \
-	   $(INCDIR)/StreamWriter.hpp \
 	   $(INCDIR)/StreamReader.hpp \
-	   $(INCDIR)/StreamPeeker.hpp \
+	   $(INCDIR)/StreamWriter.hpp \
+	   $(INCDIR)/RandomReader.hpp \
+	   $(INCDIR)/RandomWriter.hpp \
 	   $(INCDIR)/HttpMessage.hpp 
 	  
 OBJ	:= $(OBJDIR)/ErrorCode.o \
@@ -61,9 +62,10 @@ OBJ	:= $(OBJDIR)/ErrorCode.o \
 	   $(OBJDIR)/AsyncTcpAcceptor.o \
 	   $(OBJDIR)/AsyncTcpSocket.o \
 	   $(OBJDIR)/AsyncUdpSocket.o \
-	   $(OBJDIR)/StreamWriter.o \
 	   $(OBJDIR)/StreamReader.o \
-	   $(OBJDIR)/StreamPeeker.o \
+	   $(OBJDIR)/StreamWriter.o \
+	   $(OBJDIR)/RandomReader.o \
+	   $(OBJDIR)/RandomWriter.o \
 	   $(OBJDIR)/HttpMessage.o
 
 all: $(LIBDIR)/$(OUT)

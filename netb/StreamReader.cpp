@@ -16,26 +16,26 @@
  */
 
 #include "StreamReader.hpp"
-#include <cassert>
 
 NETB_BEGIN
 
 StreamReader::StreamReader()
-: _stream(nullptr)
+: _stream(0)
 {
 
 }
 
-StreamReader::StreamReader(StreamBuffer* buf)
+StreamReader::StreamReader(StreamBuffer* buf, bool reset)
 : _stream(buf)
 {
-
+    assert(buf);
+    if(reset) buf->Reset();
 }
 
-StreamReader::StreamReader(StreamBuffer& buf)
+StreamReader::StreamReader(StreamBuffer& buf, bool reset)
 : _stream(&buf)
 {
-
+    if(reset) _stream->Reset();
 }
 
 StreamReader::~StreamReader()
@@ -43,58 +43,72 @@ StreamReader::~StreamReader()
 
 }
 
-StreamReader& StreamReader::Attach(StreamBuffer* buf)
+StreamReader& StreamReader::Attach(StreamBuffer* buf, bool reset)
 {
+    assert(buf);
     _stream = buf;
+    if(reset) _stream->Reset();
     return *this;
 }
 
-StreamReader& StreamReader::Attach(StreamBuffer& buf)
+StreamReader& StreamReader::Attach(StreamBuffer& buf, bool reset)
 {
     _stream = &buf;
+    if(reset) _stream->Reset();
     return *this;
 }
 
+// Read n bytes
 bool StreamReader::Bytes(void* p, size_t n)
 {
-    if(_stream == nullptr) return false;
+    if(!_stream) return false;
     if(_stream->Readable() < n) return false;
-
     return _stream->Read(p, n);
 }
 
+// Read string
+// includes all readable data
 bool StreamReader::String(std::string& s)
 {
-    if(_stream == nullptr) return false;
+    if(!_stream) return false;
     size_t n = _stream->Readable();
     if(n == 0) return false;
     return String(s, n);
 }
 
+// Read string 
+// that is n bytes length
 bool StreamReader::String(std::string& s, size_t n)
 {
-    if(_stream == nullptr) return false;
-    if(_stream->Readable() < n) return false;
-
-    const unsigned char* p = (const unsigned char*)_stream->Read();
+    if(!_stream) return false;
+    if(n > _stream->Readable()) return false;
+    const char* p = (const char*)_stream->Read();
     std::string(p, p + n).swap(s);
     _stream->Read(n);
     return true;
 }
 
-bool StreamReader::String(std::string& s, const char* delim)
+// Read string
+// to delimit char ('\0')
+bool StreamReader::String(std::string& s, const char delim)
 {
-    if(_stream == nullptr) return false;
-    if(_stream->Readable() < strlen(delim)) return false;
-
+    if(!_stream) return false;
     ssize_t n = _stream->Readable(delim);
     if(n < 0) return false;
     if(n == 0) return true;
-    
-    const unsigned char* p = (const unsigned char*)_stream->Read();
-    std::string(p, p + n).swap(s);
-    _stream->Read(n + strlen(delim));
-    return true;
+    return String(s, (size_t)n);
+}
+
+// Read string 
+// to delimit string ('\r\n')
+bool StreamReader::String(std::string& s, const char* delim)
+{
+    if(!_stream) return false;
+    if(strlen(delim) > _stream->Readable()) return false;
+    ssize_t n = _stream->Readable(delim);
+    if(n < 0) return false;
+    if(n == 0) return true;
+    return String(s, (size_t)n);
 }
 
 NETB_END

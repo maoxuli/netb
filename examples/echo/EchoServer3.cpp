@@ -16,7 +16,7 @@
  */
 
 #include "AsyncUdpSocket.hpp"
-#include "StreamPeeker.hpp"
+#include "RandomReader.hpp"
 
 NETB_BEGIN
 
@@ -38,7 +38,7 @@ private:
         assert(buf);
         assert(addr);
         std::string s;
-        if(StreamPeeker(buf).String(s))
+        if(RandomReader(buf).String(0, s))
         {
             std::cout << "Received [" << buf->Readable() << "][" << addr->String() << "]" << std::endl;
         }

@@ -24,8 +24,9 @@ NETB_BEGIN
 StreamBuffer::StreamBuffer(size_t init, size_t limit)
 : _bytes(init)
 , _limit(limit)
-, _read_index(0)
-, _write_index(0)
+, _opos(0)
+, _rpos(0)
+, _wpos(0)
 {
     assert(limit >= init);   
 }
@@ -34,160 +35,146 @@ StreamBuffer::StreamBuffer(size_t init, size_t limit)
 StreamBuffer::StreamBuffer(const void* p, size_t n, size_t init, size_t limit)
 : _bytes(init)
 , _limit(limit)
-, _read_index(0)
+, _opos(0)
+, _rpos(0)
 {
     assert(init >= n);
     assert(limit >= init);
     memcpy(Begin(), p, n);
-    _write_index = n;
+    _wpos = n;
 }
 
 // Copy constructor
-// Deep copy and move data to the beginning
+// Discard the flushed data
 StreamBuffer::StreamBuffer(const StreamBuffer& b)
-: _bytes(b.Readable())
+: _bytes(b.Size())
 , _limit(b._limit)
+, _opos(0)
+, _rpos(0)
 {
-    memcpy(Begin(), b.Read(), b.Readable());
-    _read_index = 0;
-    _write_index = b.Readable();
+    memcpy(Begin(), b.Begin() + b._opos, b._wpos - b._opos);
+    _wpos = b._wpos - b._opos;
 }
 
 // Copy constructor
-// Deep copy and move data to the beginning
+// Discard the flushed data
 StreamBuffer::StreamBuffer(const StreamBuffer* b)
-: _bytes(b->Readable())
-, _limit(b->_limit)
+: _bytes(b->Size())
+, _limit(b->_limit) 
+, _opos(0)
+, _rpos(0)
 {
-    memcpy(Begin(), b->Read(), b->Readable());
-    _read_index = 0;
-    _write_index = b->Readable();
-}
-
-StreamBuffer::~StreamBuffer()
-{
-    
+    assert(b);
+    memcpy(Begin(), b->Begin() + b->_opos, b->_wpos - b->_opos);
+    _wpos = b->_wpos - b->_opos;
 }
 
 // Assignment operator
-// Deep copy and move data to the beginning 
+// Discard the flushed data
 StreamBuffer& StreamBuffer::operator=(const StreamBuffer& b)
 {
-    if(_limit < b.Size())
-    {
-        _limit = b.Size();
-    }
-    if(_bytes.size() < b.Readable())
-    {
-        _bytes.resize(b.Readable());
-    }
-    memcpy(Begin(), b.Read(), b.Readable());
-    _read_index = 0;
-    _write_index = b.Readable();
+    _bytes.resize(b.Size());
+    memcpy(Begin(), b.Begin() + _opos, b._wpos - b._opos);
+    _limit = b._limit;
+    _opos = 0;
+    _rpos = b._rpos - b._opos;
+    _wpos = b._wpos - b._opos;
     return *this;
 }
 
 // Actually write, copy data into the buffer and move write position forward
 bool StreamBuffer::Write(const void* p, size_t n)
 {
-    if(!Writable(n))
-    {
-        return false;
-    }
+    if(!Writable(n)) return false;
     memcpy(Write(), p, n);
-    Write(n);
-    return true;
+    return Write(n);
 }
 
 // Actually write, copy data into the buffer and move write position forward
 // Append a delimit char
+// Todo: recover from errors
 bool StreamBuffer::Write(const void* p, size_t n, const char delim)
 {
-    if(Write(p, n))
-    {
-        return Write(&delim, sizeof(char));
-    }
-    return false;
+    return Write(p, n) && Write(&delim, sizeof(delim));
 }
 
 // Actually write, copy data into the buffer and move write position forward
 // Append a delimit string
+// Todo: recover from errors
 bool StreamBuffer::Write(const void* p, size_t n, const char* delim)
 {
-    if(Write(p, n))
-    {
-        return Write(delim, strlen(delim));
-    }
-    return false;
+    return Write(p, n) && Write(delim, strlen(delim));
 }
 
-// Available data to read
-// Before next delimit string
+// return the length of accessible data 
+// after current sequential reading position and before next delimit string
+// return -1 if the delim is not found
+ssize_t StreamBuffer::Readable(const char delim) const
+{
+    if(Readable() < sizeof(delim)) return -1;
+    const char* p1 = (const char*)Read();
+    const char* p2 = std::find(p1, (const char*)Write(), delim);
+    if(p2 == Write()) return -1;
+    return p2 - p1;
+}
+
+// return the length of accessible data 
+// after current sequential reading position and before next delimit string
+// return -1 if the delim is not found
 ssize_t StreamBuffer::Readable(const char* delim) const
 {
-    if(Readable() < strlen(delim))
-    {
-        return -1;
-    }
+    if(Readable() < strlen(delim)) return -1;
     const char* p1 = (const char*)Read();
     const char* p2 = std::find_first_of(p1, (const char*)Write(), delim, delim + strlen(delim));
-    if(p2 == Write())
-    {
-        return -1;
-    }
+    if(p2 == Write()) return -1;
     return p2 - p1;
 }
 
 // Actually read, copy data from the buffer and move read position forward
 bool StreamBuffer::Read(void* p, size_t n)
 {
-    if(Readable() < n)
-    {
-        return false;
-    }
+    if(Readable() < n) return false;
     memcpy(p, Read(), n);
-    Read(n);
-    return true;
+    return Read(n);
 }
 
-// Addressable data from position that offset the reading position
-// to next delimit string
-ssize_t StreamBuffer::Addressable(const char* delim, size_t offset) const
+// return the length of peekable data with offset and before the delimit character
+// return -1 if the offset position is out of range of peekable data or delim is not found
+ssize_t StreamBuffer::Peekable(size_t offset, const char delim) const
 {
-    if(Addressable(offset) < strlen(delim))
-    {
-        return -1;
-    }
-    const char* p1 = (const char*)Address(offset);
-    const char* p2 = std::find_first_of(p1, (const char*)Write(), delim, delim + strlen(delim));
-    if(p2 == Write())
-    {
-        return -1;
-    }
+    if(Peekable(offset) < sizeof(delim)) return -1;
+    const char* p1 = (const char*)Peekable(offset);
+    const char* p2 = std::find(p1, (const char*)Write(), delim);
+    if(p2 == Write()) return -1;
     return p2 - p1;
 }
 
-// Peek data at position that offset to the reading position
-// Copy data from buffer but not affect reading and writing position
-bool StreamBuffer::Peek(void* p, size_t n, size_t offset)
+// return the length of peekable data with offset and before the delimit string
+// return -1 if the offset position is out of range of peekable data or delim is not found
+ssize_t StreamBuffer::Peekable(size_t offset, const char* delim) const
 {
-    if(Addressable(offset) < n) 
-    {
-        return false;
-    }
-    memcpy(p, Address(offset), n);
+    if(Peekable(offset) < strlen(delim)) return -1;
+    const char* p1 = (const char*)Peekable(offset);
+    const char* p2 = std::find_first_of(p1, (const char*)Write(), delim, delim + strlen(delim));
+    if(p2 == Write()) return -1;
+    return p2 - p1;
+}
+
+// Peek the peekable data at offset position 
+bool StreamBuffer::Peek(size_t offset, void* p, size_t n)
+{
+    if(Peekable(offset) < n) return false;
+    memcpy(p, Peek(offset), n);
     return true;
 }
 
-// Update data at position that offset to the reading position
-// Update data in buffer but not affect reading and writing position
-bool StreamBuffer::Update(void* p, size_t n, size_t offset)
+// Update the peekable data at offset position
+// this function must be used when you know what you are doing
+// improperly update may destroy the data structure in the buffer
+bool StreamBuffer::Update(size_t offset, const void* p, size_t n)
 {
-    if(Addressable(offset) < n) 
-    {
-        return false;
-    }
-    memcpy(Address(offset), p, n);
+    if(Peekable(offset) < n) return false;
+    memcpy(Peek(offset), p, n);
     return true;
 }
 

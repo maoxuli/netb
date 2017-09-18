@@ -17,7 +17,7 @@
 
 #include "AsyncTcpAcceptor.hpp"
 #include "AsyncTcpSocket.hpp"
-#include "StreamPeeker.hpp"
+#include "RandomReader.hpp"
 
 NETB_BEGIN
 
@@ -87,7 +87,7 @@ private:
         assert(conn);
         assert(buf);
         std::string s;
-        if(StreamPeeker(buf).String(s))
+        if(RandomReader(buf).String(0, s))
         {
             std::cout << "Received [" << buf->Readable() << "][" << s << "]" << "\n";
         }

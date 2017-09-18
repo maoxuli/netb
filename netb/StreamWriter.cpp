@@ -16,26 +16,26 @@
  */
 
 #include "StreamWriter.hpp"
-#include <cassert>
 
 NETB_BEGIN
 
 StreamWriter::StreamWriter()
-: _stream(nullptr)
+: _stream(0)
 {
 
 }
 
-StreamWriter::StreamWriter(StreamBuffer* buf)
+StreamWriter::StreamWriter(StreamBuffer* buf, bool clear)
 : _stream(buf)
 {
-
+    assert(buf);
+    if(clear) _stream->Clear();
 }
 
-StreamWriter::StreamWriter(StreamBuffer& buf)
+StreamWriter::StreamWriter(StreamBuffer& buf, bool clear)
 : _stream(&buf)
 {
-
+    if(clear) _stream->Clear();
 }
 
 StreamWriter::~StreamWriter()
@@ -43,41 +43,52 @@ StreamWriter::~StreamWriter()
 
 }
 
-StreamWriter& StreamWriter::Attach(StreamBuffer* buf)
+StreamWriter& StreamWriter::Attach(StreamBuffer* buf, bool clear)
 {
+    assert(buf);
     _stream = buf;
+    if(clear) _stream->Clear();
     return *this;
 }
 
-StreamWriter& StreamWriter::Attach(StreamBuffer& buf)
+StreamWriter& StreamWriter::Attach(StreamBuffer& buf, bool clear)
 {
     _stream = &buf;
+    if(clear) _stream->Clear();
     return *this;
 }
 
 bool StreamWriter::Bytes(const void* p, size_t n)
 {
-    if(_stream == nullptr) return false;
+    if(!_stream) return false;
     return _stream->Write(p, n);
 }
 
+// write string
+// all data in the string
 bool StreamWriter::String(const std::string& s)
 {
-    if(_stream == nullptr) return false;
+    if(!_stream) return false;
     return _stream->Write(s.data(), s.length());
 }
 
-bool StreamWriter::String(const std::string& s, size_t n)
+// append ending null or not
+// append delimit character (e.g. '\0')
+bool StreamWriter::String(const std::string& s, const char delim)
 {
-    if(_stream == nullptr) return false;
-    return _stream->Write(s.data(), n);
+    if(!_stream) return false;
+    assert(s[s.length()] != delim);
+    std::string ss = s + delim;
+    return _stream->Write(ss.data(), ss.length());
 }
 
+// write string
+// append delimit string (e.g. "\r\n")
 bool StreamWriter::String(const std::string& s, const char* delim)
 {
-    if(_stream == nullptr) return false;
-    return _stream->Write(s.data(), s.length()) && 
-           _stream->Write(delim, strlen(delim));
+    if(!_stream) return false;
+    std::string ss = s + delim;
+    return _stream->Write(ss.data(), ss.length());
 }
 
 NETB_END
