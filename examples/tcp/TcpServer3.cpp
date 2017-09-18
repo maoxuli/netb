@@ -51,9 +51,11 @@ int main(const int argc, char* argv[])
             {
                 if((ret = conn.Send(buf)) > 0)
                 {
+                    buf.Flush();
                     std::cout << "Echo [" << ret << "]" << std::endl;;
                 }
             }
+            buf.Clear();
         }
     }
     catch(const Exception& ex)

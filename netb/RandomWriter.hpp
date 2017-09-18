@@ -41,37 +41,37 @@ public:
     StreamBuffer* Buffer() const { return _stream; }
 
     // Update n bytes at offset position
-    bool Bytes(size_t offset, const void* p, size_t n);
+    bool Bytes(size_t offset, const void* p, size_t n) const;
 
     // Update at offset position
     // integer number with given type (with indicated length) 
-    bool Integer(size_t offset, int8_t v);
-    bool Integer(size_t offset, uint8_t v);
-    bool Integer(size_t offset, int16_t v);
-    bool Integer(size_t offset, uint16_t v);
-    bool Integer(size_t offset, int32_t v);
-    bool Integer(size_t offset, uint32_t v);
-    bool Integer(size_t offset, int64_t v);
-    bool Integer(size_t offset, uint64_t v);
+    bool Integer(size_t offset, int8_t v) const;
+    bool Integer(size_t offset, uint8_t v) const;
+    bool Integer(size_t offset, int16_t v) const;
+    bool Integer(size_t offset, uint16_t v) const;
+    bool Integer(size_t offset, int32_t v) const;
+    bool Integer(size_t offset, uint32_t v) const;
+    bool Integer(size_t offset, int64_t v) const;
+    bool Integer(size_t offset, uint64_t v) const;
 
     // Update at offset position
     // bool, float, double (with default length)
     // Todo: compatible format in memory
-    bool Bool(size_t offset, bool v);
-    bool Float(size_t offset, float v);
-    bool Double(size_t offset, double v);
+    bool Bool(size_t offset, bool v) const;
+    bool Float(size_t offset, float v) const;
+    bool Double(size_t offset, double v) const;
 
     // Update string at offset position
     // all data in string
-    bool String(size_t offset, const std::string& s);
+    bool String(size_t offset, const std::string& s) const;
 
     // Update string at offset position
     // append delimit character (e.g. '\0')
-    bool String(size_t offset, const std::string& s, const char delim);
+    bool String(size_t offset, const std::string& s, const char delim) const;
 
     // Update string at offset position
     // append delimit string (e.g. "\r\n")
-    bool String(size_t offset, const std::string& s, const char* delim);
+    bool String(size_t offset, const std::string& s, const char* delim) const;
 
 protected:
     StreamBuffer* _stream;

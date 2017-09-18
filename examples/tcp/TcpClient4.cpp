@@ -54,16 +54,17 @@ int main(const int argc, char* argv[])
     }
     // I/O
     std::string msg = "Hello";
-    StreamBuffer buf(msg.data(), msg.length());
+    StreamBuffer buf(msg.length() * 2);
     ssize_t ret = 0;
-    if((ret = tcpc.Send(buf, &e)) <= 0 ||
+    if((ret = tcpc.Send(msg.data(), msg.length(), &e)) <= 0 ||
        (ret = tcpc.Receive(&buf, &e)) <= 0)
     {
         std::cout << e.Report() << std::endl;
     }
     else
     {
-        std::cout << "Received [" << ret << "][" << std::string((const char*)buf.Read(), buf.Readable()) << "]" << std::endl;
+        std::cout << "Received [" << ret << "][" 
+        << std::string((const char*)buf.Read(), buf.Readable()) << "]" << std::endl;
     }
     return 0;
 }

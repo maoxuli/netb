@@ -21,6 +21,8 @@
 #include "Config.hpp"
 #include "Uncopyable.hpp"
 #include "StreamBuffer.hpp"
+#include "StreamReader.hpp"
+#include "StreamWriter.hpp"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -69,7 +71,7 @@ public:
 	bool ToBuffer(StreamBuffer* buf) const;
 
 	// output for log or diagnosis
-	std::string ToString() const;
+	std::string String() const;
 
 protected:
 	static const char* CRLF; // "\r\n"
@@ -99,9 +101,9 @@ protected:
     };
     STATE _state;
 
-	void ReadStartLine(StreamBuffer* buf);
-	void ReadHeader(StreamBuffer* buf);
-	void ReadBody(StreamBuffer* buf);
+	void ReadStartLine(const StreamReader& stream);
+	void ReadHeader(const StreamReader& stream);
+	void ReadBody(const StreamReader& stream);
 
 	// Parse start line and composite start line
 	// implement by derived classes

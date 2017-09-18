@@ -64,7 +64,7 @@ RandomWriter& RandomWriter::Attach(StreamBuffer& buf, size_t offset)
 }
 
 // Update n bytes at offset position
-bool RandomWriter::Bytes(size_t offset, const void* p, size_t n)
+bool RandomWriter::Bytes(size_t offset, const void* p, size_t n) const
 {
     if(!_stream) return false;
     if(_offset + offset + n > _stream->Peekable()) return false;
@@ -73,7 +73,7 @@ bool RandomWriter::Bytes(size_t offset, const void* p, size_t n)
 
 // Write string at offset position
 // include all data in string
-bool RandomWriter::String(size_t offset, const std::string& s)
+bool RandomWriter::String(size_t offset, const std::string& s) const
 {
     if(!_stream) return false;
     if(_offset + offset + s.length() > _stream->Peekable()) return false;
@@ -82,7 +82,7 @@ bool RandomWriter::String(size_t offset, const std::string& s)
 
 // Udpate string at offset position
 // append delimit character (e.g. '\0')
-bool RandomWriter::String(size_t offset, const std::string& s, const char delim)
+bool RandomWriter::String(size_t offset, const std::string& s, const char delim) const
 {
     if(!_stream) return false;
     assert(s[s.length()] != delim);
@@ -93,7 +93,7 @@ bool RandomWriter::String(size_t offset, const std::string& s, const char delim)
 
 // Update string at offset position
 // append delimit string (e.g. "\r\n")
-bool RandomWriter::String(size_t offset, const std::string& s, const char* delim)
+bool RandomWriter::String(size_t offset, const std::string& s, const char* delim) const
 {
     if(!_stream) return false;
     std::string ss = s + delim;

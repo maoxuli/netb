@@ -50,6 +50,7 @@ int main(const int argc, char* argv[])
             {
                 std::cout << "Echo [" << ret << "][" << addr.String() << "]" << std::endl;
             }
+            buf.Clear();
         }
     }
     catch(const Exception& ex)

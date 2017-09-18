@@ -59,7 +59,7 @@ StreamReader& StreamReader::Attach(StreamBuffer& buf, bool reset)
 }
 
 // Read n bytes
-bool StreamReader::Bytes(void* p, size_t n)
+bool StreamReader::Bytes(void* p, size_t n) const
 {
     if(!_stream) return false;
     if(_stream->Readable() < n) return false;
@@ -68,7 +68,7 @@ bool StreamReader::Bytes(void* p, size_t n)
 
 // Read string
 // includes all readable data
-bool StreamReader::String(std::string& s)
+bool StreamReader::String(std::string& s) const
 {
     if(!_stream) return false;
     size_t n = _stream->Readable();
@@ -78,7 +78,7 @@ bool StreamReader::String(std::string& s)
 
 // Read string 
 // that is n bytes length
-bool StreamReader::String(std::string& s, size_t n)
+bool StreamReader::String(std::string& s, size_t n) const
 {
     if(!_stream) return false;
     if(n > _stream->Readable()) return false;
@@ -90,7 +90,7 @@ bool StreamReader::String(std::string& s, size_t n)
 
 // Read string
 // to delimit char ('\0')
-bool StreamReader::String(std::string& s, const char delim)
+bool StreamReader::String(std::string& s, const char delim) const
 {
     if(!_stream) return false;
     ssize_t n = _stream->Readable(delim);
@@ -101,7 +101,7 @@ bool StreamReader::String(std::string& s, const char delim)
 
 // Read string 
 // to delimit string ('\r\n')
-bool StreamReader::String(std::string& s, const char* delim)
+bool StreamReader::String(std::string& s, const char* delim) const
 {
     if(!_stream) return false;
     if(strlen(delim) > _stream->Readable()) return false;

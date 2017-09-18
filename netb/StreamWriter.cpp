@@ -58,7 +58,7 @@ StreamWriter& StreamWriter::Attach(StreamBuffer& buf, bool clear)
     return *this;
 }
 
-bool StreamWriter::Bytes(const void* p, size_t n)
+bool StreamWriter::Bytes(const void* p, size_t n) const
 {
     if(!_stream) return false;
     return _stream->Write(p, n);
@@ -66,7 +66,7 @@ bool StreamWriter::Bytes(const void* p, size_t n)
 
 // write string
 // all data in the string
-bool StreamWriter::String(const std::string& s)
+bool StreamWriter::String(const std::string& s) const
 {
     if(!_stream) return false;
     return _stream->Write(s.data(), s.length());
@@ -74,7 +74,7 @@ bool StreamWriter::String(const std::string& s)
 
 // append ending null or not
 // append delimit character (e.g. '\0')
-bool StreamWriter::String(const std::string& s, const char delim)
+bool StreamWriter::String(const std::string& s, const char delim) const
 {
     if(!_stream) return false;
     assert(s[s.length()] != delim);
@@ -84,7 +84,7 @@ bool StreamWriter::String(const std::string& s, const char delim)
 
 // write string
 // append delimit string (e.g. "\r\n")
-bool StreamWriter::String(const std::string& s, const char* delim)
+bool StreamWriter::String(const std::string& s, const char* delim) const
 {
     if(!_stream) return false;
     std::string ss = s + delim;

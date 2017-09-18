@@ -41,37 +41,37 @@ public:
     StreamBuffer* Buffer() const { return _stream; }
 
     // write n bytes
-    bool Bytes(const void* p, size_t n);
+    bool Bytes(const void* p, size_t n) const;
 
     // write integer 
     // integer with given type (with indicated length) 
     // Todo: endianess concerns for multi-bytes types 
-    bool Integer(int8_t v);
-    bool Integer(uint8_t v);
-    bool Integer(int16_t v);
-    bool Integer(uint16_t v);
-    bool Integer(int32_t v);
-    bool Integer(uint32_t v);
-    bool Integer(int64_t v);
-    bool Integer(uint64_t v);
+    bool Integer(int8_t v) const;
+    bool Integer(uint8_t v) const;
+    bool Integer(int16_t v) const;
+    bool Integer(uint16_t v) const;
+    bool Integer(int32_t v) const;
+    bool Integer(uint32_t v) const;
+    bool Integer(int64_t v) const;
+    bool Integer(uint64_t v) const;
 
     // write bool, float, double (with default length)
     // Todo: compatible format in memory
-    bool Bool(bool v);
-    bool Float(float v);
-    bool Double(double v);
+    bool Bool(bool v) const;
+    bool Float(float v) const;
+    bool Double(double v) const;
 
     // write string
     // all data in the string
-    bool String(const std::string& s);
+    bool String(const std::string& s) const;
 
     // write string
     // append delimit character (e.g. '\0')
-    bool String(const std::string& s, const char delim);
+    bool String(const std::string& s, const char delim) const;
 
     // write string
     // append delimit string (e.g. "\r\n")
-    bool String(const std::string& s, const char* delim);
+    bool String(const std::string& s, const char* delim) const;
 
 protected:
     StreamBuffer* _stream;

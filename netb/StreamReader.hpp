@@ -41,41 +41,41 @@ public:
     StreamBuffer* Buffer() const { return _stream; }
 
     // Read n bytes
-    bool Bytes(void* p, size_t n);
+    bool Bytes(void* p, size_t n) const;
 
     // Read integer 
     // integer with given type (with indicated length) 
     // Todo: endianess concerns for multi-bytes types 
-    bool Integer(int8_t& v);
-    bool Integer(uint8_t& v);
-    bool Integer(int16_t& v);
-    bool Integer(uint16_t& v);
-    bool Integer(int32_t& v);
-    bool Integer(uint32_t& v);
-    bool Integer(int64_t& v);
-    bool Integer(uint64_t& v);
+    bool Integer(int8_t& v) const;
+    bool Integer(uint8_t& v) const;
+    bool Integer(int16_t& v) const;
+    bool Integer(uint16_t& v) const;
+    bool Integer(int32_t& v) const;
+    bool Integer(uint32_t& v) const;
+    bool Integer(int64_t& v) const;
+    bool Integer(uint64_t& v) const;
 
     // Read bool, float, double
     // Todo: compatible format in memory
-    bool Bool(bool& v);
-    bool Float(float& v);
-    bool Double(double& v);
+    bool Bool(bool& v) const;
+    bool Float(float& v) const;
+    bool Double(double& v)const;
 
     // Read string
     // include all readalbe data 
-    bool String(std::string& s);
+    bool String(std::string& s) const;
     
     // Read string 
     // that is n bytes length
-    bool String(std::string& s, size_t n);
+    bool String(std::string& s, size_t n) const;
 
     // Read string 
     // to delimit character ('\0')
-    bool String(std::string& s, const char delim);
+    bool String(std::string& s, const char delim) const;
 
     // Read string 
     // to delimit string ('\r\n')
-    bool String(std::string& s, const char* delim);
+    bool String(std::string& s, const char* delim) const;
 
 protected:
     StreamBuffer* _stream;

@@ -56,6 +56,7 @@ private:
             std::cout << "[" << s << "]";
         }
         std::cout << std::endl;
+        buf->Flush();
     }
 };
 
