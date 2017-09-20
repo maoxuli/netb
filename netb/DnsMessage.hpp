@@ -209,45 +209,45 @@ private:
 
         }
         
-        void Decode(uint16_t flags)
+        void Decode(uint8_t flags[])
         {
-            uint8_t* p = (uint8_t*)&flags;
-            qr = (p[0] & 0x80) >> 7;
-            opcode = (p[0] & 0x78) >> 3;
-            aa = (p[0] & 0x04) >> 2;
-            tc = (p[0] & 0x02) >> 1;
-            rd = p[0] & 0x01;
-            ra = (p[1] & 0x80) >> 7;
-            z = (p[1] & 0x70) >> 4;
-            rcode = p[1] & 0x0f;
+            qr = (flags[0] & 0x80) >> 7;
+            opcode = (flags[0] & 0x78) >> 3;
+            aa = (flags[0] & 0x04) >> 2;
+            tc = (flags[0] & 0x02) >> 1;
+            rd = flags[0] & 0x01;
+            ra = (flags[1] & 0x80) >> 7;
+            z = (flags[1] & 0x70) >> 4;
+            rcode = flags[1] & 0x0f;
         }
 
-        uint16_t Encode()
+        void Encode(uint8_t flags[])
         {
-            uint16_t flags;
-            uint8_t* p = (uint8_t*)&flags;
-            p[0] = rd | 
-                   (tc << 1) | 
-                   (aa << 2) |
-                   (opcode << 3) |
-                   (qr << 7);
-            p[1] = rcode | 
-                   (z << 4) | 
-                   (ra << 7);
-            return flags;
+            flags[0] = rd | 
+                       (tc << 1) | 
+                       (aa << 2) |
+                       (opcode << 3) |
+                       (qr << 7);
+            flags[1] = rcode | 
+                       (z << 4) | 
+                       (ra << 7);
         }
 
         bool Serialize(const StreamWriter& stream)
         {
-            uint16_t flags = ntohs(Encode());
-            return stream.Integer(flags);
+            uint8_t flags[2];
+            Encode(flags);
+            if(!stream.Integer(flags[0])) return false;
+            if(!stream.Integer(flags[1])) return false;
+            return true;
         }
 
         bool Serialize(const StreamReader& stream)
         {
-            uint16_t flags;
-            if(!stream.Integer(flags)) return false;
-            Decode(htons(flags));
+            uint8_t flags[2];
+            if(!stream.Integer(flags[0])) return false;
+            if(!stream.Integer(flags[1])) return false;
+            Decode(flags);
             return true;
         }
     };
