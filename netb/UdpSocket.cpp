@@ -152,13 +152,13 @@ void UdpSocket::Connect(const SocketAddress& addr)
 // NULL address will remove the assocication
 bool UdpSocket::Connect(const SocketAddress& addr, Error* e) noexcept
 {
-    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
-    {
-        return false;
-    }
     if(!_address.Empty() && !addr.Empty() && addr.Family() != _address.Family())
     {
         SET_LOGIC_ERROR(e, "Mismatched address family.");
+        return false;
+    }
+    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
+    {
         return false;
     }
     return Socket::Connect(addr, e);
@@ -173,6 +173,15 @@ SocketAddress UdpSocket::ConnectedAddress(Error* e) const noexcept
 // Send data to given address, in block mode
 ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress& addr, Error* e) noexcept
 {
+    if(!_address.Empty() && !addr.Empty() && addr.Family() != _address.Family())
+    {
+        SET_LOGIC_ERROR(e, "Mismatched address family.");
+        return false;
+    }
+    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
+    {
+        return false;
+    }
     if(!Socket::Block(true, e)) return -1;
     return Socket::SendTo(p, n, addr, 0, e);
 }
@@ -189,8 +198,17 @@ ssize_t UdpSocket::SendTo(StreamBuffer& buf, const SocketAddress& addr, Error* e
 ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress& addr, int timeout, Error* e) noexcept
 {
     if(timeout < 0) return SendTo(p, n, addr, e);
-    if(Socket::Block(false, e)) return -1;
 
+    if(!_address.Empty() && !addr.Empty() && addr.Family() != _address.Family())
+    {
+        SET_LOGIC_ERROR(e, "Mismatched address family.");
+        return false;
+    }
+    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
+    {
+        return false;
+    }
+    if(Socket::Block(false, e)) return -1;
     if(timeout > 0 && !Socket::WaitForWrite(timeout, e))
     {
         return -1;

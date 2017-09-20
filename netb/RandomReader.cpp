@@ -71,6 +71,73 @@ bool RandomReader::Bytes(size_t offset, void* p, size_t n) const
     return _stream->Peek(_offset + offset, p, n);
 }
 
+// Peek integer at offset position
+// with given integer type (with indicated length)
+bool RandomReader::Integer(size_t offset, int8_t& v) const
+{
+    if(!_stream) return false;
+    return _stream->Peek(offset, &v, sizeof(int8_t));
+}
+
+bool RandomReader::Integer(size_t offset, uint8_t& v) const
+{
+    if(!_stream) return false;
+
+    char b[10];
+    uint8_t n;
+    _stream->Peek(offset, b, sizeof(uint8_t));
+    _stream->Peek(offset, &n, sizeof(uint8_t));
+    return _stream->Peek(offset, &v, sizeof(uint8_t));
+}
+
+bool RandomReader::Integer(size_t offset, int16_t& v) const
+{
+    if(!_stream) return false;
+    uint16_t nv;
+    if(!_stream->Peek(offset, &nv, sizeof(uint16_t))) return false;
+    v = ntohs(nv);
+    return true;
+}
+
+bool RandomReader::Integer(size_t offset, uint16_t& v) const
+{
+    if(!_stream) return false;
+    uint16_t nv;
+    if(!_stream->Peek(offset, &nv, sizeof(uint16_t))) return false;
+    v = ntohs(nv);
+    return true;
+}
+
+bool RandomReader::Integer(size_t offset, int32_t& v) const
+{
+    if(!_stream) return false;
+    uint32_t nv;
+    if(!_stream->Peek(offset, &nv, sizeof(uint32_t))) return false;
+    v = ntohl(nv);
+    return true;
+}
+
+bool RandomReader::Integer(size_t offset, uint32_t& v) const
+{
+    if(!_stream) return false;
+    uint32_t nv;
+    if(!_stream->Peek(offset, &nv, sizeof(uint32_t))) return false;
+    v = ntohl(nv);
+    return true;
+}
+
+bool RandomReader::Integer(size_t offset, int64_t& v) const
+{
+    assert(false);
+    return false;
+}
+
+bool RandomReader::Integer(size_t offset, uint64_t& v) const
+{
+    assert(false);
+    return false;
+}
+
 // Peek string
 // to ending null or include all readable data
 bool RandomReader::String(size_t offset, std::string& s) const

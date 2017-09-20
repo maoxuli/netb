@@ -10,4 +10,7 @@ Examples of UDP server and UDP client working in block or non-block mode. Good i
 Examples of echo server and echo client working in asynchronous I/O mode. Good illustrations of using AsyncTcpAcceptor, AsyncTcpSocket, and AsyncUdpSocket, as well as the asynchronous facility including EventLoop and EventLoopThread. 
 
 - http  
-Examples of HTTP server and HTTP client. Good illustrations of using StreamBuffer and the tool classes of StreamWrirter, StreamReader, and StreamPeeker in message packging and unpackaging.  
+Examples of HTTP server and HTTP client. Good illustrations of using StreamBuffer and the tool classes of StreamWrirter, StreamReader, and RandomReader in message packging and unpackaging.  
+
+- dns  
+Examples of DNS resolver. Good illustrations of using StreamBuffer and the tool classes of StreamWriter, StreamReader, and RandomWriter, RandomReader in message packing and unpacking.  

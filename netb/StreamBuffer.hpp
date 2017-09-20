@@ -111,6 +111,10 @@ public:
     {
         if(n > _wpos - _opos) return -1;
         _opos += n;
+        if(_opos == _wpos)
+        {
+            _wpos = _rpos = _opos = 0;
+        }
         return _wpos - _opos;
     }
 
@@ -125,6 +129,19 @@ public:
             _wpos = _rpos = _opos = 0;
         }
         return _wpos - _opos;
+    }
+
+    // Dump for debug
+    void Dump() const 
+    {
+        std::cout << "opos:" << _opos << "\n";
+        std::cout << "rpos:" << _rpos << "\n";
+        std::cout << "wpos:" << _wpos << "\n";
+        for(int i = _opos; i < _wpos; i++)
+        {
+            std::cout << i << ":" << (int)(*(Begin() + i)) << " ";
+        }
+        std::cout << std::endl;
     }
 
     // Sequential writing is the basic feature of a data buffer. 
@@ -156,35 +173,42 @@ public:
 
     // return the memory pointer of writable space 
     // may be used for external writing of data into the buffer
-    const void* Write() const
+    // return also current relative position indicated by offset
+    const void* Write(size_t* offset = 0) const
     {
+        if(offset) *offset = _wpos;
         return Begin() + _wpos;
     }
 
     // return the memory pointer of writable space
     // may be used for external writing of data into the buffer
-    void* Write()
+    // return also current relative position indicated by offset
+    void* Write(size_t* offset = 0)
     {
+        if(offset) *offset = _wpos;
         return Begin() + _wpos;
     }
 
     // virtually write, move the write position forward
     // usually used after external writing to adjust write position
-    bool Write(size_t n)
+    // return also current relative position indicated by offset
+    bool Write(size_t n, size_t* offset = 0)
     {
         if(_wpos + n > _bytes.size()) return false;
+        if(offset) *offset = _wpos;
         _wpos += n;
         return true;
     }
 
     // actually write data into buffer
     // copy data into the buffer and move write position forward
-    bool Write(const void* p, size_t n);
+    // return also current relative position indicated by offset
+    bool Write(const void* p, size_t n, size_t* offset = 0);
 
     // actually write data into buffer
     // append a delimit char or string as the boundary of the data
-    bool Write(const void* p, size_t n, const char delim); 
-    bool Write(const void* p, size_t n, const char* delim);
+    bool Write(const void* p, size_t n, const char delim, size_t* offset = 0); 
+    bool Write(const void* p, size_t n, const char* delim, size_t* offset = 0);
 
     // Sequential reading is an usual way to access data in the buffer. 
     // the accessible data is the range between _opos position and _wpos 
@@ -213,37 +237,34 @@ public:
 
     // return the memory pointer of current sequential reading position
     // may be used for external sequential reading data from the buffer
-    const void* Read() const
+    // return also current relative position indicated by offset
+    const void* Read(size_t* offset = 0) const
     {
+        if(offset) *offset = _rpos;
         return Begin() + _rpos;
     }
 
     // return the memory pointer of current sequential reading position
     // may be used for external sequential reading data from the buffer
-    void* Read() 
+    void* Read(size_t* offset = 0) 
     {
+        if(offset) *offset = _rpos;
         return Begin() + _rpos;
     }
 
     // virtual sequentila reading, move read position forward
     // usually used after external sequential reading
-    bool Read(size_t n)
+    bool Read(size_t n, size_t* offset = 0)
     {
         if(_rpos + n > _wpos) return false;
+        if(offset) *offset = _rpos;
         _rpos += n;
         return true;
     }
 
     // actual seqential reading data from buffer
     // copy data from the buffer and move read position forward
-    bool Read(void* p, size_t n);
-
-    // reset the sequential reading position to the first byte of accessible data
-    // so the sequential reading will start over 
-    void Reset()
-    {
-        _rpos = _opos;
-    }
+    bool Read(void* p, size_t n, size_t* offset = 0);
 
     // Sometimes the data in buffer is not used sequentially so the sequential 
     // reading is not enough for access of buffer data. Random access is reading or 
@@ -276,13 +297,13 @@ public:
     const void* Peek(size_t offset = 0) const
     {
         if(offset > _wpos - _opos) return 0;
-        return Begin() + _opos + - offset;
+        return Begin() + _opos + offset;
     }
 
     void* Peek(size_t offset = 0)
     {
         if(offset > _wpos - _opos) return 0;
-        return Begin() + _opos + - offset;
+        return Begin() + _opos + offset;
     }
 
     // Peek the peekable data at offset position 

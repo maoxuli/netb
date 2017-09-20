@@ -41,7 +41,9 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/StreamWriter.hpp \
 	   $(INCDIR)/RandomReader.hpp \
 	   $(INCDIR)/RandomWriter.hpp \
-	   $(INCDIR)/HttpMessage.hpp 
+	   $(INCDIR)/HttpMessage.hpp \
+	   $(INCDIR)/DnsRecord.hpp \
+	   $(INCDIR)/DnsMessage.hpp
 	  
 OBJ	:= $(OBJDIR)/ErrorCode.o \
 	   $(OBJDIR)/Error.o \
@@ -66,7 +68,9 @@ OBJ	:= $(OBJDIR)/ErrorCode.o \
 	   $(OBJDIR)/StreamWriter.o \
 	   $(OBJDIR)/RandomReader.o \
 	   $(OBJDIR)/RandomWriter.o \
-	   $(OBJDIR)/HttpMessage.o
+	   $(OBJDIR)/HttpMessage.o \
+	   $(OBJDIR)/DnsRecord.o \
+	   $(OBJDIR)/DnsMessage.o
 
 all: $(LIBDIR)/$(OUT)
 
@@ -76,9 +80,9 @@ $(LIBDIR)/$(OUT): $(OBJ)
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(INC)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
-.PHONY: examples tcp udp echo http clean cleanall
+.PHONY: examples tcp udp echo http dns clean cleanall
 
-examples: tcp udp echo http 
+examples: tcp udp echo http dns
 
 tcp:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcps1 examples/tcp/TcpServer1.cpp 
@@ -108,9 +112,12 @@ echo:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echos4 examples/echo/EchoServer4.cpp 
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoc4 examples/echo/EchoClient4.cpp 
 
-http:
+#http:
 #	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/https examples/http/HttpServer.cpp 
 #	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/httpc examples/http/HttpClient.cpp 
+
+dns:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/dnsr examples/dns/DnsResolver.cpp 
 	
 clean:
 	rm -f $(OBJDIR)/*.o
@@ -122,3 +129,4 @@ cleanall: clean
 	rm -f $(BINDIR)/udp*
 	rm -f $(BINDIR)/echo*
 	rm -f $(BINDIR)/http*
+	rm -f $(BINDIR)/dns*

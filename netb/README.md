@@ -12,16 +12,6 @@ NetB supports error handling either with or without exceptions. It defined an er
 - Exception  
 - ErrorCode  
 
-## Asynchronous I/O facility  
-
-Socket multiplexing and multi-threading is the major way to implement asynchronous I/O. NetB introduced the callback style asynchronous I/O interface, which is driven by internal socket multiplexing and multi-threading. The implementation is in classes listed below: 
-
-- EventSelector  
-- EventHandler  
-- SocketPipe  
-- EventLoop  
-- EventLoopThread  
-
 ## A very thin wrapper of socket API  
 
 In some cases, a thin wrapper of socket API that supports cross-platform has been enough. The files below include the wrappers of socket descriptor and associated operations, socket multiplexing, and socket address.  
@@ -36,6 +26,16 @@ In some cases, a thin wrapper of socket API that supports cross-platform has bee
 - TcpSocket  
 - UdpSocket  
 
+## Asynchronous I/O facility  
+
+Socket multiplexing and multi-threading is the major way to implement asynchronous I/O. NetB introduced the callback style asynchronous I/O interface, which is driven by internal socket multiplexing and multi-threading. The implementation is in classes listed below: 
+
+- EventSelector  
+- EventHandler  
+- SocketPipe  
+- EventLoop  
+- EventLoopThread  
+
 ## Asynchronous Socket I/O  
 
 - AsyncTcpAcceptor  
@@ -47,4 +47,11 @@ In some cases, a thin wrapper of socket API that supports cross-platform has bee
 - StreamBuffer  
 - StreamWriter  
 - StreamReader  
-- StreamPeeker  
+- RandomWriter
+- RandomReader  
+
+## Application layer protocol supports
+
+- HttpMessage  
+- DnsRecord  
+- DnsMessage  

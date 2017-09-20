@@ -6,3 +6,4 @@ bin/tcp*
 bin/udp*
 bin/echo*
 bin/http*
+bin/dns*

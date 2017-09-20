@@ -71,6 +71,60 @@ bool RandomWriter::Bytes(size_t offset, const void* p, size_t n) const
     return _stream->Update(_offset + offset, p, n);
 }
 
+// Update at offset position
+// integer number with given type (with indicated length) 
+bool RandomWriter::Integer(size_t offset, int8_t v) const
+{
+    if(!_stream) return false;
+    return _stream->Update(offset, &v, sizeof(int8_t));
+}
+
+bool RandomWriter::Integer(size_t offset, uint8_t v) const
+{
+    if(!_stream) return false;
+    return _stream->Update(offset, &v, sizeof(uint8_t));
+}
+
+bool RandomWriter::Integer(size_t offset, int16_t v) const
+{
+    if(!_stream) return false;
+    uint16_t nv = htons(*reinterpret_cast<uint16_t*>(&v));
+    return _stream->Update(offset, &nv, sizeof(uint16_t));
+}
+
+bool RandomWriter::Integer(size_t offset, uint16_t v) const
+{
+    if(!_stream) return false;
+    uint16_t nv = htons(v);
+    return _stream->Update(offset, &nv, sizeof(uint16_t));
+}
+
+bool RandomWriter::Integer(size_t offset, int32_t v) const
+{
+    if(!_stream) return false;
+    uint32_t nv = htonl(*reinterpret_cast<uint32_t*>(&v));
+    return _stream->Update(offset, &nv, sizeof(uint32_t));
+}
+
+bool RandomWriter::Integer(size_t offset, uint32_t v) const
+{
+    if(!_stream) return false;
+    uint32_t nv = htonl(v);
+    return _stream->Update(offset, &nv, sizeof(uint32_t));
+}
+
+bool RandomWriter::Integer(size_t offset, int64_t v) const
+{
+    assert(false);
+    return false;
+}
+
+bool RandomWriter::Integer(size_t offset, uint64_t v) const
+{
+    assert(false);
+    return false;
+}
+
 // Write string at offset position
 // include all data in string
 bool RandomWriter::String(size_t offset, const std::string& s) const
@@ -85,7 +139,7 @@ bool RandomWriter::String(size_t offset, const std::string& s) const
 bool RandomWriter::String(size_t offset, const std::string& s, const char delim) const
 {
     if(!_stream) return false;
-    assert(s[s.length()] != delim);
+    assert(s[s.length() - 1] != delim);
     std::string ss = s + delim;
     if(_offset + offset + ss.length()  > _stream->Peekable()) return false;
     return _stream->Update(_offset + offset, ss.data(), ss.length());

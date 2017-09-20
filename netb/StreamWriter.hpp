@@ -41,37 +41,37 @@ public:
     StreamBuffer* Buffer() const { return _stream; }
 
     // write n bytes
-    bool Bytes(const void* p, size_t n) const;
+    bool Bytes(const void* p, size_t n, size_t* offset = 0) const;
 
     // write integer 
     // integer with given type (with indicated length) 
     // Todo: endianess concerns for multi-bytes types 
-    bool Integer(int8_t v) const;
-    bool Integer(uint8_t v) const;
-    bool Integer(int16_t v) const;
-    bool Integer(uint16_t v) const;
-    bool Integer(int32_t v) const;
-    bool Integer(uint32_t v) const;
-    bool Integer(int64_t v) const;
-    bool Integer(uint64_t v) const;
+    bool Integer(int8_t v, size_t* offset = 0) const;
+    bool Integer(uint8_t v, size_t* offset = 0) const;
+    bool Integer(int16_t v, size_t* offset = 0) const;
+    bool Integer(uint16_t v, size_t* offset = 0) const;
+    bool Integer(int32_t v, size_t* offset = 0) const;
+    bool Integer(uint32_t v, size_t* offset = 0) const;
+    bool Integer(int64_t v, size_t* offset = 0) const;
+    bool Integer(uint64_t v, size_t* offset = 0) const;
 
     // write bool, float, double (with default length)
     // Todo: compatible format in memory
-    bool Bool(bool v) const;
-    bool Float(float v) const;
-    bool Double(double v) const;
+    bool Bool(bool v, size_t* offset = 0) const;
+    bool Float(float v, size_t* offset = 0) const;
+    bool Double(double v, size_t* offset = 0) const;
 
     // write string
     // all data in the string
-    bool String(const std::string& s) const;
+    bool String(const std::string& s, size_t* offset = 0) const;
 
     // write string
     // append delimit character (e.g. '\0')
-    bool String(const std::string& s, const char delim) const;
+    bool String(const std::string& s, const char delim, size_t* offset = 0) const;
 
     // write string
     // append delimit string (e.g. "\r\n")
-    bool String(const std::string& s, const char* delim) const;
+    bool String(const std::string& s, const char* delim, size_t* offset = 0) const;
 
 protected:
     StreamBuffer* _stream;

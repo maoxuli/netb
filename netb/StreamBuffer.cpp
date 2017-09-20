@@ -83,27 +83,27 @@ StreamBuffer& StreamBuffer::operator=(const StreamBuffer& b)
 }
 
 // Actually write, copy data into the buffer and move write position forward
-bool StreamBuffer::Write(const void* p, size_t n)
+bool StreamBuffer::Write(const void* p, size_t n, size_t* offset)
 {
     if(!Writable(n)) return false;
     memcpy(Write(), p, n);
-    return Write(n);
+    return Write(n, offset);
 }
 
 // Actually write, copy data into the buffer and move write position forward
 // Append a delimit char
 // Todo: recover from errors
-bool StreamBuffer::Write(const void* p, size_t n, const char delim)
+bool StreamBuffer::Write(const void* p, size_t n, const char delim, size_t* offset)
 {
-    return Write(p, n) && Write(&delim, sizeof(delim));
+    return Write(p, n, offset) && Write(&delim, sizeof(delim));
 }
 
 // Actually write, copy data into the buffer and move write position forward
 // Append a delimit string
 // Todo: recover from errors
-bool StreamBuffer::Write(const void* p, size_t n, const char* delim)
+bool StreamBuffer::Write(const void* p, size_t n, const char* delim, size_t* offset)
 {
-    return Write(p, n) && Write(delim, strlen(delim));
+    return Write(p, n, offset) && Write(delim, strlen(delim));
 }
 
 // return the length of accessible data 
@@ -131,11 +131,11 @@ ssize_t StreamBuffer::Readable(const char* delim) const
 }
 
 // Actually read, copy data from the buffer and move read position forward
-bool StreamBuffer::Read(void* p, size_t n)
+bool StreamBuffer::Read(void* p, size_t n, size_t* offset)
 {
     if(Readable() < n) return false;
     memcpy(p, Read(), n);
-    return Read(n);
+    return Read(n, offset);
 }
 
 // return the length of peekable data with offset and before the delimit character

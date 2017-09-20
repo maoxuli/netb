@@ -31,12 +31,12 @@ class StreamReader : private Uncopyable
 {
 public:
     StreamReader();
-    explicit StreamReader(StreamBuffer* buf, bool reset = false);
-    explicit StreamReader(StreamBuffer& buf, bool reset = false); 
+    explicit StreamReader(StreamBuffer* buf, bool flush = false);
+    explicit StreamReader(StreamBuffer& buf, bool flush = false); 
     virtual ~StreamReader();
 
-    StreamReader& Attach(StreamBuffer* buf, bool reset = false);
-    StreamReader& Attach(StreamBuffer& buf, bool reset = false);
+    StreamReader& Attach(StreamBuffer* buf, bool flush = false);
+    StreamReader& Attach(StreamBuffer& buf, bool flush = false);
 
     StreamBuffer* Buffer() const { return _stream; }
 
@@ -79,6 +79,7 @@ public:
 
 protected:
     StreamBuffer* _stream;
+    bool _flush;
 };
 
 NETB_END

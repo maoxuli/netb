@@ -16,7 +16,7 @@
  */
 
 #include "AsyncUdpSocket.hpp"
-#include "StreamReader.hpp"
+#include "RandomReader.hpp"
 
 NETB_BEGIN
 
@@ -40,12 +40,11 @@ private:
         assert(addr);
         std::cout << "Received [" << addr->String() << "]["<< buf->Readable() << "]";
         std::string s;
-        if(StreamReader(buf).String(s))
+        if(RandomReader(buf).String(0, s))
         {
             std::cout << "[" << s << "]";
         }
         std::cout << std::endl;
-        buf->Reset();
         sock->SendTo(buf, addr);
         buf->Flush();
     }
