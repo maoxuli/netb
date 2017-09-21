@@ -6,15 +6,16 @@ File names, class names, and function names (including member functions of class
 
 ## Error handling 
 
-NetB supports error handling either with or without exceptions. It defined an error object used with return values to catch details of error status. The two error handling methods may be used separately or mixed. The foundamental implementation is in classes listed below:  
+NetB supports error handling either with or without exceptions. It introduced an error object used together with return values to catch details of error status, providing the same power of error handing as the exceptions. The two error handling styles may be mixed and switched at any points. The foundamental implementation is in classes listed below:  
 
 - Error
-- Exception  
+- ErrorClass (and sub-classes)
+- Exception (and sub-classes)
 - ErrorCode  
 
 ## A very thin wrapper of socket API  
 
-In some cases, a thin wrapper of socket API that supports cross-platform has been enough. The files below include the wrappers of socket descriptor and associated operations, socket multiplexing, and socket address.  
+In some cases, a thin wrapper of socket API that only for the purpose of cross-platform has been enough. The files below include simple C++ wrappers of socket descriptor and associated operations, socket address, and socket multiplexing. They may work independently or coorperatively.    
 
 - Socket  
 - SocketSelector  
@@ -26,23 +27,22 @@ In some cases, a thin wrapper of socket API that supports cross-platform has bee
 - TcpSocket  
 - UdpSocket  
 
-## Asynchronous I/O facility  
+## Event-driven notifications  
 
-Socket multiplexing and multi-threading is the major way to implement asynchronous I/O. NetB introduced the callback style asynchronous I/O interface, which is driven by internal socket multiplexing and multi-threading. The implementation is in classes listed below: 
+Socket multiplexing with event-driven notifications is the major way to implement asynchronous I/O. NetB introduced the callback style asynchronous I/O interface, which is driven by internal socket ready events.  The model is an event handler per socket, and an event loop per thread. The implementation is in classes listed below: 
 
-- EventSelector  
-- EventHandler  
-- SocketPipe  
-- EventLoop  
+- EventHandler 
+- EventSelector 
+- EventLoop    
 - EventLoopThread  
 
-## Asynchronous Socket I/O  
+## Asynchronous Socket I/O   
 
 - AsyncTcpAcceptor  
 - AsyncTcpSocket  
 - AsyncUdpSocket 
 
-## I/O buffer and message packaging  
+## I/O buffer and protocol message serialization    
 
 - StreamBuffer  
 - StreamWriter  
@@ -50,8 +50,10 @@ Socket multiplexing and multi-threading is the major way to implement asynchrono
 - RandomWriter
 - RandomReader  
 
-## Application layer protocol supports
+## Application layer protocols
 
 - HttpMessage  
 - DnsRecord  
 - DnsMessage  
+- StunMessage  
+- RtspMessage  
