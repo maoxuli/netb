@@ -22,6 +22,8 @@ A necessary function of network programming is to transfer protocol message over
 
 NetB did not implement application frameworks for network protcols as usual. It only implemented some wrappers of protocol messages and messaging flows. Tha fact is the application frameworks using network protocols are always various dramatically, with the only unchanged protocol message formats and messaging flows. NetB provides essential support of impotant application protcols, such as HTTP, DNS, and STUN, to make it easy enough to assemble any kind of network applications.  
 
+Again NetB is not a software framework, it oncly consists of the components useful for assembling network applictions. For more details, please refer to the README files, both in "netb" folder and "examples" folder.  
+
 ## Build NetB
 
 NetB is currently in dense development and the supporting platforms will include Linux, FreeBSD, Mac OSX, Solaris,and Windows. While to date, the major work of development is on Mac OSX EI Capitan. The pre-release version on Mac OSX and Linux should be completed recently. Please follow our updates. 
@@ -46,9 +48,9 @@ Build all NetB examples with:
 make examples
 ```
 
-Build examples in "examples/echo" folder with:  
+Build examples in "examples/http" folder with:  
 ```shell
-make echo 
+make http  
 ```
 
 3. Clean  
