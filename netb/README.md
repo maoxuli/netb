@@ -29,10 +29,9 @@ In some cases, a thin wrapper of socket API that only for the purpose of cross-p
 
 ## Event-driven notifications  
 
-Socket multiplexing with event-driven notifications is the major way to implement asynchronous I/O. NetB introduced the callback style asynchronous I/O interface, which is driven by internal socket ready events.  The model is an event handler per socket, and an event loop per thread. The implementation is in classes listed below: 
+I/O demultiplexing with event-driven notifications is the major way to implement asynchronous I/O. NetB introduced the callback style asynchronous I/O interface, which is driven by internal socket ready events.  The model is an event handler per socket, and an event loop per thread. The implementation is in classes listed below: 
 
 - EventHandler 
-- EventSelector 
 - EventLoop    
 - EventLoopThread  
 
