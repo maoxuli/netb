@@ -31,7 +31,6 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/UdpSocket.hpp \
 	   $(INCDIR)/SocketPipe.hpp \
 	   $(INCDIR)/EventHandler.hpp \
-	   $(INCDIR)/EventSelector.hpp \
 	   $(INCDIR)/EventLoop.hpp \
 	   $(INCDIR)/EventLoopThread.hpp \
 	   $(INCDIR)/AsyncTcpAcceptor.hpp \
@@ -58,7 +57,6 @@ OBJ	:= $(OBJDIR)/ErrorCode.o \
 	   $(OBJDIR)/UdpSocket.o \
 	   $(OBJDIR)/SocketPipe.o \
 	   $(OBJDIR)/EventHandler.o \
-	   $(OBJDIR)/EventSelector.o \
 	   $(OBJDIR)/EventLoop.o \
 	   $(OBJDIR)/EventLoopThread.o \
 	   $(OBJDIR)/AsyncTcpAcceptor.o \

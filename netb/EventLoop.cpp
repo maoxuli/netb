@@ -48,16 +48,15 @@ void EventLoop::Run()
     while(!_stop)
     {
         // Block to wait for active events
-        _active_handlers.clear();
-        if(_selector.WaitForEvents(_active_handlers, -1) > 0) 
+        std::vector<struct SocketSelector::SocketEvents> sockets;
+        if(_selector.Select(sockets, -1, nullptr) > 0) // ignore errors
         {
-            // Events handling
             _event_handling = true;
-            for(std::vector<EventHandler*>::const_iterator it = _active_handlers.begin();
-                it != _active_handlers.end(); ++it)
+            for(auto it = sockets.begin(), end = sockets.end(); it != end; ++it)
             {
-                _current_handler = *it;
-                _current_handler->HandleEvents();
+                _current_handler = _handlers[it->fd];
+                assert(_current_handler);
+                _current_handler->HandleEvents(it->events);
             }
             _current_handler = nullptr;
             _event_handling = false;
@@ -88,26 +87,58 @@ void EventLoop::Stop()
     }
 }
 
-// Setup and remove a handler that handle some events
-// Actually update the socket list and associcated events
-void EventLoop::SetupHandler(EventHandler* handler)
+// Register a handler that interested in some events
+// update the handlers list
+bool EventLoop::RegisterHandler(EventHandler* handler, int events)
 {
     AssertInLoopThread();
-    _selector.SetupHandler(handler);
+    auto it = _handlers.begin();
+    for(; it != _handlers.end(); ++it)
+    {
+        if(*it == handler) break;
+    }
+    if(it == _handlers.end()) // not found
+    {
+        _handlers.push_back(handler);
+    }
+    return _selector.Set(handler->GetSocket(), events);
 }
 
-// Setup and remove a handler that handle some events
-// Actually update the socket list and associcated events
-void EventLoop::RemoveHandler(EventHandler* handler)
+// Update a handler that interested in some events
+// update socket's events
+bool EventLoop::UpdateHandler(EventHandler* handler, int events)
 {
     AssertInLoopThread();
-    if(_event_handling)
+    auto it = _handlers.begin();
+    for(; it != _handlers.end(); ++it)
     {
-        assert(_current_handler == handler // self
-               || std::find(_active_handlers.begin(), _active_handlers.end(),
-                handler) == _active_handlers.end()); // Not active handler
+        if(*it == handler) break;
     }
-    _selector.RemoveHandler(handler);
+    if(it == _handlers.end()) // not found
+    {
+        return false;
+    }
+    return _selector.Set(handler->GetSocket(), events);
+}
+
+// Remove a handler
+bool EventLoop::RemoveHandler(EventHandler* handler)
+{
+    assert(!_event_handling);
+    auto it = _handlers.begin();
+    while(it != _handlers.end())
+    {
+        if(*it == handler) // found
+        {
+            it = _handlers.erase(it);
+            _selector.Remove(handler->GetSocket());
+        }
+        else
+        {
+            ++it;
+        }
+    }
+    return true;
 }
 
 // Set a function that will be invoked in the loop

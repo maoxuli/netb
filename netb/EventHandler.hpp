@@ -24,10 +24,15 @@
 NETB_BEGIN
 
 //
-// Event handler is a bridge between a socket and a event loop.
+// Event handler is a bridge between a socket and event dispacher.
 // It register interested socket and associated events to event loop, 
 // and call back to handle read or write on the socket when event 
-// loop detect active events.
+// loop detect ready events.
+// 
+// The event handler is designed to interact with event loop.
+// Event loop suppose event handler alway working in the own thread, 
+// but event handler may be accessed by other threads. so the 
+// interface of event handler should be thread safe. 
 //
 class EventLoop;
 class EventHandler
@@ -37,62 +42,69 @@ public:
     EventHandler(EventLoop* loop, SOCKET s);
     ~EventHandler();
 
-    // Callback for events
+    // Callback for ready events
     typedef std::function<void(SOCKET)> EventCallback;
 
+    // Set callback for read ready event
     void SetReadCallback(const EventCallback& cb)
     {
         _read_callback = cb; 
     }
     
+    // Set callback for wirte ready event
     void SetWriteCallback(const EventCallback& cb)
     { 
         _write_callback = cb; 
     }
     
-    // Register interested events 
-    void EnableReading();
+    // Reading event
+    bool EnableReading(); 
     void DisableReading();
     
-    void EnableWriting();
+     // Writing event
+    bool EnableWriting();
     void DisableWriting();
     
     // Isolate this handler from event loop
     // Block until done
-    // This make sure cut the callback from event loop before deleting
-    void Detach();
+    // This make sure cut the callback from event loop
+    // Only called once before deleting
+    bool Detach(); 
 
 private:
-    // EventLoop
-    // Works as a event dispatcher
+    // Event dispatcher
     EventLoop* _loop;
     
-    // SOCKET
+    // Bound SOCKET
     SOCKET _socket;
 
+    // For event dispatcher
     SOCKET GetSocket() const { return _socket; }
+
+    // Callback from event loop
+    void AttachInLoop();
     
     // Events interested
     int _events;
     mutable std::mutex _events_mutex;
 
-    void Update();
+    // Update to event dispatcher
+    bool Update();
     void UpdateInLoop();
-    int GetEvents() const;
 
-    // Active events to handle
-    int _active_events;
-    void SetActiveEvents(int events) { _active_events |= events; };
-    void HandleEvents();
+    // Callback from event dispatcher 
+    void HandleEvents(int events);
 
+    // Detached from event dispatcher
+    // before deleting
     bool _detached;
     std::mutex _detach_mutex;
     std::condition_variable _detach_cond;
     
+    // Callback from event loop
     void DetachInLoop();
 
-    // Open access to EventHandler and EventLoop 
-    friend class EventSelector;
+    // Open access to EventLoop 
     friend class EventLoop;
 
     // Callback of events

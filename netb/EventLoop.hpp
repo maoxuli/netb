@@ -19,8 +19,8 @@
 #define NETB_EVENT_LOOP_HPP
 
 #include "Uncopyable.hpp"
-#include "EventSelector.hpp"
 #include "EventHandler.hpp"
+#include "SocketSelector.hpp"
 #include "SocketPipe.hpp"
 #include <thread>
 #include <mutex>
@@ -30,10 +30,17 @@
 NETB_BEGIN
 
 //
-// Event driven thread loop, one loop per thread
-// The purpose of an event loop is to keep your thread busy when there is work to do
-// and put your thread to sleep when there is none.
-//
+// Event loop is the event dispacher of reactor design pattern. 
+// It provides interface to register event handlers and interested 
+// events, and dispatch the ready events captured by internal I/O
+// events demultiplexer to associated event handlers. 
+// 
+// This is a simplified event loop only supoorts socket I/O ready 
+// notification by registering event handlers and dispaching ready 
+// events to the handlers. It also supports function running 
+// notification by setting a general function object as callback.  
+// Timer notification is not supported in this implementation. 
+// 
 class EventHandler;
 class EventLoop : private Uncopyable
 {
@@ -49,13 +56,18 @@ public:
     // Sould be thread safe
     void Stop();
     
-    // Setup and remove a handler that handle some events
-    // First will update the interested socket list and associcated events
-    // Later will set active events and hanle events with this handler, 
-    // so it is a pointer or reference, not const
-    // Must be called in loop thread
-    void SetupHandler(EventHandler* handler);
-    void RemoveHandler(EventHandler* handler);
+    // Register a handler with interested events
+    // Must called in loop thread
+    bool RegisterHandler(EventHandler* handler, int events = 0);
+
+    // Update a handler with interested events
+    // Return false if the handler has not been registered
+    // Must called in loop thread
+    bool UpdateHandler(EventHandler* handler, int events = 0);
+
+    // Remote a registered handler
+    // Must called in loop thread
+    bool RemoveHandler(EventHandler* handler);
 
     // Function that can be invoked by the loop
     typedef std::function<void()> Functor;
@@ -68,12 +80,6 @@ public:
     // Set a function that will be invoked in the loop later
     // Append to the waiting list
     void InvokeLater(const Functor& f);
-
-    // Set a function that will be invoked after a given delay (seconds)
-    void InvokeAfter(const Functor& f, int delay);
-
-    // Set a function that will be invoked every given interval (seconds)
-    void InvokeEvery(const Functor& f, int interval);
     
     // Check in owner thread
     // thread safe ?
@@ -96,11 +102,10 @@ private:
     // Todo: using atomic type for thread safe
     bool _stop;
     
-    // EventSelector is a internal object to manage interested sockets 
-    // and associated events, as well generate the active list.
-    // Event setting and handling are always done in the loop 
-    EventSelector _selector;
-    std::vector<EventHandler*> _active_handlers;
+    // Events demultiplexing and dispaching
+    // Todo: using a cross-list to manage the handlers
+    SocketSelector _selector;
+    std::vector<EventHandler*> _handlers;
     EventHandler* _current_handler;
     bool _event_handling; // only used in loop
 
@@ -110,8 +115,6 @@ private:
     std::vector<const Functor> _queue;
     std::mutex _queue_mutex;
     bool _queue_invoking; // only used in loop
-
-    // Todo: timer and timingly running functions
 
 private:
     // Wake up from sleeping

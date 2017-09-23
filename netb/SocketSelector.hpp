@@ -38,7 +38,7 @@ public:
     {
         SocketEvents(SOCKET s, unsigned int ev) 
         : fd(s), events(ev) { }
-        const SOCKET fd;
+        SOCKET fd;
         int events;
     };
 
@@ -49,9 +49,9 @@ public:
     SocketSelector(const fd_set* read, const fd_set* write, const fd_set* except) noexcept;
     virtual ~SocketSelector() noexcept;
 
-    // Setup interested socket and events
+    // Set interested socket and events
     // May result in adding or removing socket and event
-    void SetupEvents(SOCKET s, int events) noexcept;
+    bool Set(SOCKET s, int events, Error* e = nullptr) noexcept;
     
     // Remove a socket and its associcated events
     void Remove(SOCKET s) noexcept;
@@ -60,7 +60,7 @@ public:
     // timeout in miliseconds, -1 for block
     // return -1 on errors
     // return number of active sockets, 0 indicates timeout
-    void Select(std::vector<SocketEvents>& sockets, int timeout = -1); // throw on errors
+    int Select(std::vector<SocketEvents>& sockets, int timeout = -1); // throw on errors
     int Select(std::vector<SocketEvents>& sockets, int timeout, Error* e) noexcept;
     
 private:

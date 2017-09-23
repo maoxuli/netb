@@ -32,15 +32,13 @@ SocketSelector::SocketSelector(SOCKET s, int events) noexcept
     FD_ZERO(&_read_set);
     FD_ZERO(&_write_set);
     FD_ZERO(&_except_set);
-
-    SetupEvents(s, events);
+    Set(s, events);
 }
 SocketSelector::SocketSelector(const std::vector<SocketEvents>& sockets) noexcept
 {
     FD_ZERO(&_read_set);
     FD_ZERO(&_write_set);
     FD_ZERO(&_except_set);
-
     assert(false);
 }
 
@@ -62,9 +60,9 @@ SocketSelector::~SocketSelector() noexcept
 
 // Setup interested socket and events
 // May result in adding or removing socket and events
-void SocketSelector::SetupEvents(SOCKET s, int events) noexcept
+bool SocketSelector::Set(SOCKET s, int events, Error* e) noexcept 
 {    
-    if(events == SOCKET_EVENT_NONE)
+    if(events == 0)
     {
         Remove(s);
     }
@@ -80,7 +78,6 @@ void SocketSelector::SetupEvents(SOCKET s, int events) noexcept
             _sockets.push_back(s);
             std::make_heap(_sockets.begin(), _sockets.end());
         }
-
         if(events & SOCKET_EVENT_READ)
         {
             FD_SET(s, &_read_set);
@@ -89,7 +86,6 @@ void SocketSelector::SetupEvents(SOCKET s, int events) noexcept
         {
             FD_CLR(s, &_read_set);
         }
-
         if(events & SOCKET_EVENT_WRITE)
         {
             FD_SET(s, &_write_set);
@@ -98,7 +94,6 @@ void SocketSelector::SetupEvents(SOCKET s, int events) noexcept
         {
             FD_CLR(s, &_write_set);
         }
-
         if(events & SOCKET_EVENT_EXCEPT)
         {
             FD_SET(s, &_except_set);
@@ -108,6 +103,7 @@ void SocketSelector::SetupEvents(SOCKET s, int events) noexcept
             FD_CLR(s, &_except_set);
         }
     }
+    return true;
 }
 
 // Remove a socket and its associated events
@@ -119,10 +115,10 @@ void SocketSelector::Remove(SOCKET s) noexcept
         if(*it == s)
         {
             _sockets.erase(it);
+            std::make_heap(_sockets.begin(), _sockets.end());
             break;
         }
     }
-    std::make_heap(_sockets.begin(), _sockets.end());
     FD_CLR(s, &_read_set);
     FD_CLR(s, &_write_set);
     FD_CLR(s, &_except_set);
@@ -130,13 +126,15 @@ void SocketSelector::Remove(SOCKET s) noexcept
 
 // Select sockets with active events
 // timeout in miliseconds, -1 for block
-void SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout)
+int SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout)
 {
    Error e;
-   if(!Select(sockets, timeout, &e))
+   int ret;
+   if((ret = Select(sockets, timeout, &e)) < 0)
    {
        THROW_ERROR(e);
    }
+   return ret;
 }
 
 // Select sockets with active events
@@ -150,7 +148,6 @@ int SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Erro
         FD_COPY(&_read_set, &_active_read_set);
         FD_COPY(&_write_set, &_active_write_set);
         FD_COPY(&_except_set, &_active_except_set);
-
         if(timeout < 0)
         {
             ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, 0); 
@@ -201,10 +198,6 @@ int SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Erro
                 sockets.push_back(SocketEvents(fd, events));
             }
         }
-    }
-    if(ret == 0)
-    {
-        SET_LOGIC_ERROR(e, "Socket select timeout.");
     }
     return ret;
 }
