@@ -26,11 +26,11 @@ NetB did not implement application frameworks for network protcols as usual. It 
 
 ## Build NetB
 
-NetB is currently in dense development and the supporting platforms will include Linux, FreeBSD, Mac OSX, Solaris,and Windows. While to date, the major work of development is on Mac OSX EI Capitan. The pre-release version on Mac OSX and Linux should be completed recently. Please follow our updates. 
+NetB is currently in dense development and the supporting platforms will include Linux, Mac OSX, Windows, and the major OS on Raspberry PI. While to date, the major work of development is on Mac OSX EI Capitan and OpenMediaVault. The pre-release version will be ready soon. Please follow our updates. 
 
-1. Build NetB Static Library
+1. Build NetB Library
 
-The target of "all" in make file is used to build a static library, which by default produces an output file libnetb.a in "lib" folder, based on all source code in "netb" folder.   
+The target of "all" in make file will build a static library, which by default produces an output file libnetb.a in "lib" folder, based on all source code in "netb" folder.   
 
 Build NetB static library with:  
 ```shell
@@ -41,7 +41,7 @@ make all
 
 2. Build NetB Examples  
 
-A set of examples have been included to illustrate the using and important features of NetB. Target of "examples" in make file will build all examples in "examples" folder. Other targets with the same names of subfolders in "examples" will build examples in each subfolder. 
+A set of examples have been included to illustrate the using and important features of NetB. Target of "examples" in make file will build all examples in "examples" folder. Other targets with the same names of subfolders will build examples in each subfolder. 
 
 Build all NetB examples with:    
 ```shell
