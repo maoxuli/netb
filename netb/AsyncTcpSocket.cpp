@@ -241,7 +241,7 @@ void AsyncTcpSocket::OnRead(SOCKET s)
     else // Error
     {
         assert(_handler);
-        _handler->Detach();
+        _handler->DisableReading();
         if(_connected_callback)
         {
             _connected_callback(this, false);

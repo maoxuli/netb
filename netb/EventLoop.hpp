@@ -26,6 +26,8 @@
 #include <mutex>
 #include <functional>
 #include <cassert>
+#include <map>
+#include <list>
 
 NETB_BEGIN
 
@@ -40,6 +42,16 @@ NETB_BEGIN
 // events to the handlers. It also supports function running 
 // notification by setting a general function object as callback.  
 // Timer notification is not supported in this implementation. 
+//
+// Todo: current implementation suppose that one SOCKET only bound 
+// to one handler, so using a map to manage the the socket and 
+// associated handlers. The reasonable way is using a cross list 
+// to manage multiple handlers for a socket and set priority for 
+// event handlers. 
+// 
+// Todo: event loop does not keep the events bount to a handler. 
+// it is fetched when events are ready, so the events are not 
+// current actually. Potential issues. 
 // 
 class EventHandler;
 class EventLoop : private Uncopyable
@@ -58,12 +70,12 @@ public:
     
     // Register a handler with interested events
     // Must called in loop thread
-    bool RegisterHandler(EventHandler* handler, int events = 0);
+    bool RegisterHandler(EventHandler* handler);
 
     // Update a handler with interested events
     // Return false if the handler has not been registered
     // Must called in loop thread
-    bool UpdateHandler(EventHandler* handler, int events = 0);
+    bool UpdateHandler(EventHandler* handler);
 
     // Remote a registered handler
     // Must called in loop thread
@@ -103,9 +115,10 @@ private:
     bool _stop;
     
     // Events demultiplexing and dispaching
-    // Todo: using a cross-list to manage the handlers
+    // Only one event handler for a socket currently
+    // Toto: using a cross-list to manage multiple handlers
     SocketSelector _selector;
-    std::vector<EventHandler*> _handlers;
+    std::map<SOCKET, EventHandler*> _handlers;
     EventHandler* _current_handler;
     bool _event_handling; // only used in loop
 

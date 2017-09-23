@@ -52,11 +52,14 @@ void EventLoop::Run()
         if(_selector.Select(sockets, -1, nullptr) > 0) // ignore errors
         {
             _event_handling = true;
-            for(auto it = sockets.begin(), end = sockets.end(); it != end; ++it)
+            for(auto it = sockets.begin(); it != sockets.end(); ++it)
             {
                 _current_handler = _handlers[it->fd];
                 assert(_current_handler);
-                _current_handler->HandleEvents(it->events);
+                //if((_current_handler->GetEvents() | it->events) != 0)
+                //{
+                    _current_handler->HandleEvents(it->events);
+                //}
             }
             _current_handler = nullptr;
             _event_handling = false;
@@ -89,49 +92,45 @@ void EventLoop::Stop()
 
 // Register a handler that interested in some events
 // update the handlers list
-bool EventLoop::RegisterHandler(EventHandler* handler, int events)
+bool EventLoop::RegisterHandler(EventHandler* handler)
 {
+    assert(handler);
     AssertInLoopThread();
-    auto it = _handlers.begin();
-    for(; it != _handlers.end(); ++it)
+    SOCKET fd = handler->GetSocket();
+    auto it = _handlers.find(fd);
+    if(it == _handlers.end())
     {
-        if(*it == handler) break;
+        _handlers[fd] = handler;
     }
-    if(it == _handlers.end()) // not found
-    {
-        _handlers.push_back(handler);
-    }
-    return _selector.Set(handler->GetSocket(), events);
+    return _selector.Set(handler->GetSocket(), handler->GetEvents());
 }
 
 // Update a handler that interested in some events
 // update socket's events
-bool EventLoop::UpdateHandler(EventHandler* handler, int events)
+bool EventLoop::UpdateHandler(EventHandler* handler)
 {
+    assert(handler);
     AssertInLoopThread();
-    auto it = _handlers.begin();
-    for(; it != _handlers.end(); ++it)
-    {
-        if(*it == handler) break;
-    }
-    if(it == _handlers.end()) // not found
+    SOCKET fd = handler->GetSocket();
+    auto it = _handlers.find(fd);
+    if(it == _handlers.end())
     {
         return false;
     }
-    return _selector.Set(handler->GetSocket(), events);
+    return _selector.Set(handler->GetSocket(), handler->GetEvents());
 }
 
 // Remove a handler
 bool EventLoop::RemoveHandler(EventHandler* handler)
 {
-    assert(!_event_handling);
+    assert(handler);
     auto it = _handlers.begin();
     while(it != _handlers.end())
     {
-        if(*it == handler) // found
+        if(it->second == handler) // found
         {
             it = _handlers.erase(it);
-            _selector.Remove(handler->GetSocket());
+            _selector.Remove(it->first);
         }
         else
         {

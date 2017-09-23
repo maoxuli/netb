@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceRoot}/bin/echos1",
-            "args": [""],
+            "args": ["9091"],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
             "environment": [],

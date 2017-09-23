@@ -148,16 +148,17 @@ int SocketSelector::Select(std::vector<SocketEvents>& sockets, int timeout, Erro
         FD_COPY(&_read_set, &_active_read_set);
         FD_COPY(&_write_set, &_active_write_set);
         FD_COPY(&_except_set, &_active_except_set);
+        int nfds = _sockets.empty() ? 1 : _sockets.front() + 1;
         if(timeout < 0)
         {
-            ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, 0); 
+            ret = ::select(nfds, &_active_read_set, &_active_write_set, &_active_except_set, 0); 
         }
         else
         {
             struct timeval tv;
             tv.tv_sec = timeout / 1000;
             tv.tv_usec = (timeout - tv.tv_sec * 1000) * 1000;
-            ret = ::select(_sockets.front() + 1, &_active_read_set, &_active_write_set, &_active_except_set, &tv); 
+            ret = ::select(nfds, &_active_read_set, &_active_write_set, &_active_except_set, &tv); 
         }
         if(ret < 0) // errors
         {

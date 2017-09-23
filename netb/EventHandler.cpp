@@ -75,7 +75,7 @@ void EventHandler::AttachInLoop()
 {
     assert(_loop);
     _loop->AssertInLoopThread();
-    _loop->RegisterHandler(this, _events);
+    _detached = !(_loop->RegisterHandler(this));
 }
 
 // Set intresting event, reading
@@ -126,7 +126,7 @@ bool EventHandler::Update()
         _loop->Invoke(std::bind(&EventHandler::UpdateInLoop, this));
         return true;
     }
-    return _loop->UpdateHandler(this, _events);
+    return _loop->UpdateHandler(this);
 }
 
 // Notify event loop to update interested events
@@ -134,8 +134,14 @@ void EventHandler::UpdateInLoop()
 {
     assert(_loop);
     assert(_loop->IsInLoopThread());
+    _loop->UpdateHandler(this);
+}
+
+// call from event dispatcher
+int EventHandler::GetEvents() const 
+{
     std::unique_lock<std::mutex> lock(_events_mutex);
-    _loop->UpdateHandler(this, _events);
+    return _events;
 }
 
 // Handle current active events

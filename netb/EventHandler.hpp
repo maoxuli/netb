@@ -92,6 +92,9 @@ private:
     bool Update();
     void UpdateInLoop();
 
+    // call from event dispatcher
+    int GetEvents() const;
+
     // Callback from event dispatcher 
     void HandleEvents(int events);
 
