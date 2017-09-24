@@ -41,7 +41,7 @@ public:
 	
 	// get type
 	enum class TYPE { UNKNOWN = 0, REQUEST = 1, RESPONSE = 2 };
-	virtual TYPE GetType() const { return TYPE::UNKNOWN; }
+	virtual unsigned short GetType() const { return (unsigned short)TYPE::UNKNOWN; }
 
 	// Reset 
 	virtual void Reset();
@@ -81,25 +81,23 @@ protected:
 	{
 		Header(const char* k, const char* v) 
 		: key(k), value(v) { }
-
 		std::string key;
 		std::string value;
 	};
 	std::vector<Header*> _headers; // keep order with vector
 
 	size_t _body_len;
-	unsigned char* _body;
+	char* _body;
 
 protected:
-	// State to parse HTTP message
-    enum class STATE
+	// Steps to parse HTTP message
+    enum class PARSING
     {
         READY,   // Ready to parse start line
         HEADER,  // Reading header lines
         BODY,    // Reading body
-        OKAY     // Complete a message packet
-    };
-    STATE _state;
+        DONE     // Complete a message packet
+    } _state;
 
 	void ReadStartLine(const StreamReader& stream);
 	void ReadHeader(const StreamReader& stream);
@@ -118,7 +116,7 @@ public:
     HttpRequest(const char* method, const char* url, const char* version = "HTTP/1.1");
 	virtual ~HttpRequest();
 
-	virtual TYPE GetType() const { return TYPE::REQUEST; }
+	virtual unsigned short GetType() const { return (unsigned short)TYPE::REQUEST; }
 	virtual void Reset();
 
 	// get and set method
@@ -145,7 +143,7 @@ public:
 	HttpResponse(int code, const char* phrase = "", const char* version = "HTTP/1.1");
 	virtual ~HttpResponse();
 
-	virtual TYPE GetType() const { return TYPE::RESPONSE; }
+	virtual unsigned short GetType() const { return (unsigned short)TYPE::RESPONSE; }
 	virtual void Reset();
 
 	// get and set 

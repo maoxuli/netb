@@ -41,8 +41,7 @@ void HttpConnection::OnReceived(AsyncTcpSocket* conn, StreamBuffer* buf)
 void HttpConnection::HandleRequest(AsyncTcpSocket* conn)
 {
     std::cout << "Received a HTTP request: \n";
-    std::cout << _request.ToString();
-
+    std::cout << _request.String();
     HttpResponse res;
     SendResponse(conn, res);
 }

@@ -114,7 +114,7 @@ bool Message::ToBuffer(StreamBuffer* buf)
 // Unpack from buffer
 // Note: the offset used in domain name compression is relative to the  
 // begining of the message so unpacking must be done on all message data. 
-bool Message::FromBuffer(StreamBuffer& buf)
+bool Message::FromBuffer(StreamBuffer* buf)
 {
     StreamReader reader(buf);
     if(!_header.Serialize(reader)) return false;
@@ -142,7 +142,7 @@ bool Message::FromBuffer(StreamBuffer& buf)
         if(!p || !p->Serialize(reader)) return false;
         _additionals.push_back(p);
     }
-    buf.Flush();
+    buf->Flush();
     return true;
 }
 

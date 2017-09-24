@@ -172,8 +172,12 @@ bool StreamReader::String(std::string& s, const char delim) const
     if(!_stream) return false;
     ssize_t n = _stream->Readable(delim);
     if(n < 0) return false;
-    if(n == 0) return true;
-    return String(s, (size_t)n);
+    if(n == 0) 
+    {
+        s.clear();
+        return true;
+    }
+    return String(s, (size_t)n) && _stream->Read(sizeof(delim));
 }
 
 // Read string 
@@ -184,8 +188,12 @@ bool StreamReader::String(std::string& s, const char* delim) const
     if(strlen(delim) > _stream->Readable()) return false;
     ssize_t n = _stream->Readable(delim);
     if(n < 0) return false;
-    if(n == 0) return true;
-    return String(s, (size_t)n);
+    if(n == 0) 
+    {
+        s.clear();
+        return true;
+    }
+    return String(s, (size_t)n) && _stream->Read(strlen(delim));
 }
 
 NETB_END

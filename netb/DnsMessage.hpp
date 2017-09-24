@@ -19,6 +19,7 @@
 #define NETB_DNS_MESSAGE_HPP
 
 #include "Config.hpp"
+#include "Uncopyable.hpp"
 #include "DnsRecord.hpp"
 
 NETB_BEGIN
@@ -386,7 +387,7 @@ into 5 sections (some of which are empty in certain cases) shown below:
     +---------------------+	
 */
 
-class Message 
+class Message : private Uncopyable
 {
 public:
     virtual ~Message();
@@ -398,7 +399,7 @@ public:
     bool ToBuffer(StreamBuffer* buf);
 
     // Unpack from buffer
-    bool FromBuffer(StreamBuffer& buf);
+    bool FromBuffer(StreamBuffer* buf);
     
 protected:
     // Header Section

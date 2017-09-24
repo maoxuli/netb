@@ -110,9 +110,9 @@ echo:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/echos4 examples/echo/EchoServer4.cpp $(LIBDIR)/$(OUT)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/echoc4 examples/echo/EchoClient4.cpp $(LIBDIR)/$(OUT)
 
-#http:
-#	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/https examples/http/HttpServer.cpp $(LIBDIR)/$(OUT)
-#	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/httpc examples/http/HttpClient.cpp $(LIBDIR)/$(OUT)
+http:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/https examples/http/HttpServer.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/httpc examples/http/HttpClient.cpp $(LIBDIR)/$(OUT)
 
 dns:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/dnsr examples/dns/DnsResolver.cpp $(LIBDIR)/$(OUT)

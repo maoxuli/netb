@@ -68,7 +68,7 @@ bool Resolver::Resolve(Query& query, Response* response, Error* e)
     {
         return false;
     }
-    if(!response->FromBuffer(buf))
+    if(!response->FromBuffer(&buf))
     {
         SET_ERROR(e, "Unpacking reponse from buffer failed", 0);
         return false;

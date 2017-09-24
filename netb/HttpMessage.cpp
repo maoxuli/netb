@@ -27,7 +27,7 @@ HttpMessage::HttpMessage(const char* version)
 : _version(version)
 , _body_len(0)
 , _body(nullptr)
-, _state(STATE::READY)
+, _state(PARSING::READY)
 {
 
 }
@@ -55,7 +55,7 @@ void HttpMessage::Reset()
     _body_len = 0;
 
     _version = "HTTP/1.1";
-    _state = STATE::READY;
+    _state = PARSING::READY;
 }
 
 const char* HttpMessage::GetVersion() const 
@@ -159,7 +159,10 @@ std::string HttpMessage::String() const
         oss << p->key << ":" << p->value << "\r\n";
     }
     oss << "\r\n";
-    oss << "Body [" << _body_len << "]" << "\r\n";
+    if(_body_len > 0)
+    {
+        oss << std::string(_body, _body_len) << "\r\n";
+    }
     return oss.str();
 }
 
@@ -196,10 +199,10 @@ bool HttpMessage::ToBuffer(StreamBuffer* buf) const
 bool HttpMessage::FromBuffer(StreamBuffer* buf)
 {
     StreamReader stream(buf);
-    if(_state == STATE::READY) ReadStartLine(stream);
-    if(_state == STATE::HEADER) ReadHeader(stream);
-    if(_state == STATE::BODY) ReadBody(stream);
-    if(_state == STATE::OKAY) 
+    if(_state == PARSING::READY) ReadStartLine(stream);
+    if(_state == PARSING::HEADER) ReadHeader(stream);
+    if(_state == PARSING::BODY) ReadBody(stream);
+    if(_state == PARSING::DONE) 
     {
         buf->Flush();
         return true;
@@ -212,12 +215,12 @@ bool HttpMessage::FromBuffer(StreamBuffer* buf)
 // Todo: detect error before reading
 void HttpMessage::ReadStartLine(const StreamReader& stream)
 {
-    assert(_state == STATE::READY);
+    assert(_state == PARSING::READY);
     std::string line;
     if(stream.String(line, CRLF))
     {
         StartLine(line);
-        _state = STATE::HEADER;
+        _state = PARSING::HEADER;
     }
 }
 
@@ -225,14 +228,14 @@ void HttpMessage::ReadStartLine(const StreamReader& stream)
 // Read each complete line, until a blank line
 void HttpMessage::ReadHeader(const StreamReader& stream)
 {
-    assert(_state == STATE::HEADER);
+    assert(_state == PARSING::HEADER);
     std::string line;
     while(stream.String(line, CRLF))// Read all complete lines
     {       
         if(line.empty()) // Blank line, Separator line of headers and body, headers are completd
         {
             _body_len = GetHeaderAsInt("Content-Length");
-            _state = _body_len > 0 ? STATE::BODY : STATE::OKAY;
+            _state = _body_len > 0 ? PARSING::BODY : PARSING::DONE;
             break;
         }
         // parse line to key and value
@@ -247,12 +250,12 @@ void HttpMessage::ReadHeader(const StreamReader& stream)
 // Read http message body
 void HttpMessage::ReadBody(const StreamReader& stream)
 {
-    assert(_state == STATE::BODY);
+    assert(_state == PARSING::BODY);
     assert(_body_len > 0);
-    if(!_body) _body = new unsigned char[_body_len];
+    if(!_body) _body = new char[_body_len];
     if(stream.Bytes(_body, _body_len))
     {
-        _state = STATE::OKAY;
+        _state = PARSING::DONE;
     }
 }
 
@@ -426,8 +429,19 @@ bool HttpResponse::StartLine(const std::string& line)
     {
         return false;
     }
-    std::istringstream iss(line);
-    iss >> _version >> _code >> _phrase;
+    size_t opos = 0;
+    size_t pos;
+    if((pos = line.find_first_of(" ", opos)) != std::string::npos)
+    {
+        _version = line.substr(opos, pos - opos);
+        opos = pos + 1;
+        if((pos = line.find_first_of(" ", opos)) != std::string::npos)
+        {
+            std::string code = line.substr(opos, pos - opos);
+            _code = ::atoi(code.c_str());
+            _phrase = line.substr(pos + 1);
+        }
+    }
     return true;
 }
 

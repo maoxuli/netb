@@ -169,8 +169,12 @@ bool RandomReader::String(size_t offset, std::string& s, const char delim) const
     if(_offset + offset + sizeof(delim) > _stream->Peekable()) return false;
     ssize_t n = _stream->Peekable(_offset + offset, delim);
     if(n < 0) return false;
-    if(n == 0) return true;
-    return String(offset, s, (size_t)n);
+    if(n == 0) 
+    {
+        s.clear();
+        return true;
+    }
+    return String(offset, s, (size_t)n) && _stream->Read(sizeof(delim));
 }
 
 // Peek string
@@ -181,8 +185,12 @@ bool RandomReader::String(size_t offset, std::string& s, const char* delim) cons
     if(_offset + offset + strlen(delim) > _stream->Peekable()) return false;
     ssize_t n = _stream->Peekable(_offset + offset, delim);
     if(n < 0) return false;
-    if(n == 0) return true;
-    return String(offset, s, (size_t)n);
+    if(n == 0) 
+    {
+        s.clear();
+        return true;
+    }
+    return String(offset, s, (size_t)n) && _stream->Read(strlen(delim));
 }
 
 NETB_END

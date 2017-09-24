@@ -46,29 +46,36 @@ int main(const int argc, char* argv[])
     if(!client.Connect(netb::SocketAddress(host, port), nullptr))
     {
         std::cout << "HTTP client failed to connect: " << host << ":" << port << "\n";
-        return -1;
+        return 0;
     }
 
     // Send out a request
-    netb::HttpRequest request;
+    netb::HttpRequest request("GET", "google.com");
     netb::StreamBuffer buf;
-    request.ToBuffer(&buf);
-    if(client.Send(&buf) <= 0)
+    if(!request.ToBuffer(&buf))
+    {
+        std::cout << "Packing request to buffer failed.\n";
+        return 0;
+    }
+    if(client.Send(buf) <= 0)
     {
         std::cout << "Send request failed.\n";
-        return -1;
+        return 0;
     }
-    std::cout << "Request: " << request.ToString();
+    std::cout << "Request: " << request.String();
 
     // Receive response
     buf.Clear();
     if(client.Receive(&buf) <= 0) // receive with timeout
     {
         std::cout << "Receive response failed.\n";
-        return -1;
+        return 0;
     }
     netb::HttpResponse response;
-    response.FromBuffer(&buf);
-    std::cout << "Response: " << response.ToString();
+    if(!response.FromBuffer(&buf))
+    {
+        std::cout << "Unpacking response from buffer failed.\n";
+    }
+    std::cout << "Response: " << response.String();
     return 0;
 }

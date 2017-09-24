@@ -19,6 +19,7 @@
 #define NETB_DNS_RECORD_HPP
 
 #include "Config.hpp"
+#include "Uncopyable.hpp"
 #include "StreamBuffer.hpp"
 #include "StreamWriter.hpp"
 #include "StreamReader.hpp"
@@ -255,7 +256,7 @@ public:
 };
 
 // Resource Record 
-class ResourceRecord 
+class ResourceRecord : private Uncopyable
 {
 public:
     ResourceRecord();
