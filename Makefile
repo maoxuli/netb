@@ -122,7 +122,7 @@ clean:
 
 cleanall: clean
 	rm -f $(LIBDIR)/$(OUT)
-	#rm -r $(BINDIR)/*.dSYM
+	rm -fr $(BINDIR)/*.dSYM
 	rm -f $(BINDIR)/tcp*
 	rm -f $(BINDIR)/udp*
 	rm -f $(BINDIR)/echo*
