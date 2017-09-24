@@ -171,7 +171,7 @@ void EventLoop::InvokeLater(const Functor& f)
 
 void EventLoop::Wakeup()
 {
-    unsigned char c = 0;
+    char c = 0;
     if(_wakeup_pipe.Write(&c, 1) < 0)
     {
         // If wakeup pipe dead, the loop should stop working
@@ -182,7 +182,7 @@ void EventLoop::Wakeup()
 
 void EventLoop::OnWakeupRead()
 {
-    unsigned char c = 0;
+    char c = 0;
     if(_wakeup_pipe.Read(&c, 1) < 0)
     {
         // If wakeup pipe dead, the loop should stop working

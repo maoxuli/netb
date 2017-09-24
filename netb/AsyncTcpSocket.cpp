@@ -195,7 +195,7 @@ ssize_t AsyncTcpSocket::Send(const void* p, size_t n, Error* e) noexcept
         if(sent < n) // buffered left data
         {
             size_t off = sent < 0 ? 0 : sent;
-            if(_out_buffer.Write((unsigned char*)p + off, n - off))
+            if(_out_buffer.Write((char*)p + off, n - off))
             {
                 sent = n;
             }
@@ -207,7 +207,7 @@ ssize_t AsyncTcpSocket::Send(const void* p, size_t n, Error* e) noexcept
         return sent;
     }
     std::unique_lock<std::mutex> lock(_out_buffer_mutex);
-    if(!_out_buffer.Write((unsigned char*)p, n))
+    if(!_out_buffer.Write((char*)p, n))
     {
         return 0;
     }

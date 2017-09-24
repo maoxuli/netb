@@ -344,20 +344,20 @@ private:
     //
     
     // bytes container
-    std::vector<unsigned char> _bytes;
+    std::vector<char> _bytes;
     size_t _limit;  // limit of the max memory occupancy
     size_t _opos;   // origin position
     size_t _rpos;   // sequential reading position 
     size_t _wpos;   // writing position
 
     // pointer of the first byte of the bytes container
-    const unsigned char* Begin() const
+    const char* Begin() const
     {
         return &_bytes[0];
     }
 
     // pointer of the first byte of the bytes container
-    unsigned char* Begin()
+    char* Begin()
     {
         return &_bytes[0];
     }
