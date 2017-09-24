@@ -16,7 +16,6 @@
  */
 
 #include "SocketSelector.hpp"
-#include <cassert>
 
 NETB_BEGIN
 

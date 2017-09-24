@@ -20,6 +20,8 @@
 
 #include "SocketConfig.hpp"
 #include <functional>
+#include <mutex>
+#include <condition_variable>
 
 NETB_BEGIN
 

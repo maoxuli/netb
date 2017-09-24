@@ -117,7 +117,8 @@ bool SocketAddress::Host(const std::string& host)
         else if(host.empty() || host == "any" || host == "wildcard")
             addrin6->sin6_addr = in6addr_any;
         else if(host == "none" || host == "broadcast")
-            addrin6->sin6_addr = in6addr_nodelocal_allnodes;
+            assert(false);
+	    //addrin6->sin6_addr = in6addr_nodelocal_allnodes;
         else
         {
             if(::inet_pton(AF_INET6, host.c_str(), &addrin6->sin6_addr) != 1)

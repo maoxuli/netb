@@ -16,6 +16,7 @@
  */
 
 #include "StreamBuffer.hpp"
+#include <cstring>
 #include <cassert>
 
 NETB_BEGIN

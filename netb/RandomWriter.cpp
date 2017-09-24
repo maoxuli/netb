@@ -16,6 +16,7 @@
  */
 
 #include "RandomWriter.hpp"
+#include <netinet/in.h>
 
 NETB_BEGIN
 

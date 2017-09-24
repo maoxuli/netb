@@ -34,5 +34,7 @@
 #include <iostream>
 #include <sstream>
 #include <cassert>
+#include <cstring>
+#include <algorithm>
 
 #endif

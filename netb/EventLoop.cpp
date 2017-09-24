@@ -65,7 +65,7 @@ void EventLoop::Run()
             _event_handling = false;
         }
         // Invoking Queued functions
-        std::vector<const Functor> functions;
+        std::vector<Functor> functions;
         _queue_invoking = true;
         {
             std::unique_lock<std::mutex> lock(_queue_mutex);

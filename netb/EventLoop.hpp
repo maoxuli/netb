@@ -125,7 +125,7 @@ private:
     // FIFO queue of functions waiting for running
     // Always run all queued founctions per loop
     // so vector is just fine
-    std::vector<const Functor> _queue;
+    std::vector<Functor> _queue;
     std::mutex _queue_mutex;
     bool _queue_invoking; // only used in loop
 

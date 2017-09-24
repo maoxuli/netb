@@ -10,7 +10,7 @@ SRCDIR := netb
 OUT := libnetb.a
 
 CXX := g++
-CXXFLAGS := -g -Wall -std=c++11
+CXXFLAGS := -g -Wall -std=c++11 -pthread
 CPPFLAGS := -I./$(INCDIR)
 
 AR := ar
@@ -83,46 +83,46 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(INC)
 examples: tcp udp echo http dns
 
 tcp:
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcps1 examples/tcp/TcpServer1.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcpc1 examples/tcp/TcpClient1.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcps2 examples/tcp/TcpServer2.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcpc2 examples/tcp/TcpClient2.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcps3 examples/tcp/TcpServer3.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcpc3 examples/tcp/TcpClient3.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcps4 examples/tcp/TcpServer4.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/tcpc4 examples/tcp/TcpClient4.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/tcps1 examples/tcp/TcpServer1.cpp $(LIBDIR)/$(OUT) 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/tcpc1 examples/tcp/TcpClient1.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/tcps2 examples/tcp/TcpServer2.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/tcpc2 examples/tcp/TcpClient2.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/tcps3 examples/tcp/TcpServer3.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/tcpc3 examples/tcp/TcpClient3.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/tcps4 examples/tcp/TcpServer4.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/tcpc4 examples/tcp/TcpClient4.cpp $(LIBDIR)/$(OUT)
 
 udp:
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udps1 examples/udp/UdpServer1.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udpc1 examples/udp/UdpClient1.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udps2 examples/udp/UdpServer2.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udpc2 examples/udp/UdpClient2.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udps3 examples/udp/UdpServer3.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/udpc3 examples/udp/UdpClient3.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/udps1 examples/udp/UdpServer1.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/udpc1 examples/udp/UdpClient1.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/udps2 examples/udp/UdpServer2.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/udpc2 examples/udp/UdpClient2.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/udps3 examples/udp/UdpServer3.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/udpc3 examples/udp/UdpClient3.cpp $(LIBDIR)/$(OUT)
 
 echo:
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echos1 examples/echo/EchoServer1.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoc1 examples/echo/EchoClient1.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echos2 examples/echo/EchoServer2.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoc2 examples/echo/EchoClient2.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echos3 examples/echo/EchoServer3.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoc3 examples/echo/EchoClient3.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echos4 examples/echo/EchoServer4.cpp 
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/echoc4 examples/echo/EchoClient4.cpp 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/echos1 examples/echo/EchoServer1.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/echoc1 examples/echo/EchoClient1.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/echos2 examples/echo/EchoServer2.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/echoc2 examples/echo/EchoClient2.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/echos3 examples/echo/EchoServer3.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/echoc3 examples/echo/EchoClient3.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/echos4 examples/echo/EchoServer4.cpp $(LIBDIR)/$(OUT)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/echoc4 examples/echo/EchoClient4.cpp $(LIBDIR)/$(OUT)
 
 #http:
-#	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/https examples/http/HttpServer.cpp 
-#	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/httpc examples/http/HttpClient.cpp 
+#	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/https examples/http/HttpServer.cpp $(LIBDIR)/$(OUT)
+#	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/httpc examples/http/HttpClient.cpp $(LIBDIR)/$(OUT)
 
 dns:
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LIBDIR)/$(OUT) -o $(BINDIR)/dnsr examples/dns/DnsResolver.cpp 
-	
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/dnsr examples/dns/DnsResolver.cpp $(LIBDIR)/$(OUT)
+
 clean:
 	rm -f $(OBJDIR)/*.o
 
 cleanall: clean
 	rm -f $(LIBDIR)/$(OUT)
-	rm -r $(BINDIR)/*.dSYM
+	#rm -r $(BINDIR)/*.dSYM
 	rm -f $(BINDIR)/tcp*
 	rm -f $(BINDIR)/udp*
 	rm -f $(BINDIR)/echo*

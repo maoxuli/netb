@@ -21,6 +21,7 @@
 #include "Config.hpp"
 #include <cstddef>
 #include <vector>
+#include <algorithm>
 
 // Default buffer size
 // can be defined in Config.hpp
@@ -137,7 +138,7 @@ public:
         std::cout << "opos:" << _opos << "\n";
         std::cout << "rpos:" << _rpos << "\n";
         std::cout << "wpos:" << _wpos << "\n";
-        for(int i = _opos; i < _wpos; i++)
+        for(size_t i = _opos; i < _wpos; i++)
         {
             std::cout << i << ":" << (int)(*(Begin() + i)) << " ";
         }

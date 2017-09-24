@@ -16,6 +16,7 @@
  */
 
 #include "StreamWriter.hpp"
+#include <netinet/in.h>
 
 NETB_BEGIN
 

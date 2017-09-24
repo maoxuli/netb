@@ -54,6 +54,11 @@ enum {
     SOCKET_EVENT_EXCEPT = 4
 };
 
+// FD_COPY is not POSIX 98 
+#ifndef FD_COPY
+#define FD_COPY(src, dst) do{ memcpy((dst), (src), sizeof *(dst)); } while(0) // no trailing ;
+#endif
+
 // Socket initializer
 // Necessary for Windows and do nothing on linux or so
 struct SocketInitializer
