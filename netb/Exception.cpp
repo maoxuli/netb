@@ -32,10 +32,20 @@ Exception::~Exception() noexcept
 
 }
 
+// what() needs a static string
+const std::string& Exception::MakeWhat() const
+{
+    static std::string s;
+    std::ostringstream oss;
+    oss << _message << " : " << _code;
+    s = oss.str();
+    return s;
+}
+
 // what
 const char* Exception::what() const noexcept
 {
-    return _message.c_str();
+    return MakeWhat().c_str();
 }
 
 // To string for log
@@ -54,7 +64,7 @@ std::string Exception::Report() const
 // Logic exception
 LogicException::LogicException(const std::string& msg, int code)
 : Exception(msg, code)
-, std::logic_error((std::ostringstream() << msg << " : " << code).str())
+, std::logic_error(MakeWhat())
 {
 
 }
@@ -86,7 +96,7 @@ std::string LogicException::Report() const
 // Runtime exception
 RuntimeException::RuntimeException(const std::string& msg, int code)
 : Exception(msg, code)
-, std::runtime_error((std::ostringstream() << msg << " : " << code).str())
+, std::runtime_error(MakeWhat())
 {
 
 }

@@ -50,6 +50,8 @@ public:
 protected:
     std::string _message;
     int _code;
+
+    const std::string& MakeWhat() const; 
 };
 
 //
