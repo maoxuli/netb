@@ -86,28 +86,28 @@ public:
     // to given address
     virtual ssize_t SendTo(const void* p, size_t n, const SocketAddress& addr, int timeout, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AysncUdpSocket::SendTo : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
     // to given address
     virtual ssize_t SendTo(StreamBuffer& buf, const SocketAddress& addr, int timeout, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AysncUdpSocket::SendTo : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
     // to connected address
     virtual ssize_t Send(const void* p, size_t n, int timeout, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AysncUdpSocket::Send : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
     // to connected address
     virtual ssize_t Send(StreamBuffer& buffer, int timeout, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AysncUdpSocket::SendTo : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
@@ -115,28 +115,28 @@ public:
     // Receive data and get remote address
     virtual ssize_t ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags = 0, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AysncUdpSocket::ReceiveFrom : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
     // Receive data and get remote address
     virtual ssize_t ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int flags = 0, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AysncUdpSocket::ReceiveFrom : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
     // Receive data from connected address
     virtual ssize_t Receive(void* p, size_t n, int flags = 0, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AysncUdpSocket::Receive : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
     // Receive data from connected address
     virtual ssize_t Receive(StreamBuffer* buf, int flags = 0, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AysncUdpSocket::Receive : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 

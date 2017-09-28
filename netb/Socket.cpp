@@ -26,16 +26,15 @@ NETB_BEGIN
 // closed on most platform, but with exceptions, e.g. HP-UX.
 bool CloseSocket(SOCKET& s, Error* e) noexcept
 {
-    if(s == INVALID_SOCKET) return true;
 #ifdef _WIN32
     int ret = ::closesocket(s);
 #else
     int ret = ::close(s);
 #endif 
     s = INVALID_SOCKET;
-    if(ret < 0)
+    if(ret == SOCKET_ERROR)
     {
-        SET_SYSTEM_ERROR(e, "Errors on closing socket [" << s << "]");
+        SET_SOCKET_CLOSE_ERROR(e, "ClsoeSocket [" << s << "]");
         return false;
     }  
     return true;
@@ -92,7 +91,7 @@ bool Socket::InitSocket(int domain, int type, int protocol, Error* e) noexcept
     _fd = ::socket(domain, type, protocol);
     if(_fd == INVALID_SOCKET)
     {
-        SET_SYSTEM_ERROR(e, "Open socket failed.");
+        SET_SOCKET_OPEN_ERROR(e, "Socket::InitSocket");
         return false;
     }
     return true;
@@ -154,9 +153,9 @@ bool Socket::Shutdown(int how, Error* e) noexcept
 {
     if(_fd == INVALID_SOCKET) return true;
     int ret = ::shutdown(_fd, how);
-    if(ret < 0)
+    if(ret == SOCKET_ERROR)
     {
-        SET_SYSTEM_ERROR(e, "Shutdown socket failed [" << _fd << "]");
+        SET_SOCKET_SHUTDOWN_ERROR(e, "Socket::Shutdown [" << _fd << "]");
         return false;
     }
     return true;
@@ -166,11 +165,6 @@ bool Socket::Shutdown(int how, Error* e) noexcept
 // family of bound address
 sa_family_t Socket::Family(Error* e) const noexcept
 {
-    if(_fd == INVALID_SOCKET) 
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return AF_UNSPEC;
-    }
     SocketAddress addr = Address(e);
     return addr.Family();
 }
@@ -184,11 +178,6 @@ int Socket::Domain(Error* e) const noexcept
 // Get type of the socket
 int Socket::Type(Error* e) const noexcept
 {
-    if(_fd == INVALID_SOCKET) 
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     int type;
     socklen_t len = sizeof(int);
     if(!GetOption(SOL_SOCKET, SO_TYPE, &type, &len, e))
@@ -201,13 +190,8 @@ int Socket::Type(Error* e) const noexcept
 // Get protocol of the socket
 int Socket::Protocol(Error* e) const noexcept
 {
-    if(_fd == INVALID_SOCKET) 
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     assert(false);
-    SET_LOGIC_ERROR(e, "Calling of unimplemented function.");
+    SET_ERROR(e, "Function is not implemented yet.", 0);
     return -1;
 }
 
@@ -226,14 +210,9 @@ void Socket::Bind(const SocketAddress& addr)
 // Explicitly bind to local address
 bool Socket::Bind(const SocketAddress& addr, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
+    if(::bind(_fd, addr.Addr(), addr.Length()) == SOCKET_ERROR)
     {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return false;
-    }
-    if(::bind(_fd, addr.Addr(), addr.Length()) < 0)
-    {
-        SET_SYSTEM_ERROR(e, "Bind address to socket failed [" << _fd << "][" << addr.String() << "]");
+        SET_SOCKET_BIND_ERROR(e, "Socket::Bind [" << _fd << "][" << addr.String() << "]");
         return false;
     }
     return true;
@@ -244,15 +223,10 @@ SocketAddress Socket::Address(Error* e) const noexcept
 {
     struct sockaddr_storage addr;
     memset(&addr, 0, sizeof(struct sockaddr_storage));
-    if(_fd == INVALID_SOCKET) 
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return addr;
-    }
     socklen_t addrlen = sizeof(struct sockaddr_storage);
-    if(::getsockname(_fd, (sockaddr*)&addr, &addrlen) < 0)
+    if(::getsockname(_fd, (sockaddr*)&addr, &addrlen) == SOCKET_ERROR)
     {
-        SET_SYSTEM_ERROR(e, "Get socket local address failed [" << _fd << "]");
+        SET_SOCKET_NAME_ERROR(e, "Socket::Address [" << _fd << "]");
     }
     return addr;
 }
@@ -268,17 +242,13 @@ void Socket::Listen(int backlog)
     }
 }
 
+// backlog -1 for default 
 bool Socket::Listen(int backlog, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return false;
-    }
-    if(backlog < 0) backlog = SOMAXCONN;
+    if(backlog < 0) backlog = SOMAXCONN; 
     if(::listen(_fd, backlog) < 0)
     {
-        SET_SYSTEM_ERROR(e, "Socket lsiten failed [" << _fd << "]");
+        SET_SOCKET_LISTEN_ERROR(e, "Socket::Listen [" << _fd << "]");
         return false;
     }
     return true;
@@ -300,17 +270,12 @@ SOCKET Socket::Accept()
 // TCP socket accepts an incomming connection
 SOCKET Socket::Accept(Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     SOCKET s;
     while((s = ::accept(_fd, 0, 0)) == INVALID_SOCKET)
     {
-        if(!ErrorCode::IsInterrupted())
+        if(!SocketError::Interrupted())
         {
-            SET_SYSTEM_ERROR(e, "Socket accept failed [" <<  _fd << "]");
+            SET_SOCKET_ACCEPT_ERROR(e, "Socke::Accept [" <<  _fd << "]");
             return INVALID_SOCKET;
         }
     }
@@ -334,19 +299,14 @@ SOCKET Socket::AcceptFrom(SocketAddress* addr)
 SOCKET Socket::AcceptFrom(SocketAddress* addr, Error* e) noexcept
 {
     if(!addr) return Accept(e);
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     SOCKET s;
     addr->Reset();
     socklen_t addrlen = addr->Length();
     while((s = ::accept(_fd, (sockaddr*)addr, &addrlen)) == INVALID_SOCKET)
     {
-        if(!ErrorCode::IsInterrupted())
+        if(!SocketError::Interrupted())
         {
-            SET_SYSTEM_ERROR(e, "Socket accept failed [" <<  _fd << "]");
+            SET_SOCKET_ACCEPT_ERROR(e, "Socket::AcceptFrom [" <<  _fd << "]");
             return INVALID_SOCKET;
         }
     }
@@ -370,17 +330,11 @@ void Socket::Connect(const SocketAddress& addr)
 // status need to be checked with select() and getsockopt()
 bool Socket::Connect(const SocketAddress& addr, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
+    while(::connect(_fd, addr.Addr(), addr.Length()) == SOCKET_ERROR)
     {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return false;
-    }
-    assert(!addr.Empty()); // need to check details about UDP socket 
-    while(::connect(_fd, addr.Addr(), addr.Length()) < 0)
-    {
-        if(!ErrorCode::IsInterrupted())
+        if(!SocketError::Interrupted())
         {
-            SET_SYSTEM_ERROR(e, "Socket connect failed [" << _fd << "][" << addr.String() << "]");
+            SET_SOCKET_CONNECT_ERROR(e, "Socket::Connect [" << _fd << "][" << addr.String() << "]");
             return false;
         }
     }
@@ -392,15 +346,10 @@ SocketAddress Socket::ConnectedAddress(Error* e) const noexcept
 {
     struct sockaddr_storage addr;
     memset(&addr, 0, sizeof(struct sockaddr_storage));
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return addr;
-    }
     socklen_t addrlen = sizeof(struct sockaddr_storage);
-    if(::getpeername(_fd, (struct sockaddr*)&addr, &addrlen) < 0)
+    if(::getpeername(_fd, (struct sockaddr*)&addr, &addrlen) == SOCKET_ERROR)
     {
-        SET_SYSTEM_ERROR(e, "Get socket connected address failed [" << _fd << "]");
+        SET_SOCKET_NAME_ERROR(e, "Socket::ConnectedAddress [" << _fd << "]");
     }
     return addr;
 }
@@ -409,11 +358,6 @@ SocketAddress Socket::ConnectedAddress(Error* e) const noexcept
 // -1: block, 0: non-block, >0: block with timeout
 bool Socket::WaitForRead(int timeout, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     SocketSelector selector(_fd, SOCKET_EVENT_READ);
     std::vector<SocketSelector::SocketEvents> sockets;
     if(selector.Select(sockets, timeout, e) <= 0)
@@ -428,11 +372,6 @@ bool Socket::WaitForRead(int timeout, Error* e) noexcept
 
 bool Socket::WaitForWrite(int timeout, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     SocketSelector selector(_fd, SOCKET_EVENT_WRITE);
     std::vector<SocketSelector::SocketEvents> sockets;
     if(selector.Select(sockets, timeout, e) <= 0)
@@ -448,11 +387,6 @@ bool Socket::WaitForWrite(int timeout, Error* e) noexcept
 // -1: errors, 0: timeout, >0: events
 int Socket::WaitForReady(int timeout, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     SocketSelector selector(_fd, SOCKET_EVENT_READ | SOCKET_EVENT_WRITE | SOCKET_EVENT_EXCEPT);
     std::vector<SocketSelector::SocketEvents> sockets;
     if(selector.Select(sockets, timeout, e) < 0)
@@ -471,20 +405,15 @@ int Socket::WaitForReady(int timeout, Error* e) noexcept
 
 // Send data over a connected socket
 // Return value varied on block or non-block mode
-ssize_t Socket::Send(const void* p, size_t n, int flags, Error* e) noexcept
-{ 
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
+ssize_t Socket::Send(const void* p, size_t n, int flags, Error* e) noexcept 
+{
     assert(p);
     ssize_t ret;
-    while((ret = ::send(_fd, p, n, flags)) < 0)
+    while((ret = ::send(_fd, p, n, flags)) == SOCKET_ERROR)
     {
-        if(!ErrorCode::IsInterrupted())
+        if(!SocketError::Interrupted())
         {
-            SET_SYSTEM_ERROR(e, "Send errors [" << _fd << "]"); 
+            SET_SOCKET_SEND_ERROR(e, "Socket::Send [" << _fd << "]"); 
             break;
         }
     }
@@ -495,18 +424,13 @@ ssize_t Socket::Send(const void* p, size_t n, int flags, Error* e) noexcept
 // Return value varied on block or non-block mode
 ssize_t Socket::Receive(void* p, size_t n, int flags, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     assert(p);
     ssize_t ret;
-    while((ret = ::recv(_fd, p, n, flags)) < 0)
+    while((ret = ::recv(_fd, p, n, flags)) == SOCKET_ERROR)
     {
-        if(!ErrorCode::IsInterrupted())
+        if(!SocketError::Interrupted())
         {
-            SET_SYSTEM_ERROR(e, "Receive errors [" << _fd << "]"); 
+            SET_SOCKET_RECEIVE_ERROR(e, "Socket::Receive [" << _fd << "]"); 
             break;
         }
     }
@@ -520,18 +444,13 @@ ssize_t Socket::Receive(void* p, size_t n, int flags, Error* e) noexcept
 // Todo: check the address is equal to remote address when connected
 ssize_t Socket::SendTo(const void* p, size_t n, const SocketAddress& addr, int flags, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     assert(p);
     ssize_t ret;
-    while((ret = ::sendto(_fd, p, n, flags, addr.Addr(), addr.Length())) < 0)
+    while((ret = ::sendto(_fd, p, n, flags, addr.Addr(), addr.Length())) == SOCKET_ERROR)
     {
-        if(!ErrorCode::IsInterrupted())
+        if(!SocketError::Interrupted())
         {
-            SET_SYSTEM_ERROR(e, "SendTo errors [" << _fd << "]");
+            SET_SOCKET_SEND_ERROR(e, "Socket::SendTo [" << _fd << "]");
             break;
         }
     }
@@ -545,20 +464,15 @@ ssize_t Socket::SendTo(const void* p, size_t n, const SocketAddress& addr, int f
 ssize_t Socket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags, Error* e) noexcept
 {
     if(!addr) return Receive(p, n, flags, e);
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     assert(p);
-    ssize_t ret;
     addr->Reset();
     socklen_t addrlen = addr->Length();
-    while((ret = ::recvfrom(_fd, p, n, flags, addr->Addr(), &addrlen)) < 0)
+    ssize_t ret;
+    while((ret = ::recvfrom(_fd, p, n, flags, addr->Addr(), &addrlen)) == SOCKET_ERROR)
     {
-        if(!ErrorCode::IsInterrupted())
+        if(!SocketError::Interrupted())
         {
-            SET_SYSTEM_ERROR(e, "ReceiveFrom errors [" << _fd << "]");
+            SET_SOCKET_RECEIVE_ERROR(e, "Socket::ReceiveFrom [" << _fd << "]");
             break;
         }
     }
@@ -567,25 +481,15 @@ ssize_t Socket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, int flags, E
 
 ssize_t Socket::SendMessage(const struct msghdr* msg, int flags, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     assert(false);
-    SET_LOGIC_ERROR(e, "Calling of unimplemented function.");
+    SET_ERROR(e, "Function is not implemented yet.", 0);
     return -1;
 }
 
 ssize_t Socket::ReceiveMessage(struct msghdr* msg, int flags, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return -1;
-    }
     assert(false);
-    SET_LOGIC_ERROR(e, "Calling of unimplemented function.");
+    SET_ERROR(e, "Function is not implemented yet.", 0);
     return -1;
 }
 
@@ -603,11 +507,6 @@ void Socket::Block(bool block)
 
 bool Socket::Block(bool block, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return false;
-    }
 #ifdef _WIN32
     unsigned long arg = block ? 0 : 1;
     int ret = ::ioctlsocket(_fd, FIONBIO, &arg);
@@ -617,9 +516,9 @@ bool Socket::Block(bool block, Error* e) noexcept
     else flags |= O_NONBLOCK;
     int ret = ::fcntl(_fd, F_SETFL, flags);
 #endif
-    if(ret < 0)
+    if(ret == SOCKET_ERROR)
     {
-        SET_SYSTEM_ERROR(e, "Set socket block option failed [" << _fd << "][" << block << "]");
+        SET_SOCKET_CONTROL_ERROR(e, "Socket::Block [" << _fd << "][" << block << "]");
         return false;
     }
     return true;
@@ -637,15 +536,10 @@ void Socket::ReuseAddress(bool reuse)
 
 bool Socket::ReuseAddress(bool reuse, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return false;
-    }
     int flag = reuse ? 1 : 0;
     if(::setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, int(sizeof(int))) != 0)
     {
-        SET_SYSTEM_ERROR(e, "Set socket reuse address option failed [" << _fd << "][" << reuse << "]");
+        SET_SOCKET_OPTION_ERROR(e, "Socket::ReuseAddress [" << _fd << "][" << reuse << "]");
         return false;
     }
     return true;
@@ -663,15 +557,10 @@ void Socket::ReusePort(bool reuse)
 
 bool Socket::ReusePort(bool reuse, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return false;
-    }
     int flag = reuse ? 1 : 0;
     if(::setsockopt(_fd, SOL_SOCKET, SO_REUSEPORT, (char*)&flag, int(sizeof(int))) != 0)
     {
-        SET_SYSTEM_ERROR(e, "Set socket reuse port option failed [" << _fd << "][" << reuse << "]");
+        SET_SOCKET_OPTION_ERROR(e, "Socket::ReusePort [" << _fd << "][" << reuse << "]");
         return false;
     }
     return true;
@@ -680,14 +569,9 @@ bool Socket::ReusePort(bool reuse, Error* e) noexcept
 // Set socket options
 bool Socket::SetOption(int level, int name, const void* val, socklen_t len, Error* e) noexcept
 {
-    if(_fd == INVALID_SOCKET)
+    if(::setsockopt(_fd, level, name, val, len) == SOCKET_ERROR)
     {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return false;
-    }
-    if(::setsockopt(_fd, level, name, val, len) < 0)
-    {
-        SET_SYSTEM_ERROR(e, "Set socket option failed [" << _fd << "][" 
+        SET_SOCKET_OPTION_ERROR(e, "Socket::SetOption [" << _fd << "][" 
                         << level << "," << name << "," << val << "," << len << "]");
         return false;
     }
@@ -697,14 +581,9 @@ bool Socket::SetOption(int level, int name, const void* val, socklen_t len, Erro
 // Get socket options
 bool Socket::GetOption(int level, int name, void* val, socklen_t* len, Error* e) const noexcept
 {
-    if(_fd == INVALID_SOCKET)
-    {
-        SET_LOGIC_ERROR(e, "Socket is not opened yet.");
-        return false;
-    }
     if(::getsockopt(_fd, level, name, val, len) < 0)
     {
-        SET_SYSTEM_ERROR(e, "Get socket option failed [" << _fd << "][" 
+        SET_SOCKET_OPTION_ERROR(e, "Socket::GetOption [" << _fd << "][" 
                         << level << "," << name << "," << val << "," << len << "]");
         return false;
     }

@@ -65,45 +65,45 @@ public:
     // and notify the application by AcceptedCallback
     virtual SOCKET Accept() // thow on errors
     {
-        throw LogicException("Function not work in this mode.");
+        throw LogicException("AsyncTcpAcceptor::Accept", ErrorCode::ACCES);
     }
 
     virtual SOCKET Accept(Error* e) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AsyncTcpAcceptor::Accept", ErrorCode::ACCES);
         return INVALID_SOCKET;
     }
 
     virtual SOCKET Accept(int timeout) // throw on errors
     {
-       throw LogicException("Function not work in this mode.");
+        throw LogicException("AsyncTcpAcceptor::Accept", ErrorCode::ACCES);
     }
     
     virtual SOCKET Accept(int timeout, Error* e) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AsyncTcpAcceptor::Accept", ErrorCode::ACCES);
         return INVALID_SOCKET;
     }
     
     virtual SOCKET AcceptFrom(SocketAddress* addr) // thow on errors
     {
-        throw LogicException("Function not work in this mode.");
+        throw LogicException("AsyncTcpAcceptor::AcceptFrom", ErrorCode::ACCES);
     }
 
     virtual SOCKET AcceptFrom(SocketAddress* addr, Error* e) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AsyncTcpAcceptor::AcceptFrom", ErrorCode::ACCES);
         return INVALID_SOCKET;
     }
 
     virtual SOCKET AcceptFrom(SocketAddress* addr, int timeout) // throw on errors
     {
-       throw LogicException("Function not work in this mode.");
+        throw LogicException("AsyncTcpAcceptor::AcceptFrom", ErrorCode::ACCES);
     }
     
     virtual SOCKET AcceptFrom(SocketAddress* addr, int timeout, Error* e) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AsyncTcpAcceptor::AcceptFrom", ErrorCode::ACCES);
         return INVALID_SOCKET;
     }
 

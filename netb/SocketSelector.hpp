@@ -19,8 +19,6 @@
 #define NETB_SOCKET_SELECTOR_HPP
 
 #include "SocketConfig.hpp"
-#include <sys/select.h>
-#include <vector>
 
 NETB_BEGIN
 
@@ -43,10 +41,10 @@ public:
     };
 
     // Constructor and Destructor
-    SocketSelector() noexcept;
-    SocketSelector(SOCKET s, int events) noexcept;
-    SocketSelector(const std::vector<SocketEvents>& sockets) noexcept;
-    SocketSelector(const fd_set* read, const fd_set* write, const fd_set* except) noexcept;
+    SocketSelector();
+    SocketSelector(SOCKET s, int events);
+    SocketSelector(const std::vector<SocketEvents>& sockets);
+    SocketSelector(const fd_set* read, const fd_set* write, const fd_set* except);
     virtual ~SocketSelector() noexcept;
 
     // Set interested socket and events

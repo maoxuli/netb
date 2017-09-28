@@ -19,44 +19,57 @@
 #define NETB_ERROR_CODE_HPP
 
 #include "Config.hpp"
+#include <errno.h>
 
 NETB_BEGIN
 
 //
-// ErrorCode is a wrapper class for system error codes and runtime last-error. 
-// It defines an error with a customized name (function's name), and establish 
-// a static mapping from the name to system dependent error codes. It also 
-// hides the difference of last-errors across operating systems. ErrorCode is 
-// a tool class consists of a set of static member functions corresponding to 
-// system's last-error and all system defined error codes.  
+// Once a system calling is failed, an errno/last-error is usually set. 
+// ErrorCode namespace include the error code defined by system and the 
+// associated text description of each error code. The errno/last-error 
+// is returned by function Current().
 //
-class ErrorCode
+namespace ErrorCode
 {
-public:  
-    // System's last-error
-    static int Current(); 
-    static void SetCurrent(int code);
 
-    // Text description for last-error or given error code
-    static std::string Description();
-    static std::string Description(int code);
-    
-    // Interrupted, error returned in block function calling
-    static int Interrupted();               // error code
-    static bool IsInterrupted();            // last-error
-    static bool IsInterrupted(int code);    // given code
+//
+// Once a system calling is failed, errno/last-error is set, which can 
+// be retrieved by Current() function. The current error code can be 
+// reset too, in some cases to pass error status to following actions. 
+// 
 
-    // In progress, error returned in non-block function calling
-    // e.g. socket connect() 
-    static int InProgress(); 
-    static bool IsInProgress(); 
-    static bool IsInProgress(int code); 
-    
-    // Would block, error returned in non-block function calling
-    // e.g. socket I/O functions
-    static int WouldBlock(); 
-    static bool IsWouldBlock(); 
-    static bool IsWouldBlock(int code); 
+int Current();  // current error code
+void SetCurrent(int code);
+
+// 
+// Each error code defined by system has an associated text description, 
+// which is usually on global basis, rather a specific function.
+// 
+
+std::string Description(); // for current error code
+std::string Description(int code);
+
+//
+// Mostly it is not necessary for application code to aware the error 
+// code name. But sometimes it is. Here is some useful error code name 
+// defined for cross-platforms. 
+//
+
+enum 
+{
+#ifdef _WIN32
+    TIMEDOUT    = WSAETIMEDOUT, 
+#else 
+    BADF        = EBADF,
+    TIMEDOUT    = ETIMEDOUT,
+    INVAL       = EINVAL,
+    ACCES       = EACCES,
+    PROTOTYPE   = EPROTOTYPE,
+    NOBUFS      = ENOBUFS,
+    NOMEM       = ENOMEM
+#endif
+};
+
 };
 
 NETB_END

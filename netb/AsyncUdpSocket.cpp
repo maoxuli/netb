@@ -74,12 +74,12 @@ bool AsyncUdpSocket::InitHandler(Error* e)
 {
     if(!_loop)
     {
-        SET_LOGIC_ERROR(e, "Event loop is not set.");
+        SET_LOGIC_ERROR(e, "AsyncUdpSocket::InitHandler : Event loop is not set.", ErrorCode::INVAL);
         return false;
     }
     if(!Socket::Valid())
     {
-        SET_LOGIC_ERROR(e, "Socket is not opened.");
+        SET_LOGIC_ERROR(e, "AsyncUdpSocket::InitHandler : Socket is not opened.", ErrorCode::BADF);
         return false;
     }
     if(!Socket::Block(false, e))
@@ -91,7 +91,7 @@ bool AsyncUdpSocket::InitHandler(Error* e)
         _handler = new (std::nothrow) EventHandler(_loop, GetSocket());
         if(!_handler)
         {
-            SET_LOGIC_ERROR(e, "New event handler failed.");
+            SET_RUNTIME_ERROR(e, "AsyncUdpSocket::InitHandler : New event handler failed.", ErrorCode::NOMEM);
             return false;
         }
         _handler->SetReadCallback(std::bind(&AsyncUdpSocket::OnRead, this, _1));
@@ -105,8 +105,7 @@ bool AsyncUdpSocket::EnableReading(Error* e)
 {
     if(!InitHandler(e)) return false;
     assert(_handler);
-    _handler->EnableReading();
-    return true;
+    return _handler->EnableReading();
 }
 
 // Register async I/O events
@@ -114,8 +113,7 @@ bool AsyncUdpSocket::EnableWriting(Error* e)
 {
     if(!InitHandler(e)) return false;
     assert(_handler);
-    _handler->EnableWriting();
-    return true;
+    return _handler->EnableWriting();
 }
 
 // Open to receive data

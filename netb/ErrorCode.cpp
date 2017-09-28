@@ -16,12 +16,14 @@
  */
 
 #include "ErrorCode.hpp"
-#include <errno.h>
 
 NETB_BEGIN
 
+namespace ErrorCode 
+{
+
 // Get system last-error
-int ErrorCode::Current()
+int Current()
 {
 #ifdef _WIN32
     return WSAGetLastError();
@@ -31,7 +33,7 @@ int ErrorCode::Current()
 }
 
 // Set system last error
-void ErrorCode::SetCurrent(int code)
+void SetCurrent(int code)
 {
 #ifdef _WIN32
     WSASetLastError(code);
@@ -41,94 +43,18 @@ void ErrorCode::SetCurrent(int code)
 }
 
 // Text description of last-error
-std::string ErrorCode::Description()
+std::string Description()
 {
     return Description(Current());
 }
 
 // Text description of given error code
-std::string ErrorCode::Description(int code)
+std::string Description(int code)
 {
+    assert(false);
     return "";
 }
 
-// Interrupted error in block mode
-int ErrorCode::Interrupted()
-{
-#ifdef _WIN32
-    return WSAEINTR;
-#else
-    return EINTR;
-#endif
-}
-
-// Is last-error an interrupted error?
-bool ErrorCode::IsInterrupted()
-{
-    return IsInterrupted(Current());
-}
-
-// Is given code an interrupted error?
-bool ErrorCode::IsInterrupted(int code)
-{
-#ifdef _WIN32
-    return code == WSAEINTR;
-#else
-    return errno == EINTR;
-#endif
-}
-
-// In progress error in non-block mode
-int ErrorCode::InProgress()
-{
-#ifdef _WIN32
-    return WSAEWOULDBLOCK;
-#else
-    return EINPROGRESS;
-#endif
-}
-
-// Is last-error an in progress error?
-bool ErrorCode::IsInProgress()
-{
-    return IsInProgress(Current());
-}
-
-// I given error code an in progress error?
-bool ErrorCode::IsInProgress(int code)
-{
-#ifdef _WIN32
-    return code == WSAEWOULDBLOCK;
-#else
-    return code == EINPROGRESS;
-#endif
-}
-
-// Would block error in non-block mode
-// I/O is not ready yet. 
-int ErrorCode::WouldBlock()
-{
-#ifdef _WIN32
-    return WSAEWOULDBLOCK;
-#else
-    return EWOULDBLOCK;
-#endif    
-}
-
-// Is last-error a would block error?
-bool ErrorCode::IsWouldBlock()
-{
-    return IsWouldBlock(Current());
-}
-
-// Is given error code a would block error?
-bool ErrorCode::IsWouldBlock(int code)
-{
-#ifdef _WIN32
-    return code == WSAEWOULDBLOCK;
-#else
-    return code == EAGAIN || code == EWOULDBLOCK;
-#endif
-}
+} // namespace ErrorCode
 
 NETB_END

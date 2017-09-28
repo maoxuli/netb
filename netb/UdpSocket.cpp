@@ -67,10 +67,9 @@ void UdpSocket::Open()
 // Family or local address is given on initial
 bool UdpSocket::Open(Error* e) noexcept
 {
-    if(_address.Empty()) // no initial address or family
+    if(_address.Empty()) 
     {
-        SET_LOGIC_ERROR(e, "Address or family not assigned before opening.");
-        return false;
+        _address.Reset(AF_INET);
     }
     return Open(_address, _reuse_addr, _reuse_port, e);
 }
@@ -98,16 +97,14 @@ bool UdpSocket::Open(const SocketAddress& addr, Error* e) noexcept
 // Dynamic local address or fixed family with dynamic address
 bool UdpSocket::Open(const SocketAddress& addr, bool reuse_addr, bool reuse_port, Error* e) noexcept
 {
-    if(!_address.Empty() && addr != _address) // initial address vs given address
+    if(addr.Empty())
     {
-        if(!_address.Any() || addr.Family() != _address.Family())
-        {
-            SET_LOGIC_ERROR(e, "Given address is not qualified for initial.");
-            return false;
-        }
+        SET_LOGIC_ERROR(e, "UdpSocket::Open : Given address is invalid.", ErrorCode::INVAL);
+        return false;
     }
     // Open socket
-    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
+    if(!Socket::Valid() && 
+       !Socket::Create(_address.Empty() ? addr.Family() : _address.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
     {
         return false;
     }
@@ -149,15 +146,11 @@ void UdpSocket::Connect(const SocketAddress& addr)
 }
 
 // Connect to a remote address
-// NULL address will remove the assocication
+// Empty address will remove the assocication
 bool UdpSocket::Connect(const SocketAddress& addr, Error* e) noexcept
 {
-    if(!_address.Empty() && !addr.Empty() && addr.Family() != _address.Family())
-    {
-        SET_LOGIC_ERROR(e, "Mismatched address family.");
-        return false;
-    }
-    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
+    if(!Socket::Valid() && 
+       !Socket::Create(_address.Empty() ? addr.Family() : _address.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
     {
         return false;
     }
@@ -173,12 +166,13 @@ SocketAddress UdpSocket::ConnectedAddress(Error* e) const noexcept
 // Send data to given address, in block mode
 ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress& addr, Error* e) noexcept
 {
-    if(!_address.Empty() && !addr.Empty() && addr.Family() != _address.Family())
+    if(addr.Empty())
     {
-        SET_LOGIC_ERROR(e, "Mismatched address family.");
+        SET_LOGIC_ERROR(e, "UdpSocket::Sendto : Given address is invalid.", ErrorCode::INVAL);
         return false;
     }
-    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
+    if(!Socket::Valid() && 
+       !Socket::Create(_address.Empty() ? addr.Family() : _address.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
     {
         return false;
     }
@@ -199,12 +193,13 @@ ssize_t UdpSocket::SendTo(const void* p, size_t n, const SocketAddress& addr, in
 {
     if(timeout < 0) return SendTo(p, n, addr, e);
 
-    if(!_address.Empty() && !addr.Empty() && addr.Family() != _address.Family())
+    if(addr.Empty())
     {
-        SET_LOGIC_ERROR(e, "Mismatched address family.");
+        SET_LOGIC_ERROR(e, "UdpSocket::SendTo : Given address is invalid.", ErrorCode::INVAL);
         return false;
     }
-    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
+    if(!Socket::Valid() && 
+       !Socket::Create(_address.Empty() ? addr.Family() : _address.Family(), SOCK_DGRAM, IPPROTO_UDP, e))
     {
         return false;
     }
@@ -260,6 +255,12 @@ ssize_t UdpSocket::Send(StreamBuffer& buf, int timeout, Error* e) noexcept
     return ret;
 }
 
+/*
+Datagram sockets in various domains (e.g., the UNIX and Internet
+domains) permit zero-length datagrams.  When such a datagram is
+received, the return value is 0.
+*/
+
 // Receive data and get remote address, block mode
 ssize_t UdpSocket::ReceiveFrom(void* p, size_t n, SocketAddress* addr, Error* e) noexcept
 {
@@ -273,7 +274,7 @@ ssize_t UdpSocket::ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, Error* e)
     assert(buf != NULL);
     if(!buf->Writable(RECEIVE_BUFFER_SIZE))
     {
-        SET_LOGIC_ERROR(e, "No enought buffer to receive.");
+        SET_RUNTIME_ERROR(e, "UdpSocket::ReceiveFrom : Prepare buffer failed.", ErrorCode::NOBUFS);
         return -1;
     }
     ssize_t ret = ReceiveFrom(buf->Write(), buf->Writable(), addr, e);
@@ -300,7 +301,7 @@ ssize_t UdpSocket::ReceiveFrom(StreamBuffer* buf, SocketAddress* addr, int timeo
     assert(buf != NULL);
     if(!buf->Writable(RECEIVE_BUFFER_SIZE))
     {
-        SET_LOGIC_ERROR(e, "No enought buffer to receive.");
+        SET_RUNTIME_ERROR(e, "UdpSocket::ReceiveFrom : Prepare buffer failed.", ErrorCode::NOBUFS);
         return -1;
     }
     ssize_t ret = ReceiveFrom(buf->Write(), buf->Writable(), addr, timeout, e);
@@ -322,7 +323,7 @@ ssize_t UdpSocket::Receive(StreamBuffer* buf, Error* e) noexcept
     assert(buf != NULL);
     if(!buf->Writable(RECEIVE_BUFFER_SIZE))
     {
-        SET_LOGIC_ERROR(e, "No enought buffer to receive.");
+        SET_RUNTIME_ERROR(e, "UdpSocket::Receive : Prepare buffer failed.", ErrorCode::NOBUFS);
         return -1;
     }
     ssize_t ret = Receive(buf->Write(), buf->Writable(), e);
@@ -348,7 +349,7 @@ ssize_t UdpSocket::Receive(StreamBuffer* buf, int timeout, Error* e) noexcept
     assert(buf != NULL);
     if(!buf->Writable(RECEIVE_BUFFER_SIZE))
     {
-        SET_LOGIC_ERROR(e, "No enought buffer to receive.");
+        SET_RUNTIME_ERROR(e, "UdpSocket::Receive : Prepare buffer failed.", ErrorCode::NOBUFS);
         return -1;
     }
     ssize_t ret = Receive(buf->Write(), buf->Writable(), timeout, e);

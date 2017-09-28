@@ -94,13 +94,13 @@ public:
     // Send data over the connection, in non-block mode with timeout
     virtual ssize_t Send(const void* p, size_t n, int timeout, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AsyncTcpSocket::Send : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
     virtual ssize_t Send(StreamBuffer& buf, int timeout, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AsyncTcpSocket::Send : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
@@ -108,25 +108,25 @@ public:
    // and notify application by ReceivedCallback
     virtual ssize_t Receive(void* p, size_t n, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AsyncTcpSocket::Receive : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
     virtual ssize_t Receive(StreamBuffer* buf, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AsyncTcpSocket::Receive : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
     virtual ssize_t Receive(void* p, size_t n, int timeout, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AsyncTcpSocket::Receive : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 
     virtual ssize_t Receive(StreamBuffer* buf, int timeout, Error* e = nullptr) noexcept
     {
-        SET_LOGIC_ERROR(e, "Function not work in this mode.");
+        SET_LOGIC_ERROR(e, "AsyncTcpSocket::Receive : Function not work in this mode.", ErrorCode::ACCES);
         return -1;
     }
 

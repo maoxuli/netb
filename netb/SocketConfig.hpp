@@ -21,11 +21,13 @@
 // Include headers for some basic classes
 #include "Config.hpp"
 #include "Uncopyable.hpp"
-#include "ErrorCode.hpp"
 #include "Error.hpp"
 #include "Exception.hpp"
+#include "ErrorCode.hpp"
+#include "SocketError.hpp"
 
 // Include headers for socket API
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
@@ -35,6 +37,13 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <netdb.h>
+
+// According to POSIX.1-2001, POSIX.1-2008 
+#include <sys/select.h>
+// According to earlier standards 
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 NETB_BEGIN
 

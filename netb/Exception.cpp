@@ -19,29 +19,83 @@
 
 NETB_BEGIN
 
-// Base class of exception
-const class ErrorClass& Exception::Class() const noexcept 
+// Exception
+Exception::Exception(const std::string& msg, int code)
+: std::exception()
+, _message(msg)
+, _code(code) 
+{
+
+}
+
+Exception::~Exception() noexcept
+{
+
+}
+
+// Error class 
+const class ErrorClass& Exception::Class() const 
 {
     return ErrorClass();
 }
 
 // To string for log
-std::string Exception::Report() const noexcept 
+std::string Exception::Report() const 
 {
     std::ostringstream oss;
     oss << Class().Name();
-    if(_code > 0) oss << ":" << _code;
     if(!_message.empty()) oss << ":" << _message;
+    if(_code > 0) oss << ":" << _code;
     oss << ".";
     return oss.str();
 }
 
-// Exception subclass and ErrorClass subclass for system error
-IMPLEMENT_EXCEPTION(SystemException, SystemError)
-IMPLEMENT_ERROR_CLASS(SystemError, "SystemError", SystemException)
+////////////////////////////////////////////////////////////////////////
 
-// Exception subclass and ErrorClass subclass for logic error
-IMPLEMENT_EXCEPTION(LogicException, LogicError)
+// Logic exception
+LogicException::LogicException(const std::string& msg, int code)
+: Exception(msg, code)
+, std::logic_error(Error::MessageStream() << msg << ":" << code)
+{
+
+}
+
+LogicException::~LogicException() noexcept
+{
+
+}
+
+// Error class
+const class ErrorClass& LogicException::Class() const 
+{
+    return LogicError();
+}
+
+// Implementation for logic error class 
 IMPLEMENT_ERROR_CLASS(LogicError, "LogicError", LogicException)
+
+////////////////////////////////////////////////////////////////////////
+
+// Runtime exception
+RuntimeException::RuntimeException(const std::string& msg, int code)
+: Exception(msg, code)
+, std::runtime_error(Error::MessageStream() << msg << ":" << code)
+{
+
+}
+
+RuntimeException::~RuntimeException() noexcept
+{
+
+}
+
+// Error class  
+const class ErrorClass& RuntimeException::Class() const 
+{
+    return RuntimeError();
+}
+
+// Implementation for runtime error class 
+IMPLEMENT_ERROR_CLASS(RuntimeError, "RuntimeError", RuntimeException)
 
 NETB_END

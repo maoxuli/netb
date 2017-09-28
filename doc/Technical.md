@@ -22,6 +22,7 @@ To keep simple, StreamBuffer is designed with only interface for reading and wri
 
 Please refer to the examples of "http" and "dns", which illustrate the using of StreamBuffer and the helper classes to pack and unpack a protocol message.  
 
+
 ## Cooperating with thir-party event-driven notification libraries  
 
 NetB has an internal implementation of a simplified event-driven notification mechanism and the asynchronous I/O socket classes based on it. It provides a convenient way to introduce asynchfronous I/O mode in network applications. However, if you would like to use the third-party event-driven notification libraries, such as libevent, libev, and libuv, what you need to do is just working on the non-async socket classes.  

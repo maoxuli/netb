@@ -36,5 +36,9 @@
 #include <cassert>
 #include <cstring>
 #include <algorithm>
+#include <vector>
+#include <map>
+#include <list>
+#include <string>
 
 #endif

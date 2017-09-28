@@ -18,14 +18,15 @@ ARFLAGS := rcs
 
 INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/Uncopyable.hpp \
-	   $(INCDIR)/ErrorCode.hpp \
 	   $(INCDIR)/Error.hpp \
 	   $(INCDIR)/Exception.hpp \
-	   $(INCDIR)/StreamBuffer.hpp \
+	   $(INCDIR)/ErrorCode.hpp \
+	   $(INCDIR)/SocketError.hpp \
 	   $(INCDIR)/SocketConfig.hpp \
 	   $(INCDIR)/SocketAddress.hpp \
 	   $(INCDIR)/SocketSelector.hpp \
 	   $(INCDIR)/Socket.hpp \
+	   $(INCDIR)/StreamBuffer.hpp \
 	   $(INCDIR)/TcpAcceptor.hpp \
 	   $(INCDIR)/TcpSocket.hpp \
 	   $(INCDIR)/UdpSocket.hpp \
@@ -44,14 +45,15 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/DnsRecord.hpp \
 	   $(INCDIR)/DnsMessage.hpp
 	  
-OBJ	:= $(OBJDIR)/ErrorCode.o \
-	   $(OBJDIR)/Error.o \
+OBJ	:= $(OBJDIR)/Error.o \
 	   $(OBJDIR)/Exception.o \
-	   $(OBJDIR)/StreamBuffer.o \
+	   $(OBJDIR)/ErrorCode.o \
+	   $(OBJDIR)/SocketError.o \
 	   $(OBJDIR)/SocketConfig.o \
 	   $(OBJDIR)/SocketAddress.o \
 	   $(OBJDIR)/SocketSelector.o \
 	   $(OBJDIR)/Socket.o \
+	   $(OBJDIR)/StreamBuffer.o \
 	   $(OBJDIR)/TcpAcceptor.o \
 	   $(OBJDIR)/TcpSocket.o \
 	   $(OBJDIR)/UdpSocket.o \

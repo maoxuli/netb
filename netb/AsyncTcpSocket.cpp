@@ -27,7 +27,7 @@ using namespace std::placeholders;
 AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop) noexcept
 : TcpSocket()
 , _loop(loop)
-, _handler(nullptr)
+, _handler(0)
 {
     assert(_loop);
 }
@@ -36,7 +36,7 @@ AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop) noexcept
 AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, sa_family_t family) noexcept
 : TcpSocket(family)
 , _loop(loop)
-, _handler(nullptr)
+, _handler(0)
 {
     assert(_loop);
 }
@@ -46,7 +46,7 @@ AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, sa_family_t family) noexcept
 AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, const SocketAddress& addr, bool reuse_addr, bool reuse_port) noexcept
 : TcpSocket(addr, reuse_addr, reuse_port)
 , _loop(loop)
-, _handler(nullptr)
+, _handler(0)
 {
     assert(_loop);
 }
@@ -55,7 +55,7 @@ AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, const SocketAddress& addr, bool 
 AsyncTcpSocket::AsyncTcpSocket(EventLoop* loop, SOCKET s, const SocketAddress* addr) noexcept
 : TcpSocket(s, addr)
 , _loop(loop)
-, _handler(nullptr)
+, _handler(0)
 {
     assert(_loop);
 }
@@ -68,21 +68,23 @@ AsyncTcpSocket::~AsyncTcpSocket() noexcept
     {
         _handler->Detach(); // block until done
         delete _handler;
-        _handler = nullptr;
+        _handler = 0;
     }
 }
 
 // Init async I/O events handler
+// Called after connection is established and receiving is ready 
+// or buffered sending is ready 
 bool AsyncTcpSocket::InitHandler(Error* e)
 {
     if(!_loop)
     {
-        SET_LOGIC_ERROR(e, "Event loop is not set.");
+        SET_LOGIC_ERROR(e, "AsyncTcpSocket::InitHandler : Event loop is not set.", ErrorCode::INVAL);
         return false;
     }
     if(!Socket::Valid())
     {
-        SET_LOGIC_ERROR(e, "Socket is not opened.");
+        SET_LOGIC_ERROR(e, "AsyncTcpSocket::InitHandler : Socket is not opened yet.", ErrorCode::BADF);
         return false;
     }
     if(!Socket::Block(false, e))
@@ -94,7 +96,7 @@ bool AsyncTcpSocket::InitHandler(Error* e)
         _handler = new (std::nothrow) EventHandler(_loop, GetSocket());
         if(!_handler)
         {
-            SET_LOGIC_ERROR(e, "New event handler failed.");
+            SET_RUNTIME_ERROR(e, "AsyncTcpSocket::InitHandler : New event handler failed.", ErrorCode::NOMEM);
             return false;
         }
         _handler->SetReadCallback(std::bind(&AsyncTcpSocket::OnRead, this, _1));
@@ -110,8 +112,7 @@ bool AsyncTcpSocket::EnableReading(Error* e)
     {
         return false;
     }
-    _handler->EnableReading();
-    return true;
+    return _handler->EnableReading();
 }
 
 // Reister I/O events to enable writing
@@ -121,8 +122,7 @@ bool AsyncTcpSocket::EnableWriting(Error* e)
     {
         return false;
     }
-    _handler->EnableWriting();
-    return true;
+    return _handler->EnableWriting();
 }
 
 // Set status for externally established connection

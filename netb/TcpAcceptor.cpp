@@ -73,13 +73,12 @@ void TcpAcceptor::Open()
     }
 }
 
-// Open with fix address or fix family with any address
+// Open with fix address or fix family
 bool TcpAcceptor::Open(Error* e) noexcept
 {
-    if(_address.Empty()) // no initial address or family
+    if(_address.Empty())
     {
-        SET_LOGIC_ERROR(e, "Address or family not assigned before opening");
-        return false;
+        _address.Reset(AF_INET);
     }
     return Open(_address, _reuse_addr, _reuse_port, e);
 }
@@ -104,16 +103,14 @@ bool TcpAcceptor::Open(const SocketAddress& addr, Error* e) noexcept
 // Open with dynamic address, or fixed family with dynamic address
 bool TcpAcceptor::Open(const SocketAddress& addr, bool reuse_addr, bool reuse_port, Error* e) noexcept
 {
-    if(!_address.Empty() && addr != _address) // initial address vs given address
+    if(addr.Empty())
     {
-        if(!_address.Any() || addr.Family() != _address.Family())
-        {
-            SET_LOGIC_ERROR(e, "Given address is not qualified for initial.");
-            return false;
-        }
+        SET_LOGIC_ERROR(e, "TcpAcceptor::Open : Given address is invalid.", ErrorCode::INVAL);
+        return false;
     }
     // Open socket
-    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP, e))
+    if(!Socket::Valid() && 
+       !Socket::Create(_address.Empty() ? addr.Family() : _address.Family(), SOCK_STREAM, IPPROTO_TCP, e))
     {
         return false;
     }

@@ -88,13 +88,13 @@ bool TcpSocket::Connected(Error* e) noexcept
 {
     if(!Socket::Valid())
     {
-        SET_LOGIC_ERROR(e, "Socket connection is not established.");
+        SET_LOGIC_ERROR(e, "TcpSocket::Connected : Socket is not opened yet.", ErrorCode::BADF);
         return false;
     }
     // Check given socket type
     if(Socket::Type() != SOCK_STREAM)
     {
-        SET_LOGIC_ERROR(e, "Not a TCP socket connection.");
+        SET_LOGIC_ERROR(e, "TcpSocket::Connected : Not TCP socket.", ErrorCode::PROTOTYPE);
         return false;
     }
     // Check connectd address, will indicate connected status
@@ -106,7 +106,7 @@ bool TcpSocket::Connected(Error* e) noexcept
     // Check given conneced address
     if(!_connected_address.Empty() && _connected_address != addr)
     {
-        SET_LOGIC_ERROR(e, "Connected address is incorrect.");
+        SET_LOGIC_ERROR(e, "TcpSocket::Connected : Connected address is incorrect.", ErrorCode::INVAL);
         return false;
     }
     return true;
@@ -135,12 +135,8 @@ bool TcpSocket::Connected(SOCKET s, const SocketAddress* addr, Error* e) noexcep
 // Do connect in block or non-block mode
 bool TcpSocket::DoConnect(const SocketAddress& addr, bool block, Error* e)
 {
-    if(!_address.Empty() && addr.Family() != _address.Family())
-    {
-        SET_LOGIC_ERROR(e, "Mismatched address family.");
-        return false;
-    }
-    if(!Socket::Valid() && !Socket::Create(addr.Family(), SOCK_STREAM, IPPROTO_TCP, e))
+    if(!Socket::Valid() && 
+       !Socket::Create(_address.Empty() ? addr.Family() : _address.Family(), SOCK_STREAM, IPPROTO_TCP, e))
     {
         return false;
     }
@@ -191,21 +187,18 @@ bool TcpSocket::Connect(const SocketAddress& addr, int timeout, Error* e) noexce
     {
         return Connect(addr, e);
     }
-    Error err;
-    if(!DoConnect(addr, false, &err))
+    if(!DoConnect(addr, false, e))
     {
         if(timeout > 0) // Check status in timeout
         {
             // If the status is EINPROGRESS, check ready to write in timeout
-            // More details need to check here!
-            if(ErrorCode::IsInProgress(err.Code()) && WaitForWrite(timeout, &err))
+            // Todo: More details need to check here!
+            if(SocketError::InProgress() && WaitForWrite(timeout, e))
             {
+                RESET_ERROR(e);
                 return true;
             }
-            // Handler status of EAGAIN
         }
-        SET_ERROR(e, err.Message(), err.Code());
-        SET_ERROR_CLASS(e, err.Class());
         return false;
     }
     return true;
@@ -279,6 +272,14 @@ ssize_t TcpSocket::Send(StreamBuffer& buf, int timeout, Error* e) noexcept
     return ret;
 }
 
+/*
+When a stream socket peer has performed an orderly shutdown, the
+return value will be 0 (the traditional "end-of-file" return).
+
+The value 0 may also be returned if the requested number of bytes to
+receive from a stream socket was 0.
+*/
+
 // Receive data from the connection, in block mode
 ssize_t TcpSocket::Receive(void* p, size_t n, Error* e) noexcept
 {
@@ -291,7 +292,7 @@ ssize_t TcpSocket::Receive(StreamBuffer* buf, Error* e) noexcept
 {
     if(!buf->Writable(2048))
     {
-        SET_LOGIC_ERROR(e, "Buffer is not enough.");
+        SET_RUNTIME_ERROR(e, "TcpSocket::Receive : Prepare buffer failed.", ErrorCode::NOBUFS);
         return -1;
     }
     ssize_t ret = Receive(buf->Write(), buf->Writable(), e);
@@ -320,7 +321,7 @@ ssize_t TcpSocket::Receive(StreamBuffer* buf, int timeout, Error* e) noexcept
 {
     if(!buf->Writable(2048))
     {
-        SET_LOGIC_ERROR(e, "Buffer is not enough.");
+        SET_RUNTIME_ERROR(e, "TcpSocket::Receive : Prepare buffer failed.", ErrorCode::NOBUFS);
         return -1;
     }
     ssize_t ret = Receive(buf->Write(), buf->Writable(), timeout, e);

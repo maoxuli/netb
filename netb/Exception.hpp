@@ -21,28 +21,34 @@
 #include "Config.hpp"
 #include "Error.hpp"
 #include <exception>
+#include <stdexcept>
 
 NETB_BEGIN
 
 //
-// Base class for exceptions
+// NetB follows the logic of stl exception handling, e.g., classify exceptions 
+// into logic errors and runtime errors. NetB declared some exception classes 
+// accordingly but extended with an optional error code. 
+// 
+// The NetB exception class is so declared that it is always a subclass of a 
+// coresponding standard stl exception, if it exists. 
 //
 class Exception : public std::exception
 {
 public: 
-    Exception(const std::string& msg = "", int code = 0) noexcept
-        : std::exception(), _message(msg), _code(code) { }
+    Exception(const std::string& msg = "", int code = 0);
+    virtual ~Exception() noexcept;
     
     // Get
     virtual const char* what() const noexcept { return _message.c_str(); }
-    virtual std::string Message() const noexcept { return _message; }
-    virtual int Code() const noexcept { return _code; }
+    virtual std::string Message() const { return _message; }
+    virtual int Code() const { return _code; }
 
     // Bridge to an Error object
-    virtual const class ErrorClass& Class() const noexcept;
+    virtual const class ErrorClass& Class() const;
 
     // To string for log or display
-    virtual std::string Report() const noexcept;
+    virtual std::string Report() const;
     
 private:
     std::string _message;
@@ -50,7 +56,51 @@ private:
 };
 
 //
-// Declare and implement other exceptions
+// Logic exception 
+//
+class LogicException : public Exception, public std::logic_error
+{
+public: 
+    LogicException(const std::string& msg = "", int code = 0);
+    virtual ~LogicException() noexcept;
+
+    // what
+    virtual const char* what() const noexcept { return logic_error::what(); }
+
+    // Bridge to an error class 
+    virtual const class ErrorClass& Class() const;
+};
+
+// Declare an error class for logic exception 
+// and macro to set error object with error class of logic error 
+DECLARE_ERROR_CLASS(LogicError, ErrorClass)
+#define SET_LOGIC_ERROR(e, msg, code) do{ if(e) e->Set(LogicError(), \
+                       (Error::MessageStream() << msg), code); } while(0) // no trailing ;
+
+//
+// Runtime exception 
+// 
+class RuntimeException : public Exception, public std::runtime_error 
+{
+public: 
+    RuntimeException(const std::string& msg = "", int code = 0);
+    virtual ~RuntimeException() noexcept; 
+
+    // what
+    virtual const char* what() const noexcept { return std::runtime_error::what(); }
+
+    // Bridge to an error class
+    virtual const class ErrorClass& Class() const; 
+};
+
+// Declare an error class for runtime exception 
+// and macro to set error object with error class of runtime error
+DECLARE_ERROR_CLASS(RuntimeError, ErrorClass)
+#define SET_RUNTIME_ERROR(e, msg, code) do{ if(e) e->Set(RuntimeError(), \
+                         (Error::MessageStream() << msg), code); } while(0) // no trailing ;
+
+//
+// Macros to declare and implement non-standard exceptions
 //
 #define DECLARE_EXCEPTION(CLS, BASE)                                        \
     class CLS : public BASE                                                 \
@@ -65,24 +115,7 @@ private:
     const class ErrorClass& CLS::Class() const noexcept                     \
     {                                                                       \
         return EC();                                                        \
-    }                                      
-
-
-// Declare a new exception and associated error classification
-// System error, errors that occurred in system calling, always with an error code
-// Declare exception, error classification, and macro to set error object given by a pointer
-DECLARE_EXCEPTION(SystemException, Exception)
-DECLARE_ERROR_CLASS(SystemError, ErrorClass)
-#define SET_SYSTEM_ERROR(e, msg) do{ if(e) e->Set(SystemError(), \
-                        (Error::MessageStream() << msg), ErrorCode::Current()); } while(0) // no trailing ;
-
-// Declare a new exception and associated error classification
-// Logic error, errors of logic that produce unexcepcted results
-// Declare exception, error classification, and macro to set error object given by a pointer
-DECLARE_EXCEPTION(LogicException, Exception)
-DECLARE_ERROR_CLASS(LogicError, ErrorClass)
-#define SET_LOGIC_ERROR(e, msg) do{ if(e) e->Set(LogicError(), \
-                       (Error::MessageStream() << msg)); } while(0) // no trailing ;
+    }  
 
 NETB_END
 

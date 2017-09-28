@@ -23,12 +23,22 @@
 NETB_BEGIN
 
 //
-// Error object is used to transfer error status from functions to caller. 
-// It holds a text message and an optional associated code to describe the 
-// error, and a ErrorClass object to classify the error. ErrorClass object 
-// is also a bridge between an error object and an exception. The formats 
-// of error message and code are not determined. They are usually varied on 
-// error classifications.
+// Error object is defined by Error class, which is used to return details 
+// of error status from functions to caller. It holds a text message as 
+// description of the error and an optional associated error code defined 
+// by system or the library. 
+//
+// Error object also holds an error class object, which is defined by 
+// ErrorClass or its subclasses, to indicate classification of the error. 
+// Error class object is a bridge between an error object and an exception. 
+// Usually a subclass of ErrorClass will be declared for each of exceptions. 
+// Error class has a member method to throw associated exception. 
+// 
+// A static object for each ErrorClass and its subclasses is initiated   
+// when it is referenced for the first time. It is then referenced by all 
+// error objects to indicate error classifications. For convenience a same 
+// name function of ErrorClass and its subclasses is defined to get the 
+// reference of the error class object.  
 //
 class Error
 {
@@ -36,7 +46,7 @@ public:
     // Error with nothing indicates no error
     Error() noexcept;
 
-    // Only text message and error code denote an unclassified error
+    // Only text message and error code, denotes an unclassified error
     // The classification is set by default
     Error(const std::string& msg, int code = 0) noexcept;
 
@@ -46,10 +56,11 @@ public:
     // Destructor
     ~Error() noexcept;
 
-    // Error status
+    // Set and Get error status
     // Empty Error object indicates no error
-    bool Empty() const noexcept { return !_class; }
     operator bool() const noexcept { return _class; }
+    bool Empty() const noexcept { return !_class; }
+    void Reset() noexcept; // set to empty
 
     // Get
     const class ErrorClass& Class() const noexcept;
@@ -57,9 +68,8 @@ public:
     int Code() const noexcept { return _code; }
 
     // Set 
-    void Reset() noexcept; // Set to empty
     void Set(const std::string& msg, int code = 0) noexcept; // unclassified error by default
-    void Set(const class ErrorClass& cls, const std::string& msg = 0, int code = 0) noexcept;
+    void Set(const class ErrorClass& cls, const std::string& msg = "", int code = 0) noexcept;
     void SetClass(const class ErrorClass& cls) noexcept;
     void SetMessage(const std::string& msg) noexcept;
     void SetCode(int code) noexcept;
@@ -94,19 +104,13 @@ public:
     };
 };
 
-// Set error object given by a pointer
-#define SET_ERROR_CLASS(e, cls) do{ if(e) e->SetClass(cls); } while(0) // no trailing ;
-#define SET_ERROR_MESSAGE(e, msg) do{ if(e) e->SetMessage((Error::MessageStream() << msg)); } while(0) // no trailing ;
-#define SET_ERROR_CODE(e, code) do{ if(e) e->SetCode(code); } while(0) // no trailing ;
-
-// Throw exception based on an error object
-#define THROW_ERROR(e) do{ e.Class().Throw(e); } while(0) // no trailing ;
-
 //
-// The classification of an error is denoted by an ErrorClass or its subclass object. 
-// ErrorClass provides a name for an error classification and established a static 
-// mapping to an exception or its subclass object. By this mean, an ErrorClass subclass 
-// is usually declared for an exception subclass.
+// The classification of an error is denoted by an object of ErrorClass or its subclasses. 
+// ErrorClass provides a name for the error classification. A subclass of ErrorClass is 
+// usually declared for a target exception. So ErrorClass and it subclasses have a member
+// method to throw the target exceptions. The error class object is a bridge between error 
+// object and a exception, so that approperiate exception can be throwed based on an error 
+// object.   
 //
 class ErrorClass
 {
@@ -116,8 +120,17 @@ public:
 };
 const class ErrorClass& ErrorClass() noexcept;
 
-// Set an error object as an unclassified error, with error message and code
+// Set error object given by a pointer
+#define RESET_ERROR(e) do{ if(e) e->Reset(); } while(0) // no trailing ;
+#define SET_ERROR_CLASS(e, cls) do{ if(e) e->SetClass(cls); } while(0) // no trailing ;
+#define SET_ERROR_MESSAGE(e, msg) do{ if(e) e->SetMessage((Error::MessageStream() << msg)); } while(0) // no trailing ;
+#define SET_ERROR_CODE(e, code) do{ if(e) e->SetCode(code); } while(0) // no trailing ;
+
+// Set an error object as an unclassified error,  with error message and code
 #define SET_ERROR(e, msg, code) do{ if(e) e->Set(ErrorClass(), (Error::MessageStream() << msg), code); } while(0) // no trailing ;
+
+// Throw exception based on an error object
+#define THROW_ERROR(e) do{ e.Class().Throw(e); } while(0) // no trailing ;
 
 //
 // A dummy subclass of ErrorClass is declared to indicate no error
@@ -131,7 +144,7 @@ public:
 const class NoError& NoError() noexcept;
 
 // 
-// Declare and implement a subclass of ErrorClass
+// Macros to declare and implement a subclass of ErrorClass
 //
 #define DECLARE_ERROR_CLASS(CLS, BASE)                              \
     class CLS : public BASE                                         \

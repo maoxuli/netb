@@ -66,17 +66,17 @@ bool AsyncTcpAcceptor::EnableReading(Error* e)
 {
     if(!_loop)
     {
-        SET_LOGIC_ERROR(e, "Event loop is not set.");
+        SET_LOGIC_ERROR(e, "AsyncTcpAcceptor::EnableReading : Event loop is not set.", ErrorCode::INVAL);
         return false;
     }
     if(!_accepted_callback) 
     {
-        SET_LOGIC_ERROR(e, "Accepted callback is not set.");
+        SET_LOGIC_ERROR(e, "AsyncTcpAcceptor::EnableReading : Accepted callback is not set.", ErrorCode::INVAL);
         return false;
     }
     if(!Socket::Valid())
     {
-        SET_LOGIC_ERROR(e, "Socket is not opened.");
+        SET_LOGIC_ERROR(e, "AsyncTcpAcceptor::EnableReading : Socket is not opened yet.", ErrorCode::BADF);
         return false;
     }
     // always set to non-block for async mode
@@ -90,7 +90,7 @@ bool AsyncTcpAcceptor::EnableReading(Error* e)
         _handler = new (std::nothrow) EventHandler(_loop, GetSocket());
         if(!_handler)
         {
-            SET_LOGIC_ERROR(e, "New EventHandler failed.");
+            SET_RUNTIME_ERROR(e, "AsyncTcpAcceptor::EnableReading : New EventHandler failed.", ErrorCode::NOMEM);
             return false;
         }
         _handler->SetReadCallback(std::bind(&AsyncTcpAcceptor::OnRead, this, _1));
