@@ -20,7 +20,7 @@
 
 #include "Config.hpp"
 #include "Error.hpp"
-#include "Exception.hpp"
+#include "ErrorClass.hpp"
 #include "ErrorCode.hpp"
 
 NETB_BEGIN
@@ -54,8 +54,11 @@ namespace SocketError
 // functions so the error object is set to unclassified (or default class). 
 // 
 
-//void SetError(Error* e, const std::string& msg, int code);
-//void SetError(Error* e, const std::string& msg);
+void SetError(Error* e, const std::string& msg, int code);
+inline void SetError(Error* e, const std::string& msg)
+{
+    SetError(e, msg, ErrorCode::Current());
+}
 
 //
 // Using name space to call the function above is not convenient. 
@@ -84,7 +87,7 @@ namespace SocketError
         void SetError(Error* e, const std::string& msg, int code);  \
         inline void SetError(Error* e, const std::string& msg)      \
         {                                                           \
-            return SetError(e, msg, ErrorCode::Current());          \
+            SetError(e, msg, ErrorCode::Current());                 \
         }                                                           \
     } 
 

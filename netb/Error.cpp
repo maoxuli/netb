@@ -22,7 +22,7 @@ NETB_BEGIN
 
 // No error
 Error::Error() noexcept
-: _class(nullptr)
+: _class(0)
 , _message("")
 , _code(0)
 {
@@ -31,7 +31,7 @@ Error::Error() noexcept
 
 // Unclassified error
 Error::Error(const std::string& msg, int code) noexcept
-: _class(&ErrorClass())
+: _class(&GeneralError())
 , _message(msg)
 , _code(code)
 
@@ -59,13 +59,13 @@ const class ErrorClass& Error::Class() const noexcept
     {
         return *_class;
     }
-    return NoError();
+    return ErrorClass();
 }
 
 // Set to no error, empty error
 void Error::Reset() noexcept
 {
-    _class = nullptr;
+    _class = 0;
     _message = "";
     _code = 0; 
 }
@@ -74,7 +74,7 @@ void Error::Set(const std::string& msg, int code) noexcept
 {
     _message = msg;
     _code = code; 
-    if(!_class) _class = &ErrorClass();
+    if(!_class) _class = &GeneralError();
 }
 
 void Error::Set(const class ErrorClass& cls, const std::string& msg, int code) noexcept
@@ -92,13 +92,13 @@ void Error::SetClass(const class ErrorClass& cls) noexcept
 void Error::SetMessage(const std::string& msg) noexcept
 {
     _message = msg;
-    if(!_class) _class = &ErrorClass();
+    if(!_class) _class = &GeneralError();
 }
 
 void Error::SetCode(int code) noexcept
 {
     _code = code;
-    if(!_class) _class = &ErrorClass();
+    if(!_class) _class = &GeneralError();
 }
 
 std::string Error::Report() const noexcept
@@ -110,45 +110,6 @@ std::string Error::Report() const noexcept
     if(!_message.empty()) oss << ":" << _message;
     oss << ".";
     return oss.str();
-}
-
-////////////////////////////////////////////////////////////////////////
-
-// Base class of error classifications
-const char* ErrorClass::Name() const noexcept
-{
-    return "Error";
-}
-
-void ErrorClass::Throw(const Error& e) const
-{
-    if(e) throw Exception(e.Message(), e.Code());
-}
-
-const class ErrorClass& ErrorClass() noexcept
-{
-    static class ErrorClass sErrorClass;
-    return sErrorClass;
-}
-
-///////////////////////////////////////////////////////////////////////
-
-// Dummy class of error classifications
-// Indicate no error
-const char* NoError::Name() const noexcept
-{
-    return "";
-}
-
-void NoError::Throw(const Error& e) const noexcept
-{
-
-}
-
-const class NoError& NoError() noexcept 
-{
-    static class NoError sNoError;
-    return sNoError;
 }
 
 NETB_END

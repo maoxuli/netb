@@ -19,6 +19,7 @@
 #define NETB_ERROR_HPP
 
 #include "Config.hpp"
+#include "ErrorClass.hpp"
 
 NETB_BEGIN
 
@@ -104,71 +105,11 @@ public:
     };
 };
 
-//
-// The classification of an error is denoted by an object of ErrorClass or its subclasses. 
-// ErrorClass provides a name for the error classification. A subclass of ErrorClass is 
-// usually declared for a target exception. So ErrorClass and it subclasses have a member
-// method to throw the target exceptions. The error class object is a bridge between error 
-// object and a exception, so that approperiate exception can be throwed based on an error 
-// object.   
-//
-class ErrorClass
-{
-public:
-    virtual const char* Name() const noexcept;
-    virtual void Throw(const class Error& e) const;
-};
-const class ErrorClass& ErrorClass() noexcept;
-
 // Set error object given by a pointer
 #define RESET_ERROR(e) do{ if(e) e->Reset(); } while(0) // no trailing ;
 #define SET_ERROR_CLASS(e, cls) do{ if(e) e->SetClass(cls); } while(0) // no trailing ;
 #define SET_ERROR_MESSAGE(e, msg) do{ if(e) e->SetMessage((Error::MessageStream() << msg)); } while(0) // no trailing ;
 #define SET_ERROR_CODE(e, code) do{ if(e) e->SetCode(code); } while(0) // no trailing ;
-
-// Set an error object as an unclassified error,  with error message and code
-#define SET_ERROR(e, msg, code) do{ if(e) e->Set(ErrorClass(), (Error::MessageStream() << msg), code); } while(0) // no trailing ;
-
-// Throw exception based on an error object
-#define THROW_ERROR(e) do{ e.Class().Throw(e); } while(0) // no trailing ;
-
-//
-// A dummy subclass of ErrorClass is declared to indicate no error
-// 
-class NoError : public ErrorClass
-{
-public:
-    const char* Name() const noexcept;
-    void Throw(const Error& e) const noexcept;
-};
-const class NoError& NoError() noexcept;
-
-// 
-// Macros to declare and implement a subclass of ErrorClass
-//
-#define DECLARE_ERROR_CLASS(CLS, BASE)                              \
-    class CLS : public BASE                                         \
-    {                                                               \
-    public:                                                         \
-        const char* Name() const noexcept;                          \
-        void Throw(const Error& e) const;                           \
-    };                                                              \
-    const class CLS& CLS() noexcept;
-
-#define IMPLEMENT_ERROR_CLASS(CLS, NAME, EXCEPTION)                 \
-    const char* CLS::Name() const noexcept                          \
-    {                                                               \
-        return NAME;                                                \
-    }                                                               \
-    void CLS::Throw(const Error& e) const                           \
-    {                                                               \
-        if(e) throw EXCEPTION(e.Message(), e.Code());               \
-    }                                                               \
-    const class CLS& CLS() noexcept                                 \
-    {                                                               \
-        static class CLS s##CLS;                                    \
-        return s##CLS;                                              \
-    }                                                    
 
 NETB_END
 

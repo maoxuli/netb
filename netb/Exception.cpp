@@ -21,8 +21,7 @@ NETB_BEGIN
 
 // Exception
 Exception::Exception(const std::string& msg, int code)
-: std::exception()
-, _message(msg)
+: _message(msg)
 , _code(code) 
 {
 
@@ -33,19 +32,19 @@ Exception::~Exception() noexcept
 
 }
 
-// Error class 
-const class ErrorClass& Exception::Class() const 
+// what
+const char* Exception::what() const noexcept
 {
-    return ErrorClass();
+    return _message.c_str();
 }
 
 // To string for log
 std::string Exception::Report() const 
 {
     std::ostringstream oss;
-    oss << Class().Name();
-    if(!_message.empty()) oss << ":" << _message;
-    if(_code > 0) oss << ":" << _code;
+    oss << "Error";
+    if(!_message.empty()) oss << " : " << _message;
+    if(_code > 0) oss << " : " << _code;
     oss << ".";
     return oss.str();
 }
@@ -55,7 +54,7 @@ std::string Exception::Report() const
 // Logic exception
 LogicException::LogicException(const std::string& msg, int code)
 : Exception(msg, code)
-, std::logic_error(Error::MessageStream() << msg << ":" << code)
+, std::logic_error((std::ostringstream() << msg << " : " << code).str())
 {
 
 }
@@ -65,21 +64,29 @@ LogicException::~LogicException() noexcept
 
 }
 
-// Error class
-const class ErrorClass& LogicException::Class() const 
+// what
+const char* LogicException::what() const noexcept
 {
-    return LogicError();
+    return std::logic_error::what();
 }
 
-// Implementation for logic error class 
-IMPLEMENT_ERROR_CLASS(LogicError, "LogicError", LogicException)
+// To string for log
+std::string LogicException::Report() const 
+{
+    std::ostringstream oss;
+    oss << "Logic Error";
+    if(!_message.empty()) oss << " : " << _message;
+    if(_code > 0) oss << " : " << _code;
+    oss << ".";
+    return oss.str();
+}
 
 ////////////////////////////////////////////////////////////////////////
 
 // Runtime exception
 RuntimeException::RuntimeException(const std::string& msg, int code)
 : Exception(msg, code)
-, std::runtime_error(Error::MessageStream() << msg << ":" << code)
+, std::runtime_error((std::ostringstream() << msg << " : " << code).str())
 {
 
 }
@@ -89,13 +96,21 @@ RuntimeException::~RuntimeException() noexcept
 
 }
 
-// Error class  
-const class ErrorClass& RuntimeException::Class() const 
+// what
+const char* RuntimeException::what() const noexcept
 {
-    return RuntimeError();
+    return std::runtime_error::what();
 }
 
-// Implementation for runtime error class 
-IMPLEMENT_ERROR_CLASS(RuntimeError, "RuntimeError", RuntimeException)
+// To string for log
+std::string RuntimeException::Report() const 
+{
+    std::ostringstream oss;
+    oss << "Runtime Error";
+    if(!_message.empty()) oss << " : " << _message;
+    if(_code > 0) oss << " : " << _code;
+    oss << ".";
+    return oss.str();
+}
 
 NETB_END

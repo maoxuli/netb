@@ -18,8 +18,9 @@ ARFLAGS := rcs
 
 INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/Uncopyable.hpp \
-	   $(INCDIR)/Error.hpp \
 	   $(INCDIR)/Exception.hpp \
+	   $(INCDIR)/ErrorClass.hpp \
+	   $(INCDIR)/Error.hpp \
 	   $(INCDIR)/ErrorCode.hpp \
 	   $(INCDIR)/SocketError.hpp \
 	   $(INCDIR)/SocketConfig.hpp \
@@ -45,8 +46,9 @@ INC := $(INCDIR)/Config.hpp \
 	   $(INCDIR)/DnsRecord.hpp \
 	   $(INCDIR)/DnsMessage.hpp
 	  
-OBJ	:= $(OBJDIR)/Error.o \
-	   $(OBJDIR)/Exception.o \
+OBJ	:= $(OBJDIR)/Exception.o \
+	   $(OBJDIR)/ErrorClass.o \
+	   $(OBJDIR)/Error.o \
 	   $(OBJDIR)/ErrorCode.o \
 	   $(OBJDIR)/SocketError.o \
 	   $(OBJDIR)/SocketConfig.o \

@@ -23,39 +23,12 @@ namespace SocketError
 {
 
 // 
-// Sorting error codes used in socket API into error classifications 
-// we have defined, and seting the error object with given error message, 
-// error code, and the error class. 
+// Set error object with error message and code, but not classified
 // 
-
-/*
 void SetError(Error* e, const std::string& msg, int code) 
 {
-    assert(e);
-    switch(code)
-    {
-        case EBADF:
-        case EINVAL:
-        case ENOTSOCK:
-        {
-            SET_LOGIC_ERROR(e, msg, code);
-            break;
-        }
-        case EINTR:
-        case EAGAIN:
-        case EWOULDBLOCK:
-        {
-            SET_RUNTIME_ERROR(e, msg, code);
-            break;
-        }
-        default: 
-        {
-            SET_ERROR(e, msg, code);
-            break;
-        }
-    }
+    SET_ERROR(e, msg, code);
 }
-*/
 
 /*
 EBADF   An invalid file descriptor was given in one of the sets.

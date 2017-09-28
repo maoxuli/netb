@@ -58,10 +58,26 @@ bool SocketPipe::MakePair(Socket& reader, Socket& writer, Error* e)
         writer.Connect(addr);
         reader.Attach(reader.Accept());
     }
+    catch(const RuntimeException& ex)
+    {
+        SET_ERROR(e, ex.Message(), ex.Code());
+        SET_ERROR_CLASS(e, RuntimeError());
+    }
+    catch(const LogicException& ex)
+    {
+        SET_ERROR(e, ex.Message(), ex.Code());
+        SET_ERROR_CLASS(e, LogicError());
+    }
     catch(const Exception& ex)
     {
         SET_ERROR(e, ex.Message(), ex.Code());
-        SET_ERROR_CLASS(e, ex.Class());
+        SET_ERROR_CLASS(e, GeneralError());
+        return false;
+    }
+    catch(const std::exception& ex)
+    {
+        SET_ERROR(e, ex.what(), 0);
+        SET_ERROR_CLASS(e, GeneralError());
         return false;
     }
     return true;

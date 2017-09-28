@@ -19,7 +19,6 @@
 #define NETB_EXCEPTION_HPP
 
 #include "Config.hpp"
-#include "Error.hpp"
 #include <exception>
 #include <stdexcept>
 
@@ -28,10 +27,11 @@ NETB_BEGIN
 //
 // NetB follows the logic of stl exception handling, e.g., classify exceptions 
 // into logic errors and runtime errors. NetB declared some exception classes 
-// accordingly but extended with an optional error code. 
+// accordingly but extended with error message and error code. 
 // 
 // The NetB exception class is so declared that it is always a subclass of a 
-// coresponding standard stl exception, if it exists. 
+// coresponding standard stl exception, if it exists. The what() interface in  
+// std::exception returns error message and error code. 
 //
 class Exception : public std::exception
 {
@@ -40,17 +40,14 @@ public:
     virtual ~Exception() noexcept;
     
     // Get
-    virtual const char* what() const noexcept { return _message.c_str(); }
     virtual std::string Message() const { return _message; }
     virtual int Code() const { return _code; }
 
-    // Bridge to an Error object
-    virtual const class ErrorClass& Class() const;
-
-    // To string for log or display
+    // To string
+    virtual const char* what() const noexcept;
     virtual std::string Report() const;
     
-private:
+protected:
     std::string _message;
     int _code;
 };
@@ -64,18 +61,10 @@ public:
     LogicException(const std::string& msg = "", int code = 0);
     virtual ~LogicException() noexcept;
 
-    // what
-    virtual const char* what() const noexcept { return logic_error::what(); }
-
-    // Bridge to an error class 
-    virtual const class ErrorClass& Class() const;
+    // To string
+    virtual const char* what() const noexcept;
+    virtual std::string Report() const; 
 };
-
-// Declare an error class for logic exception 
-// and macro to set error object with error class of logic error 
-DECLARE_ERROR_CLASS(LogicError, ErrorClass)
-#define SET_LOGIC_ERROR(e, msg, code) do{ if(e) e->Set(LogicError(), \
-                       (Error::MessageStream() << msg), code); } while(0) // no trailing ;
 
 //
 // Runtime exception 
@@ -86,36 +75,10 @@ public:
     RuntimeException(const std::string& msg = "", int code = 0);
     virtual ~RuntimeException() noexcept; 
 
-    // what
-    virtual const char* what() const noexcept { return std::runtime_error::what(); }
-
-    // Bridge to an error class
-    virtual const class ErrorClass& Class() const; 
+    // To string
+    virtual const char* what() const noexcept;
+    virtual std::string Report() const;
 };
-
-// Declare an error class for runtime exception 
-// and macro to set error object with error class of runtime error
-DECLARE_ERROR_CLASS(RuntimeError, ErrorClass)
-#define SET_RUNTIME_ERROR(e, msg, code) do{ if(e) e->Set(RuntimeError(), \
-                         (Error::MessageStream() << msg), code); } while(0) // no trailing ;
-
-//
-// Macros to declare and implement non-standard exceptions
-//
-#define DECLARE_EXCEPTION(CLS, BASE)                                        \
-    class CLS : public BASE                                                 \
-    {                                                                       \
-    public:                                                                 \
-        CLS(const std::string& msg = "", int code = 0) noexcept             \
-            : BASE(msg, code) { }                                           \
-        const class ErrorClass& Class() const noexcept;                     \
-    };
-
-#define IMPLEMENT_EXCEPTION(CLS, EC)                                        \
-    const class ErrorClass& CLS::Class() const noexcept                     \
-    {                                                                       \
-        return EC();                                                        \
-    }  
 
 NETB_END
 
