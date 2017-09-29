@@ -20,7 +20,16 @@
 
 NETB_BEGIN
 
-// bound to a socket
+/*
+Implementation Note: basically all functions may be called from inside of the 
+thread or outside. Outside thread calling will be dipatched to the event loop 
+and running later. The calling will be done in order, but can not supposed 
+the prior calling has been done.   
+*/
+
+// always bound to an event loop and a socket
+// if in loop thread, complete register immediately 
+// otherwise, the register will be done by the loop async. 
 EventHandler::EventHandler(EventLoop* loop, SOCKET s)
 : _loop(loop)
 , _socket(s)
@@ -31,7 +40,8 @@ EventHandler::EventHandler(EventLoop* loop, SOCKET s)
     _loop->Invoke(std::bind(&EventHandler::AttachInLoop, this));
 }
 
-// Todo: timeout control
+// Always detach the handler from loop before deleting
+// Todo: timeout control for external thread deleting
 EventHandler::~EventHandler()
 {
     // block until done
@@ -39,7 +49,8 @@ EventHandler::~EventHandler()
 }
 
 // Isolate from event loop
-// Block until done
+// if in the loop thread, done immediately
+// otherwise dispatched to the loop and block until done
 bool EventHandler::Detach()
 {
     assert(_loop);
@@ -70,7 +81,7 @@ void EventHandler::DetachInLoop()
     _detach_cond.notify_one();
 }
 
-// Attach to teh event loop
+// Attach to event loop
 void EventHandler::AttachInLoop()
 {
     assert(_loop);
@@ -117,15 +128,17 @@ void EventHandler::DisableWriting()
 }
 
 // Notify event loop to update
+// if inside the loop thread, done immediately, 
+// otherwise done by loop later, suppose register is done or is still pending.
 bool EventHandler::Update()
 {
     assert(_loop);
-    if(_detached) return false;
     if(!_loop->IsInLoopThread())
     {
         _loop->Invoke(std::bind(&EventHandler::UpdateInLoop, this));
         return true;
     }
+    assert(!_detached);
     return _loop->UpdateHandler(this);
 }
 
@@ -134,6 +147,7 @@ void EventHandler::UpdateInLoop()
 {
     assert(_loop);
     assert(_loop->IsInLoopThread());
+    assert(!_detached);
     _loop->UpdateHandler(this);
 }
 
