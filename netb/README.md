@@ -8,10 +8,11 @@ File names, class names, and function names (including member functions of class
 
 NetB supports error handling either with or without exceptions. It introduced an error object used together with return values to catch details of error status, providing the same power of error handing as the exceptions. The two error handling styles may be mixed and switched at any points. The foundamental implementation is in classes listed below:  
 
-- Error
-- ErrorClass (and sub-classes)
-- Exception (and sub-classes)
+- Exception (and sub-classes)  
+- ErrorClass (and sub-classes)  
+- Error  
 - ErrorCode  
+- SocketError  
 
 ## A very thin wrapper of socket API  
 
