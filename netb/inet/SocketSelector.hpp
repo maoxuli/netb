@@ -19,6 +19,7 @@
 #define NETB_SOCKET_SELECTOR_HPP
 
 #include "SocketConfig.hpp"
+#include "SocketError.hpp"
 
 NETB_BEGIN
 

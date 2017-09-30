@@ -1,5 +1,6 @@
 .DS_Store
-build/*.o
+build/base/*.o
+build/inet/*.o
 lib/*.a
 bin/*.dSYM
 bin/tcp*
