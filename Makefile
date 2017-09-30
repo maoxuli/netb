@@ -11,78 +11,75 @@ OUT := libnetb.a
 
 CXX := g++
 CXXFLAGS := -g -Wall -std=c++11 -pthread
-CPPFLAGS := -I./$(INCDIR)/base -I./$(INCDIR)/inet
+CPPFLAGS := -I./$(INCDIR)
 
 AR := ar
 ARFLAGS := rcs
 
-INC := $(INCDIR)/base/Config.hpp \
-	   $(INCDIR)/base/Uncopyable.hpp \
-	   $(INCDIR)/base/Exception.hpp \
-	   $(INCDIR)/base/ErrorClass.hpp \
-	   $(INCDIR)/base/Error.hpp \
-	   $(INCDIR)/base/ErrorCode.hpp \
-	   $(INCDIR)/base/StreamBuffer.hpp \
-	   $(INCDIR)/base/StreamReader.hpp \
-	   $(INCDIR)/base/StreamWriter.hpp \
-	   $(INCDIR)/base/RandomReader.hpp \
-	   $(INCDIR)/base/RandomWriter.hpp \
-	   $(INCDIR)/inet/SocketConfig.hpp \
-	   $(INCDIR)/inet/SocketError.hpp \
-	   $(INCDIR)/inet/SocketAddress.hpp \
-	   $(INCDIR)/inet/SocketSelector.hpp \
-	   $(INCDIR)/inet/Socket.hpp \
-	   $(INCDIR)/inet/SocketPipe.hpp \
-	   $(INCDIR)/inet/EventHandler.hpp \
-	   $(INCDIR)/inet/EventLoop.hpp \
-	   $(INCDIR)/inet/EventLoopThread.hpp \
-	   $(INCDIR)/inet/TcpAcceptor.hpp \
-	   $(INCDIR)/inet/TcpSocket.hpp \
-	   $(INCDIR)/inet/UdpSocket.hpp \
-	   $(INCDIR)/inet/AsyncTcpAcceptor.hpp \
-	   $(INCDIR)/inet/AsyncTcpSocket.hpp \
-	   $(INCDIR)/inet/AsyncUdpSocket.hpp \
-	   $(INCDIR)/inet/HttpMessage.hpp \
-	   $(INCDIR)/inet/DnsRecord.hpp \
-	   $(INCDIR)/inet/DnsMessage.hpp
+INC := $(INCDIR)/Config.hpp \
+	   $(INCDIR)/Uncopyable.hpp \
+	   $(INCDIR)/Exception.hpp \
+	   $(INCDIR)/ErrorClass.hpp \
+	   $(INCDIR)/Error.hpp \
+	   $(INCDIR)/ErrorCode.hpp \
+	   $(INCDIR)/SocketError.hpp \
+	   $(INCDIR)/SocketConfig.hpp \
+	   $(INCDIR)/SocketAddress.hpp \
+	   $(INCDIR)/SocketSelector.hpp \
+	   $(INCDIR)/Socket.hpp \
+	   $(INCDIR)/StreamBuffer.hpp \
+	   $(INCDIR)/TcpAcceptor.hpp \
+	   $(INCDIR)/TcpSocket.hpp \
+	   $(INCDIR)/UdpSocket.hpp \
+	   $(INCDIR)/SocketPipe.hpp \
+	   $(INCDIR)/EventHandler.hpp \
+	   $(INCDIR)/EventLoop.hpp \
+	   $(INCDIR)/EventLoopThread.hpp \
+	   $(INCDIR)/AsyncTcpAcceptor.hpp \
+	   $(INCDIR)/AsyncTcpSocket.hpp \
+	   $(INCDIR)/AsyncUdpSocket.hpp \
+	   $(INCDIR)/StreamReader.hpp \
+	   $(INCDIR)/StreamWriter.hpp \
+	   $(INCDIR)/RandomReader.hpp \
+	   $(INCDIR)/RandomWriter.hpp \
+	   $(INCDIR)/HttpMessage.hpp \
+	   $(INCDIR)/DnsRecord.hpp \
+	   $(INCDIR)/DnsMessage.hpp
 	  
-OBJ	:= $(OBJDIR)/base/Exception.o \
-	   $(OBJDIR)/base/ErrorClass.o \
-	   $(OBJDIR)/base/Error.o \
-	   $(OBJDIR)/base/ErrorCode.o \
-	   $(OBJDIR)/base/StreamBuffer.o \
-	   $(OBJDIR)/base/StreamReader.o \
-	   $(OBJDIR)/base/StreamWriter.o \
-	   $(OBJDIR)/base/RandomReader.o \
-	   $(OBJDIR)/base/RandomWriter.o \
-	   $(OBJDIR)/inet/SocketConfig.o \
-	   $(OBJDIR)/inet/SocketError.o \
-	   $(OBJDIR)/inet/SocketAddress.o \
-	   $(OBJDIR)/inet/SocketSelector.o \
-	   $(OBJDIR)/inet/Socket.o \
-	   $(OBJDIR)/inet/SocketPipe.o \
-	   $(OBJDIR)/inet/EventHandler.o \
-	   $(OBJDIR)/inet/EventLoop.o \
-	   $(OBJDIR)/inet/EventLoopThread.o \
-	   $(OBJDIR)/inet/TcpAcceptor.o \
-	   $(OBJDIR)/inet/TcpSocket.o \
-	   $(OBJDIR)/inet/UdpSocket.o \
-	   $(OBJDIR)/inet/AsyncTcpAcceptor.o \
-	   $(OBJDIR)/inet/AsyncTcpSocket.o \
-	   $(OBJDIR)/inet/AsyncUdpSocket.o \
-	   $(OBJDIR)/inet/HttpMessage.o \
-	   $(OBJDIR)/inet/DnsRecord.o \
-	   $(OBJDIR)/inet/DnsMessage.o
+OBJ	:= $(OBJDIR)/Exception.o \
+	   $(OBJDIR)/ErrorClass.o \
+	   $(OBJDIR)/Error.o \
+	   $(OBJDIR)/ErrorCode.o \
+	   $(OBJDIR)/SocketError.o \
+	   $(OBJDIR)/SocketConfig.o \
+	   $(OBJDIR)/SocketAddress.o \
+	   $(OBJDIR)/SocketSelector.o \
+	   $(OBJDIR)/Socket.o \
+	   $(OBJDIR)/StreamBuffer.o \
+	   $(OBJDIR)/TcpAcceptor.o \
+	   $(OBJDIR)/TcpSocket.o \
+	   $(OBJDIR)/UdpSocket.o \
+	   $(OBJDIR)/SocketPipe.o \
+	   $(OBJDIR)/EventHandler.o \
+	   $(OBJDIR)/EventLoop.o \
+	   $(OBJDIR)/EventLoopThread.o \
+	   $(OBJDIR)/AsyncTcpAcceptor.o \
+	   $(OBJDIR)/AsyncTcpSocket.o \
+	   $(OBJDIR)/AsyncUdpSocket.o \
+	   $(OBJDIR)/StreamReader.o \
+	   $(OBJDIR)/StreamWriter.o \
+	   $(OBJDIR)/RandomReader.o \
+	   $(OBJDIR)/RandomWriter.o \
+	   $(OBJDIR)/HttpMessage.o \
+	   $(OBJDIR)/DnsRecord.o \
+	   $(OBJDIR)/DnsMessage.o
 
 all: $(LIBDIR)/$(OUT)
 
 $(LIBDIR)/$(OUT): $(OBJ)
 	$(AR) $(ARFLAGS) $@ $(OBJ)
 
-$(OBJDIR)/base/%.o: $(SRCDIR)/base/%.cpp $(INC)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
-
-$(OBJDIR)/inet/%.o: $(SRCDIR)/inet/%.cpp $(INC)
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(INC)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 .PHONY: examples tcp udp echo http dns clean cleanall
@@ -125,8 +122,7 @@ dns:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/dnsr examples/dns/DnsResolver.cpp $(LIBDIR)/$(OUT)
 
 clean:
-	rm -f $(OBJDIR)/base/*.o
-	rm -f $(OBJDIR)/inet/*.o
+	rm -f $(OBJDIR)/*.o
 
 cleanall: clean
 	rm -f $(LIBDIR)/$(OUT)

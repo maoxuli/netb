@@ -32,7 +32,6 @@ NETB_BEGIN
 //
 // Base error class indicate no error
 // not throw exception 
-class Error;
 class ErrorClass
 {
 public:

@@ -19,7 +19,6 @@
 #define NETB_SOCKET_HPP
 
 #include "SocketConfig.hpp"
-#include "SocketError.hpp"
 #include "SocketAddress.hpp"
 #include "SocketSelector.hpp"
 

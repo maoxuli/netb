@@ -71,7 +71,7 @@ public:
     ~EventHandler();
 
     // Callback form event loop for ready events
-    typedef std::function<void (SOCKET)> EventCallback;
+    typedef std::function<void(SOCKET)> EventCallback;
 
     // Set callback for read ready event
     void SetReadCallback(const EventCallback& cb)
@@ -107,7 +107,7 @@ private:
     SOCKET _socket;
 
     // For event dispatcher
-    int GetSocket() const { return _socket; }
+    SOCKET GetSocket() const { return _socket; }
 
     // Callback from event loop
     void AttachInLoop();

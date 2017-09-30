@@ -21,10 +21,10 @@
 // Include headers for some basic classes
 #include "Config.hpp"
 #include "Uncopyable.hpp"
-#include "Exception.hpp"
-#include "ErrorClass.hpp"
 #include "Error.hpp"
+#include "Exception.hpp"
 #include "ErrorCode.hpp"
+#include "SocketError.hpp"
 
 // Include headers for socket API
 #include <sys/types.h>
