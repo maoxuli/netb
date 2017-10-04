@@ -55,5 +55,3 @@ I/O demultiplexing with event-driven notifications is the major way to implement
 - HttpMessage  
 - DnsRecord  
 - DnsMessage  
-- StunMessage  
-- RtspMessage  

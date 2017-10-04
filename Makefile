@@ -1,5 +1,9 @@
 #
-# Todo: depedency rules on header files
+# This is a rough makefile used in development and debug. 
+# 
+# Todo: 
+# Simplify with wildcard file searching. 
+# Real depedency rules. 
 #
 
 OBJDIR := build
